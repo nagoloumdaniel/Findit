@@ -1,0 +1,21 @@
+# Normalize every text file to LF in the repository and in the working tree.
+# Without this, a Windows checkout with core.autocrlf=true produces CRLF files
+# that Prettier rejects, so `pnpm format:check` fails on a fresh clone.
+* text=auto eol=lf
+
+# Keep Windows-only scripts native so they stay executable on Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zst binary
