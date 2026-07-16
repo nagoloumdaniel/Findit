@@ -1,0 +1,36 @@
+import { z } from "zod";
+
+const nodeEnv = z.enum(["development", "test", "production"]).default("development");
+const url = z.url().transform((value) => new URL(value).toString());
+const origin = z.url().transform((value) => new URL(value).origin);
+
+export const apiEnvSchema = z.object({
+  NODE_ENV: nodeEnv,
+  API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  DATABASE_URL: url,
+  REDIS_URL: url,
+  CORS_ORIGIN: origin.default("http://localhost:3000"),
+  INTERNAL_API_KEY: z.string().min(32),
+  RESUME_RETENTION_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  AI_PROVIDER: z.enum(["disabled", "openai"]).default("disabled"),
+  OPENAI_API_KEY: z.string().default(""),
+  SEARCH_API_PROVIDER: z.enum(["disabled", "brave", "serper"]).default("disabled"),
+  SEARCH_API_KEY: z.string().default(""),
+});
+
+export const workerEnvSchema = z.object({
+  NODE_ENV: nodeEnv,
+  REDIS_URL: url,
+});
+
+export const webEnvSchema = z.object({
+  NEXT_PUBLIC_API_URL: url,
+});
+
+export type ApiEnv = z.infer<typeof apiEnvSchema>;
+export type WorkerEnv = z.infer<typeof workerEnvSchema>;
+export type WebEnv = z.infer<typeof webEnvSchema>;
+
+export const parseApiEnv = (env: NodeJS.ProcessEnv): ApiEnv => apiEnvSchema.parse(env);
+export const parseWorkerEnv = (env: NodeJS.ProcessEnv): WorkerEnv => workerEnvSchema.parse(env);
+export const parseWebEnv = (env: NodeJS.ProcessEnv): WebEnv => webEnvSchema.parse(env);

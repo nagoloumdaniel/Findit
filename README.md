@@ -1,0 +1,110 @@
+# Findit
+
+Findit centralisera les alternances et les stages publiés récemment en Île-de-France pour les métiers Front-end, Back-end, Full-stack, Développement mobile, Data Analyst et Data Engineer.
+
+L'application ne permettra jamais de postuler directement : elle affichera les informations essentielles d'une offre et redirigera vers la source d'origine. Elle prévoit aussi l'import d'un CV sans compte, un score de compatibilité indicatif et explicable, et la génération d'une lettre de motivation fondée uniquement sur des faits réels du CV et de l'offre.
+
+## État actuel
+
+Le dépôt contient uniquement l'initialisation technique. Aucune offre réelle, collecte, analyse de CV, correspondance ou génération de lettre n'est disponible aujourd'hui. La page web affiche le périmètre validé et rien d'autre : aucun compteur, aucune statistique et aucune offre simulée.
+
+## Périmètre validé
+
+- **Contrats** : alternance et stage.
+- **Métiers** : Front-end, Back-end, Full-stack, Développement mobile, Data Analyst, Data Engineer.
+- **Zone** : Île-de-France (75, 77, 78, 91, 92, 93, 94, 95).
+- **Fraîcheur** : 24 heures par défaut, 72 heures au maximum via un filtre.
+
+Ce périmètre est défini une seule fois dans `packages/shared/src/job-scope.ts` et consommé par les autres packages.
+
+## Architecture
+
+- `apps/web` : interface Next.js App Router.
+- `apps/api` : API NestJS avec Fastify.
+- `apps/worker` : processus NestJS et fondation BullMQ.
+- `packages` : contrats, configuration, base de données, UI et frontières métier réservées.
+- `infrastructure` : Docker, scripts et monitoring.
+
+Détail dans [docs/architecture.md](docs/architecture.md).
+
+## Prérequis
+
+- Node.js 24.18 ou version corrective plus récente de la branche 24 LTS.
+- pnpm 11.13.1 (via Corepack).
+- Docker Desktop avec Docker Compose.
+
+## Installation
+
+```powershell
+corepack enable
+corepack prepare pnpm@11.13.1 --activate
+Copy-Item .env.example .env
+pnpm install
+pnpm infra:up
+pnpm db:generate
+```
+
+`pnpm infra:up` démarre PostgreSQL et Redis. `pnpm infra:down` les arrête.
+
+## Variables d'environnement
+
+Toutes les variables sont documentées dans `.env.example`. Elles sont validées par Zod au démarrage : une valeur requise absente ou invalide arrête le processus concerné avec une erreur explicite. Le fichier `.env` local n'est jamais commité.
+
+| Variable                                                                                       | Utilisée par   | Rôle                                                     |
+| ---------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------- |
+| `NODE_ENV`                                                                                     | api, worker    | Mode d'exécution                                         |
+| `API_PORT`                                                                                     | api            | Port d'écoute de l'API                                   |
+| `DATABASE_URL`                                                                                 | api, database  | Connexion PostgreSQL                                     |
+| `REDIS_URL`                                                                                    | api, worker    | Connexion Redis et BullMQ                                |
+| `CORS_ORIGIN`                                                                                  | api            | Origine autorisée                                        |
+| `INTERNAL_API_KEY`                                                                             | api            | Clé des futurs endpoints internes, 32 caractères minimum |
+| `RESUME_RETENTION_HOURS`                                                                       | api            | Durée de conservation prévue d'un CV, de 1 à 168         |
+| `NEXT_PUBLIC_API_URL`                                                                          | web            | URL publique de l'API                                    |
+| `AI_PROVIDER`, `OPENAI_API_KEY`                                                                | api            | Fournisseur IA, désactivé par défaut                     |
+| `SEARCH_API_PROVIDER`, `SEARCH_API_KEY`                                                        | api            | Moteur de découverte, désactivé par défaut               |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `REDIS_PORT`, `WEB_PORT` | docker compose | Services locaux                                          |
+
+Les valeurs de `.env.example` sont locales et non secrètes. `INTERNAL_API_KEY` et `POSTGRES_PASSWORD` doivent être remplacées hors développement local.
+
+## Développement
+
+```powershell
+pnpm dev
+```
+
+- Web : `http://localhost:3000`
+- Santé API : `http://localhost:4000/health`
+
+## Qualité
+
+```powershell
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## Fonctionnement
+
+Le navigateur utilise le web Next.js. Le web appelle l'API NestJS et ne se connecte jamais directement à PostgreSQL ou Redis. L'API porte les accès synchrones et la validation des entrées. Le worker utilise BullMQ et Redis pour les traitements asynchrones. Chaque processus lit sa configuration via `@findit/config` et refuse de démarrer si elle est invalide.
+
+## Fonctionnalités
+
+| Élément                       | État       | Détail                                                |
+| ----------------------------- | ---------- | ----------------------------------------------------- |
+| Monorepo et contrôles qualité | Disponible | Installation, lint, tests, typecheck et build         |
+| PostgreSQL et Redis locaux    | Disponible | Services Docker avec healthchecks                     |
+| Configuration validée         | Disponible | Schémas Zod par runtime, échec rapide                 |
+| Santé API                     | Disponible | `GET /health`                                         |
+| Page web de périmètre         | Disponible | Périmètre validé, sans offre ni compteur              |
+| Worker BullMQ                 | Préparée   | Connexion et fermeture propre, sans processeur métier |
+| Modèle de données métier      | Absente    | Datasource Prisma seule, aucun modèle                 |
+| Recherche et filtres d'offres | Absente    | Étape distincte de la roadmap                         |
+| Collecte des sources          | Absente    | Aucun connecteur actif                                |
+| Déduplication                 | Absente    | Frontière réservée                                    |
+| CV, score et lettre           | Absente    | Aucun traitement de données personnelles actif        |
+
+## Méthode de travail
+
+Le projet avance une étape à la fois sous ordre utilisateur. Après implémentation et vérification, l'étape est présentée. Après validation utilisateur, la roadmap est cochée, puis un commit est créé et poussé sur `main`. Voir [roadmap.md](roadmap.md).
