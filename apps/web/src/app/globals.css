@@ -1,5 +1,114 @@
+/*
+ * Système de couleurs Findit : noir, blanc, gris et accents or.
+ *
+ * L'or ne peut pas être un token unique. #d4af37 atteint 9,41:1 sur fond noir
+ * mais seulement 2,10:1 sur fond blanc, ce qui échoue au minimum WCAG AA de
+ * 4,5:1. Le thème clair utilise donc un or assombri (#8a6d1a, 4,90:1) pour le
+ * texte et #b08d24 (3,14:1) pour les éléments d'interface non textuels.
+ */
+
+:root {
+  /* Neutres */
+  --color-white: #ffffff;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f4f4f5;
+  --color-neutral-200: #e4e4e7;
+  --color-neutral-300: #d4d4d8;
+  --color-neutral-400: #a1a1aa;
+  --color-neutral-500: #71717a;
+  --color-neutral-600: #52525b;
+  --color-neutral-700: #3f3f46;
+  --color-neutral-800: #27272a;
+  --color-neutral-900: #18181b;
+  --color-black: #0a0a0b;
+
+  /* Or */
+  --color-gold-200: #f5e7b8;
+  --color-gold-300: #ebd68a;
+  --color-gold-400: #ddbb4e;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #b08d24;
+  --color-gold-700: #8a6d1a;
+  --color-gold-800: #6b5414;
+
+  /* Rythme */
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem;
+  --radius-pill: 999px;
+
+  /* Mouvement */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+}
+
+/* Thème clair */
 :root {
   color-scheme: light;
+
+  --bg: var(--color-white);
+  --bg-subtle: var(--color-neutral-50);
+  --surface: var(--color-white);
+  --surface-raised: var(--color-neutral-50);
+  --border: var(--color-neutral-200);
+  --border-strong: var(--color-neutral-300);
+
+  --fg: var(--color-black);
+  --fg-muted: var(--color-neutral-600);
+  --fg-subtle: var(--color-neutral-500);
+
+  --accent: var(--color-gold-700);
+  --accent-ui: var(--color-gold-600);
+  --accent-wash: #fbf7ea;
+  --accent-border: var(--color-gold-300);
+}
+
+/* Thème sombre — suit le système, sauf choix explicite */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: var(--color-black);
+    --bg-subtle: var(--color-neutral-900);
+    --surface: var(--color-neutral-900);
+    --surface-raised: var(--color-neutral-800);
+    --border: var(--color-neutral-800);
+    --border-strong: var(--color-neutral-700);
+
+    --fg: var(--color-neutral-50);
+    --fg-muted: var(--color-neutral-400);
+    --fg-subtle: var(--color-neutral-500);
+
+    --accent: var(--color-gold-500);
+    --accent-ui: var(--color-gold-500);
+    --accent-wash: #16130a;
+    --accent-border: var(--color-gold-800);
+  }
+}
+
+/* Thème sombre — choix explicite de l'utilisateur */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: var(--color-black);
+  --bg-subtle: var(--color-neutral-900);
+  --surface: var(--color-neutral-900);
+  --surface-raised: var(--color-neutral-800);
+  --border: var(--color-neutral-800);
+  --border-strong: var(--color-neutral-700);
+
+  --fg: var(--color-neutral-50);
+  --fg-muted: var(--color-neutral-400);
+  --fg-subtle: var(--color-neutral-500);
+
+  --accent: var(--color-gold-500);
+  --accent-ui: var(--color-gold-500);
+  --accent-wash: #16130a;
+  --accent-border: var(--color-gold-800);
+}
+
+:root {
   font-family:
     Inter,
     ui-sans-serif,
@@ -8,8 +117,8 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  background: #f4f1ea;
-  color: #17201d;
+  background: var(--bg);
+  color: var(--fg);
   font-synthesis: none;
 }
 
@@ -19,12 +128,40 @@
 
 html {
   min-width: 20rem;
-  background: #f4f1ea;
+  background: var(--bg);
 }
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 82% 8%, rgb(220 229 213 / 75%), transparent 26rem), #f4f1ea;
+  background: var(--bg);
+}
+
+/*
+ * Logo : le fichier noir sert le thème clair, le fichier blanc le thème sombre.
+ * Seule la variante dont la règle s'applique est téléchargée.
+ */
+.logo {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  background-image: url("/logonoir.png");
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo {
+    background-image: url("/logoblanc.png");
+  }
+}
+
+:root[data-theme="dark"] .logo {
+  background-image: url("/logoblanc.png");
+}
+
+:root[data-theme="light"] .logo {
+  background-image: url("/logonoir.png");
 }
 
 .page-shell {
@@ -41,12 +178,16 @@ body {
 .eyebrow,
 .section-label {
   margin: 0;
-  color: #456344;
+  color: var(--accent);
   font-size: 0.75rem;
   font-weight: 750;
   letter-spacing: 0.14em;
   line-height: 1.4;
   text-transform: uppercase;
+}
+
+.eyebrow {
+  margin-top: 1.75rem;
 }
 
 h1,
@@ -67,7 +208,7 @@ h1 {
 .intro {
   max-width: 46rem;
   margin: clamp(2rem, 5vw, 3.5rem) 0 0;
-  color: #27332f;
+  color: var(--fg-muted);
   font-size: clamp(1.35rem, 3vw, 2rem);
   font-weight: 540;
   letter-spacing: -0.025em;
@@ -77,7 +218,7 @@ h1 {
 .hero-note {
   max-width: 40rem;
   margin: 1.25rem 0 0;
-  color: #55605c;
+  color: var(--fg-subtle);
   font-size: 1rem;
   line-height: 1.7;
 }
@@ -93,7 +234,7 @@ h1 {
   align-items: start;
   margin-bottom: 2rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #c9cec5;
+  border-top: 1px solid var(--border);
 }
 
 .section-heading h2 {
@@ -114,9 +255,9 @@ h1 {
 .scope-card {
   min-height: 14rem;
   padding: clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid #d3d6cf;
-  border-radius: 1.25rem;
-  background: rgb(251 250 246 / 88%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 
 .scope-card-wide {
@@ -125,7 +266,7 @@ h1 {
 
 .card-index {
   margin: 0 0 clamp(2.5rem, 5vw, 4.5rem);
-  color: #6b756f;
+  color: var(--accent-ui);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
@@ -150,10 +291,10 @@ h1 {
 
 .tag-list li {
   padding: 0.55rem 0.75rem;
-  border: 1px solid #cbd1c7;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #35413d;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  color: var(--fg-muted);
   font-size: 0.875rem;
   line-height: 1.2;
 }
@@ -161,12 +302,12 @@ h1 {
 .freshness-copy {
   max-width: 31rem;
   margin: 1.25rem 0 0;
-  color: #55605c;
+  color: var(--fg-subtle);
   line-height: 1.65;
 }
 
 .freshness-copy strong {
-  color: #17201d;
+  color: var(--fg);
   font-weight: 700;
 }
 
@@ -177,16 +318,16 @@ h1 {
   align-items: start;
   margin-top: 0.75rem;
   padding: clamp(1.5rem, 4vw, 2.5rem);
-  border: 1px solid #bfd0bb;
-  border-radius: 1.25rem;
-  background: #e4eee0;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-lg);
+  background: var(--accent-wash);
 }
 
 .status-mark {
   width: 0.65rem;
   height: 0.65rem;
   margin-top: 0.2rem;
-  border: 2px solid #456344;
+  border: 2px solid var(--accent-ui);
   border-radius: 50%;
 }
 
@@ -201,12 +342,12 @@ h1 {
 .status-panel p:last-child {
   max-width: 42rem;
   margin: 0.75rem 0 0;
-  color: #4f5d54;
+  color: var(--fg-muted);
   line-height: 1.65;
 }
 
 :focus-visible {
-  outline: 3px solid #456344;
+  outline: 2px solid var(--accent-ui);
   outline-offset: 3px;
 }
 

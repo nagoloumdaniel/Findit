@@ -6,6 +6,8 @@ import {
 } from "@findit/shared";
 import { PageShell } from "@findit/ui";
 
+import { Logo } from "../components/logo";
+
 const contractLabels = {
   ALTERNANCE: "Alternance",
   INTERNSHIP: "Stage",
@@ -24,6 +26,7 @@ export default function HomePage() {
   return (
     <PageShell>
       <header className="hero">
+        <Logo />
         <p className="eyebrow">Initialisation technique</p>
         <h1>Findit</h1>
         <p className="intro">
