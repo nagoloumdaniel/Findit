@@ -5,3 +5,6 @@ export { normalizeTitle } from "./normalized-title.js";
 
 export { extractSections } from "./sections.js";
 export type { JobSections } from "./sections.js";
+
+export { resolveLocation } from "./location.js";
+export type { LocationRefusal, LocationResolution } from "./location.js";

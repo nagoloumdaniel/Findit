@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@findit/shared": "workspace:*",
     "parse5": "8.0.1"
   }
 }

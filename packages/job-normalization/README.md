@@ -47,6 +47,33 @@ dans un nom de technologie : `c++` et `c#` ne sont pas `c`.
 Le résultat peut être vide. « Stage H/F » ne contient aucun métier, et rendre une chaîne vide vaut
 mieux que fabriquer un titre que personne n'a écrit.
 
+## La localisation vient de la table officielle, pas d'une supposition
+
+`resolveLocation` range un libellé dans le périmètre ou dit pourquoi il n'y entre pas. Le libellé est
+la seule information disponible : **aucune des 348 offres relevées ne porte de code postal**.
+
+Le département vient de `ile-de-france-communes.ts`, généré par `generate-communes.mjs` depuis
+[geo.api.gouv.fr](https://geo.api.gouv.fr), l'API officielle du découpage administratif français.
+1262 communes. La table est générée puis commitée : le découpage communal ne bouge qu'à la marge, et
+dépendre du réseau pour classer une offre serait un point de panne pour rien.
+
+La ville rendue est celle que la source a écrite, jamais réécrite. Le département, lui, n'est jamais
+deviné :
+
+- **Quatre communes sont ambiguës.** Blandy, Marolles-en-Brie, Mondreville et Saint-Martin-des-Champs
+  existent chacune dans deux départements d'Île-de-France. Le libellé ne dit pas laquelle : l'offre
+  est refusée en `AMBIGUOUS_COMMUNE` plutôt que rangée au hasard.
+- **« France » ne donne aucun département** : `TOO_VAGUE`. Le cas est réel — une offre Doctolib est
+  écrite ainsi.
+- Un libellé peut porter plusieurs lieux. « Berlin, Berlin, Germany; Paris, Paris, France » existe
+  tel quel : il suffit qu'un seul soit en Île-de-France.
+- Le mode de travail est pris quand le libellé le porte devant la ville — « Hybrid - Paris » — et
+  conservé même quand le lieu est hors zone.
+
+Limite connue : un libellé qui nomme une subdivision étrangère sans son pays, « Paris, Texas »,
+passerait au travers. Le cas ne s'est pas présenté sur les 348 offres relevées, et exiger « France »
+dans le libellé rejetterait « Paris » seul — que les sources écrivent réellement.
+
 ## Vérification
 
 Le paquet a été passé sur 348 offres réellement collectées chez Greenhouse (Vercel, Doctolib) et
@@ -68,6 +95,18 @@ d'avantages chez Spotify le sont aussi : Spotify n'écrit que trois intertitres 
 « What You'll Do », « Where You'll Be » — et ne publie aucune section d'avantages. Il n'y a rien à
 trouver, et rien n'est inventé.
 
+La localisation, sur les mêmes 348 offres :
+
+```
+296  OUTSIDE_ILE_DE_FRANCE
+ 51  RETENUE            (toutes en 75, dont les 10 alternances et stages parisiens)
+  1  TOO_VAGUE          (« France »)
+```
+
+Le compte tombe juste : Doctolib publie 52 offres localisées en France, soit 51 résolues et une seule
+trop vague.
+
 ## État
 
-Le texte, le titre et les sections sont faits. La localisation et le reste de la phase 4 suivent.
+Le texte, le titre, les sections et la localisation sont faits. La classification, les écoles, la
+déduplication et l'écriture en base suivent.
