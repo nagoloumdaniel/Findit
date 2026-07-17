@@ -177,17 +177,52 @@ body {
 }
 
 /*
+ * Marque : le glyphe du logo et « indit » forment le mot « Findit ». Ils sont
+ * alignés sur la ligne de base — le bas du « f » la rejoint — parce qu'un
+ * mot-symbole où le logo flotte au-dessus des lettres se lit comme deux objets,
+ * pas comme un mot.
+ */
+.brand {
+  display: flex;
+  align-items: baseline;
+  font-size: clamp(2.5rem, 6vw, 3.75rem);
+}
+
+/*
+ * Le « i » porte son propre blanc à gauche, et le glyphe est rogné au ras du
+ * « f ». Mis bout à bout, ils laissaient 8 px là où les lettres de « indit » en
+ * comptent 1 à 5 : le mot se lisait « F indit ». Cette marge négative rend au
+ * couple l'écart des autres lettres.
+ */
+.brand-name {
+  margin-left: -0.03em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-display);
+  line-height: 1;
+}
+
+/*
  * Logo : le fichier noir sert le thème clair, le fichier blanc le thème sombre.
  * Seule la variante dont la règle s'applique est téléchargée.
+ *
+ * L'image est carrée (161 px) mais le glyphe n'occupe que 112 × 160 px en son
+ * centre : 15 % de marge de chaque côté. Laissée telle quelle, cette marge
+ * creuserait un trou entre le « f » et « indit ». La boîte prend donc le rapport
+ * du glyphe, et le fond est agrandi pour que les marges tombent hors cadre.
+ *
+ * La hauteur vaut celle des capitales du mot, afin que le « f » monte aussi haut
+ * que le « d » et le « t » qui le suivent.
  */
 .logo {
   display: block;
-  width: 2.75rem;
-  height: 2.75rem;
+  /* 112 / 160 : le rapport du glyphe, pas celui de l'image. */
+  width: 0.504em;
+  height: 0.72em;
   background-image: url("/logonoir.png");
-  background-position: left center;
+  /* 161 / 112 et 161 / 160 : l'image reprend sa taille carrée, marges dehors. */
+  background-size: 143.75% 100.63%;
+  background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -237,13 +272,18 @@ p {
   overflow-wrap: break-word;
 }
 
+/*
+ * Le titre de la page n'est plus l'élément d'affichage : la marque l'est. Il
+ * annonce ce que la page contient, sur une ligne, et laisse la place au reste.
+ */
 h1 {
   max-width: var(--measure-prose);
-  margin: 0.75rem 0 0;
-  font-size: var(--text-display);
+  margin: 1rem 0 0;
+  font-size: var(--text-subtitle);
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-display);
-  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
+  text-wrap: balance;
 }
 
 .intro {

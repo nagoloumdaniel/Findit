@@ -51,7 +51,7 @@ export default async function HomePage({ searchParams }: PageProps) {
     <PageShell>
       <header className="hero">
         <Logo />
-        <h1>Les nouvelles alternances et stages développeur en Île-de-France</h1>
+        <h1>Alternances et stages développeur en Île-de-France</h1>
         <p className="intro">
           Offres Front-end, Back-end, Full-stack, Mobile, Data Analyst et Data Engineer publiées au
           cours des dernières 24 heures.
