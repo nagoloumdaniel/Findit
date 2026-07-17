@@ -1,7 +1,28 @@
 import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+
+/*
+ * Les polices sont téléchargées à la compilation puis servies par
+ * l'application. Rien n'est demandé à un tiers au moment de la visite, et la
+ * page ne dépend d'aucune police installée sur le poste du visiteur.
+ *
+ * Les deux familles sont variables : les graisses intermédiaires du système
+ * typographique sont donc réellement rendues, et non arrondies à 400 ou 700.
+ */
+const sans = Geist({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+});
+
+const mono = Geist_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "Findit",
@@ -25,7 +46,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={`${sans.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );
