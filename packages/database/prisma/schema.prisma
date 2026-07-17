@@ -84,7 +84,10 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  jobs Job[]
+  jobs            Job[]
+  aliases         CompanyAlias[]
+  sources         CompanySource[]
+  classifications CompanyClassification[]
 
   @@index([normalizedName])
 }
@@ -144,6 +147,7 @@ model Job {
   requisitionId String?
 
   duplicateGroupId    String?
+  duplicateGroup      DuplicateGroup? @relation(fields: [duplicateGroupId], references: [id], onDelete: SetNull)
   duplicateConfidence Float?
 
   schoolRiskScore   Int
@@ -155,8 +159,15 @@ model Job {
 
   status JobStatus
 
-  sources JobSource[]
-  skills  JobSkill[]
+  sources                JobSource[]
+  skills                 JobSkill[]
+  classificationDecision JobClassificationDecision[]
+  schoolDecisions        SchoolDetectionDecision[]
+  fraudDecisions         FraudDetectionDecision[]
+  duplicateDecisions     DuplicateDecision[]
+  processingLogs         ProcessingLog[]
+  matches                JobMatch[]
+  coverLetters           CoverLetter[]
 
   /// Une même source ne peut pas décrire deux fois la même offre.
   @@unique([companyId, externalId])
@@ -189,6 +200,8 @@ model JobSource {
 
   createdAt DateTime @default(now())
 
+  snapshots JobSourceSnapshot[]
+
   @@unique([jobId, url])
   @@index([jobId, priority])
 }
@@ -202,7 +215,8 @@ model Skill {
 
   createdAt DateTime @default(now())
 
-  jobs JobSkill[]
+  jobs    JobSkill[]
+  aliases SkillAlias[]
 
   @@index([kind])
 }
@@ -218,4 +232,588 @@ model JobSkill {
 
   @@id([jobId, skillId])
   @@index([skillId])
+}
+
+// ---------------------------------------------------------------------------
+// Entreprises : variantes de nom, sources de collecte, nature réelle
+// ---------------------------------------------------------------------------
+
+/// Variantes sous lesquelles une entreprise publie ses offres. Sert à rapprocher
+/// « ACME SAS », « Acme France » et « acme » sans les fusionner à l'aveugle.
+model CompanyAlias {
+  id String @id @default(uuid(7))
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  alias           String
+  normalizedAlias String
+
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, normalizedAlias])
+  @@index([normalizedAlias])
+}
+
+enum AtsKind {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  SMARTRECRUITERS
+  WORKDAY
+  TEAMTAILOR
+  RECRUITEE
+  TALEO
+  SAP_SUCCESSFACTORS
+  WELCOMEKIT
+  FLATCHR
+  JOBTEASER
+  OTHER
+  UNKNOWN
+}
+
+/// Régime d'accès à une source, tenu à jour dans la documentation de conformité.
+/// Aucune collecte n'est permise hors des régimes explicitement autorisés.
+enum SourceAccessStatus {
+  OFFICIAL_API
+  PUBLIC_FEED
+  AUTHORIZED_CRAWL
+  SEARCH_ENGINE_DISCOVERY_ONLY
+  MANUAL_IMPORT
+  DISABLED_PENDING_PERMISSION
+  PROHIBITED
+}
+
+/// Où et comment collecter les offres d'une entreprise.
+model CompanySource {
+  id String @id @default(uuid(7))
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  domain        String
+  careerUrl     String?
+  atsKind       AtsKind @default(UNKNOWN)
+  atsIdentifier String?
+
+  accessStatus SourceAccessStatus
+
+  connectorId String?
+  connector   Connector? @relation(fields: [connectorId], references: [id], onDelete: SetNull)
+
+  lastSuccessfulRunAt DateTime?
+  fetchedJobCount     Int       @default(0)
+  /// Confiance sur 100 dans le rattachement de cette source à l'entreprise.
+  confidence          Int
+  notes               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, domain])
+  @@index([accessStatus])
+  @@index([atsKind])
+}
+
+/// Nature réelle de l'organisation qui publie. Une école ne doit jamais
+/// apparaître comme employeur.
+enum CompanyKind {
+  EMPLOYER
+  SCHOOL
+  TRAINING_ORGANISATION
+  BOOTCAMP
+  RECRUITMENT_AGENCY
+  UNKNOWN
+}
+
+/// Origine d'une décision, pour distinguer une règle d'une sortie de modèle et
+/// d'une correction humaine.
+enum DecisionSource {
+  RULE
+  AI
+  HUMAN
+}
+
+/// Historique des classifications d'entreprise. Les lignes ne sont jamais
+/// écrasées : une correction ajoute une décision et conserve la précédente.
+model CompanyClassification {
+  id String @id @default(uuid(7))
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  kind            CompanyKind
+  schoolRiskScore Int
+  reasons         String[]
+
+  decidedBy DecisionSource
+  decidedAt DateTime       @default(now())
+
+  /// Version d'instruction utilisée quand la décision vient d'un modèle.
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, decidedAt])
+  @@index([kind])
+}
+
+// ---------------------------------------------------------------------------
+// Connecteurs : exécution, santé, erreurs
+// ---------------------------------------------------------------------------
+
+enum ConnectorStatus {
+  ACTIVE
+  DISABLED
+  DISABLED_PENDING_PERMISSION
+  FAILING
+}
+
+model Connector {
+  id   String @id @default(uuid(7))
+  name String @unique
+
+  atsKind      AtsKind            @default(UNKNOWN)
+  accessStatus SourceAccessStatus
+  status       ConnectorStatus    @default(DISABLED_PENDING_PERMISSION)
+
+  /// Date de dernière vérification des conditions d'utilisation de la source.
+  termsCheckedAt DateTime?
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runs           ConnectorRun[]
+  errors         ConnectorError[]
+  companySources CompanySource[]
+
+  @@index([status])
+}
+
+enum ConnectorRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+/// Une exécution de collecte. Alimente le tableau technique.
+model ConnectorRun {
+  id String @id @default(uuid(7))
+
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  status     ConnectorRunStatus @default(RUNNING)
+  startedAt  DateTime           @default(now())
+  finishedAt DateTime?
+
+  pagesFetched    Int @default(0)
+  jobsDiscovered  Int @default(0)
+  jobsAccepted    Int @default(0)
+  jobsRejected    Int @default(0)
+  jobsQuarantined Int @default(0)
+  duplicatesFound Int @default(0)
+  errorCount      Int @default(0)
+
+  /// Relie les journaux d'une même exécution entre les processus.
+  correlationId String
+
+  errors ConnectorError[]
+
+  @@index([connectorId, startedAt])
+  @@index([status])
+  @@index([correlationId])
+}
+
+model ConnectorError {
+  id String @id @default(uuid(7))
+
+  connectorId String
+  connector   Connector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+
+  runId String?
+  run   ConnectorRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  kind    String
+  message String
+  url     String?
+
+  occurredAt DateTime @default(now())
+
+  @@index([connectorId, occurredAt])
+  @@index([runId])
+}
+
+// ---------------------------------------------------------------------------
+// Traçabilité des sources
+// ---------------------------------------------------------------------------
+
+/// Contenu brut tel que reçu d'une source, à une date donnée. Permet de
+/// reconstituer une décision et de détecter un changement de structure sans
+/// jamais réinventer la donnée d'origine.
+model JobSourceSnapshot {
+  id String @id @default(uuid(7))
+
+  jobSourceId String
+  jobSource   JobSource @relation(fields: [jobSourceId], references: [id], onDelete: Cascade)
+
+  fetchedAt   DateTime @default(now())
+  httpStatus  Int?
+  contentType String?
+  /// Empreinte du contenu, pour repérer une modification sans tout comparer.
+  contentHash String
+  rawContent  String?
+
+  @@index([jobSourceId, fetchedAt])
+  @@index([contentHash])
+}
+
+// ---------------------------------------------------------------------------
+// Compétences
+// ---------------------------------------------------------------------------
+
+/// Formes équivalentes d'une compétence : « js », « JavaScript », « ECMAScript ».
+model SkillAlias {
+  id String @id @default(uuid(7))
+
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  alias           String
+  normalizedAlias String @unique
+
+  @@index([skillId])
+}
+
+// ---------------------------------------------------------------------------
+// Déduplication
+// ---------------------------------------------------------------------------
+
+/// Groupe d'offres considérées comme une même publication. La source canonique
+/// est celle du rang le plus élevé ; les autres restent visibles comme liens.
+model DuplicateGroup {
+  id String @id @default(uuid(7))
+
+  canonicalJobId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs      Job[]
+  decisions DuplicateDecision[]
+
+  @@index([canonicalJobId])
+}
+
+enum DuplicateAction {
+  MERGED
+  UNMERGED
+  REJECTED
+}
+
+/// Trace de chaque fusion et de chaque annulation, avec le détail du score.
+/// Une fusion doit rester réversible.
+model DuplicateDecision {
+  id String @id @default(uuid(7))
+
+  groupId String
+  group   DuplicateGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  action DuplicateAction
+  score  Float
+  /// Détail par critère : entreprise, titre, description, lieu, compétences, date.
+  scoreBreakdown Json
+  reasons        String[]
+
+  decidedBy DecisionSource
+  decidedAt DateTime       @default(now())
+
+  @@index([groupId, decidedAt])
+  @@index([jobId])
+}
+
+// ---------------------------------------------------------------------------
+// Décisions sur les offres
+// ---------------------------------------------------------------------------
+
+enum ClassificationOutcome {
+  ACCEPTED
+  REJECTED
+  QUARANTINED
+}
+
+/// Pourquoi une offre a été acceptée, rejetée ou mise en quarantaine.
+model JobClassificationDecision {
+  id String @id @default(uuid(7))
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  outcome      ClassificationOutcome
+  roleCategory RoleCategory?
+  contractType ContractType?
+  /// Confiance sur 100 dans la classification.
+  confidence   Int
+  reasons      String[]
+
+  decidedBy       DecisionSource
+  decidedAt       DateTime       @default(now())
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, decidedAt])
+  @@index([outcome])
+}
+
+/// Détection des écoles et organismes de formation publiant de fausses offres.
+model SchoolDetectionDecision {
+  id String @id @default(uuid(7))
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  riskScore Int
+  excluded  Boolean
+  /// Signaux ayant motivé la décision, cités tels quels.
+  reasons   String[]
+
+  decidedBy       DecisionSource
+  decidedAt       DateTime       @default(now())
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, decidedAt])
+  @@index([excluded])
+}
+
+model FraudDetectionDecision {
+  id String @id @default(uuid(7))
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  riskScore Int
+  excluded  Boolean
+  reasons   String[]
+
+  decidedBy       DecisionSource
+  decidedAt       DateTime       @default(now())
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, decidedAt])
+  @@index([excluded])
+}
+
+/// Journal du pipeline : une ligne par étape et par offre, avec son résultat.
+model ProcessingLog {
+  id String @id @default(uuid(7))
+
+  jobId String?
+  job   Job?    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  stage         String
+  fromStatus    JobStatus?
+  toStatus      JobStatus?
+  succeeded     Boolean
+  message       String?
+  durationMs    Int?
+  correlationId String
+
+  createdAt DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([stage, createdAt])
+  @@index([correlationId])
+}
+
+// ---------------------------------------------------------------------------
+// CV, correspondance et lettre
+// ---------------------------------------------------------------------------
+
+enum ResumeFileType {
+  PDF
+  DOCX
+}
+
+enum ResumeStatus {
+  UPLOADED
+  PARSED
+  PARSE_FAILED
+  DELETED
+}
+
+/// Un CV déposé sans compte. Rattaché à une session de navigateur, jamais à une
+/// identité, et supprimé automatiquement à l'échéance.
+model Resume {
+  id String @id @default(uuid(7))
+
+  /// Identifiant aléatoire et temporaire de session. N'est pas un identifiant
+  /// d'utilisateur et ne sert à aucun suivi publicitaire.
+  browserSessionId String
+
+  fileType ResumeFileType
+  fileSize Int
+  /// Nom de stockage réattribué : le nom d'origine n'est jamais conservé.
+  storageKey  String       @unique
+  contentHash String
+  status      ResumeStatus @default(UPLOADED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  /// Échéance de suppression automatique.
+  expiresAt DateTime
+  deletedAt DateTime?
+
+  analyses     ResumeAnalysis[]
+  matches      JobMatch[]
+  coverLetters CoverLetter[]
+
+  @@index([browserSessionId])
+  @@index([expiresAt])
+}
+
+/// Faits extraits d'un CV. Rien n'est complété : ce qui est absent reste absent
+/// et remonte dans les avertissements.
+model ResumeAnalysis {
+  id String @id @default(uuid(7))
+
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  headline        String?
+  summary         String?
+  yearsExperience Float?
+  studyLevel      String?
+  location        String?
+  availability    String?
+
+  /// Faits structurés extraits tels quels : expériences, projets, formations,
+  /// compétences, langues, certifications.
+  extractedFacts Json
+  /// Ce que l'extraction n'a pas pu établir.
+  warnings       String[]
+  /// Confiance sur 100 dans l'extraction.
+  confidence     Int
+
+  analysedBy      DecisionSource
+  createdAt       DateTime       @default(now())
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([resumeId, createdAt])
+}
+
+/// Score indicatif entre un CV et une offre. Ce n'est pas le résultat d'un ATS
+/// réel et cela ne préjuge pas de la sélection par l'employeur.
+model JobMatch {
+  id String @id @default(uuid(7))
+
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  /// Score global sur 100.
+  score Int
+  /// Score par catégorie pondérée, pour que le total soit explicable.
+  scoreBreakdown Json
+
+  matchedSkills   String[]
+  missingSkills   String[]
+  missingKeywords String[]
+  strengths       String[]
+  weaknesses      String[]
+  /// Suggestions portant uniquement sur la mise en valeur de l'existant.
+  recommendations String[]
+
+  /// Confiance sur 100 dans l'analyse.
+  confidence Int
+  /// Renseigné quand le CV ou l'offre ne contient pas assez d'éléments.
+  insufficientDataWarning String?
+
+  computedBy      DecisionSource
+  createdAt       DateTime       @default(now())
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  coverLetters CoverLetter[]
+
+  @@unique([resumeId, jobId, computedBy])
+  @@index([resumeId, score])
+  @@index([jobId])
+}
+
+enum CoverLetterTone {
+  PROFESSIONAL
+  DIRECT
+  ENTHUSIASTIC
+  SOBER
+}
+
+/// Lettre produite à partir des seuls faits du CV et de l'offre.
+model CoverLetter {
+  id String @id @default(uuid(7))
+
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  matchId String?
+  match   JobMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  tone    CoverLetterTone @default(PROFESSIONAL)
+  subject String
+  body    String
+  /// Éléments du CV réellement utilisés, afin que la lettre soit vérifiable.
+  usedResumeFacts Json
+  /// Vrai lorsque l'utilisateur a modifié le texte à la main.
+  editedByUser    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  generatedBy     DecisionSource
+  promptVersionId String?
+  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
+
+  @@index([resumeId, createdAt])
+  @@index([jobId])
+  @@index([expiresAt])
+}
+
+/// Instructions versionnées envoyées aux modèles. Permet de rattacher une
+/// décision passée à l'instruction exacte qui l'a produite.
+model PromptVersion {
+  id String @id @default(uuid(7))
+
+  name    String
+  version Int
+  /// Identifiant du modèle visé, par exemple « claude-opus-4-8 ».
+  model   String
+  content String
+  /// Empreinte du contenu, pour détecter une dérive silencieuse.
+  contentHash String
+
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  companyClassifications CompanyClassification[]
+  jobClassifications     JobClassificationDecision[]
+  schoolDecisions        SchoolDetectionDecision[]
+  fraudDecisions         FraudDetectionDecision[]
+  resumeAnalyses         ResumeAnalysis[]
+  jobMatches             JobMatch[]
+  coverLetters           CoverLetter[]
+
+  @@unique([name, version])
+  @@index([name, active])
 }
