@@ -59,19 +59,38 @@ Chaque ligne est vérifiée avant d'être écrite ici. La colonne « vérifié l
 
 ### Lever
 
-| Élément               | Valeur                                                     |
-| --------------------- | ---------------------------------------------------------- |
-| Statut                | `PUBLIC_FEED`                                              |
-| Accès                 | `GET https://api.lever.co/v0/postings/{company}?mode=json` |
-| Authentification      | Aucune                                                     |
-| `robots.txt`          | `User-agent: *`, `Allow: /`, **`Crawl-delay: 1`**          |
-| Limite annoncée       | **1 seconde entre deux requêtes, imposée par la source**   |
-| Cadence appliquée     | 1 requête/seconde au maximum, jamais dépassée              |
-| Données conservées    | Offre brute, empreinte du contenu, provenance              |
-| Durée de conservation | 72 h                                                       |
-| Vérifié le            | 2026-07-17                                                 |
+| Élément                        | Valeur                                                                |
+| ------------------------------ | --------------------------------------------------------------------- |
+| Statut                         | `PUBLIC_FEED`                                                         |
+| Accès                          | `GET https://api.lever.co/v0/postings/{company}?mode=json`            |
+| Authentification               | Aucune                                                                |
+| `robots.txt` (`api.lever.co`)  | `User-agent: *`, `Allow: /`, **`Crawl-delay: 1`**                     |
+| `robots.txt` (`jobs.lever.co`) | `User-agent: *`, `Allow: /`, `Crawl-delay: 1`, plus un content signal |
+| Content signal                 | **`search=yes,ai-train=no,use=reference`**                            |
+| Limite annoncée                | **1 seconde entre deux requêtes, imposée par la source**              |
+| Cadence appliquée              | 1 requête/seconde au maximum, jamais dépassée                         |
+| Données conservées             | Offre brute, empreinte du contenu, provenance                         |
+| Durée de conservation          | 72 h                                                                  |
+| Vérifié le                     | 2026-07-17                                                            |
 
 Le `Crawl-delay` est une contrainte de la source, pas un réglage de confort. Le connecteur doit l'appliquer même si le débit en souffre.
+
+Lever déclare aussi un **content signal**, qui dit à quoi son contenu a le droit de servir. Il ne
+porte pas sur l'accès mais sur l'usage, et il engage tout le projet, pas seulement le connecteur :
+
+- `search=yes` — construire un index de recherche et rendre des résultats est **autorisé**. C'est
+  exactement l'usage de la liste publique de Findit.
+- `ai-train=no` — entraîner ou affiner un modèle sur ce contenu est **interdit**. Aucune offre venant
+  de Lever ne doit servir à entraîner un modèle, ni partir chez un fournisseur d'IA qui s'autorise à
+  entraîner sur ce qu'il reçoit. La phase 6 devra choisir son fournisseur en conséquence, et le
+  vérifier dans ses conditions plutôt que le supposer.
+- `ai-input` n'est pas déclaré. Lever ne l'accorde ni ne le refuse. En l'absence de position, envoyer
+  une offre à un modèle pour l'analyser demande une décision explicite, pas un silence interprété
+  comme un oui.
+
+Les bots d'IA nommément désignés — `GPTBot`, `ClaudeBot`, `CCBot`, `Google-Extended`,
+`Applebot-Extended`, `Bytespider`, `meta-externalagent` — sont interdits sur `jobs.lever.co`.
+`FinditBot` n'en fait pas partie et relève de `User-agent: *`, qui l'autorise.
 
 ### Ashby
 

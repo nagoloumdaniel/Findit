@@ -20,6 +20,13 @@ export {
 
 export { FINDIT_USER_AGENT, HttpRequestError } from "./http.js";
 
+export {
+  LEVER_CONNECTOR_NAME,
+  LEVER_CRAWL_DELAY_MS,
+  LeverShapeError,
+  leverConnector,
+} from "./lever.js";
+
 export { CollectionRefusedError, runConnector } from "./run.js";
 export type { ConnectorRunOutcome, RunConnectorDeps } from "./run.js";
 
