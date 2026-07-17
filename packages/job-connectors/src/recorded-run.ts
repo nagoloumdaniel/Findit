@@ -2,7 +2,7 @@ import { ConnectorRunStatus, type PrismaClient } from "@findit/database";
 
 import type { ConnectorRegistration } from "./access-policy.js";
 import { decideCollectionAccess } from "./access-policy.js";
-import type { CollectionTarget, JobSourceConnector } from "./connector.js";
+import type { JobSourceConnector } from "./connector.js";
 import { HttpRequestError } from "./http.js";
 import { loadRegistration } from "./registry.js";
 import type { ConnectorRunOutcome, RunConnectorDeps } from "./run.js";
@@ -117,12 +117,12 @@ const describeError = (error: unknown): RecordedError => {
  * Le droit de collecter est lu en base, à chaque exécution. Un registre modifié
  * s'applique donc à la collecte suivante sans qu'aucun code ne change.
  */
-export const runRecordedConnector = async (
+export const runRecordedConnector = async <TTarget>(
   store: ConnectorRunStore,
-  connector: JobSourceConnector,
-  target: CollectionTarget,
+  connector: JobSourceConnector<TTarget>,
+  target: TTarget,
   deps: RunConnectorDeps,
-): Promise<ConnectorRunOutcome> => {
+): Promise<ConnectorRunOutcome<TTarget>> => {
   const registration = await store.loadRegistration(connector.name);
   if (registration === null) {
     // Sans ligne, il n'existe même pas de connecteur auquel rattacher l'erreur.

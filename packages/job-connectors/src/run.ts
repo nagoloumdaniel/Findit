@@ -1,6 +1,6 @@
 import type { ConnectorRegistration, RefusalReason } from "./access-policy.js";
 import { decideCollectionAccess } from "./access-policy.js";
-import type { CollectionTarget, JobSourceConnector, RawJob } from "./connector.js";
+import type { JobSourceConnector, RawJob } from "./connector.js";
 import { ThrottledJsonClient } from "./http.js";
 import { CollectionPermit } from "./permit.js";
 
@@ -26,9 +26,9 @@ export interface RunConnectorDeps {
   readonly correlationId: string;
 }
 
-export interface ConnectorRunOutcome {
+export interface ConnectorRunOutcome<TTarget = unknown> {
   readonly connectorName: string;
-  readonly target: CollectionTarget;
+  readonly target: TTarget;
   readonly jobs: readonly RawJob[];
   readonly requestCount: number;
   readonly startedAt: Date;
@@ -41,12 +41,12 @@ export interface ConnectorRunOutcome {
  * ne peut pas être appelé. Un connecteur interdit n'est donc pas exécutable,
  * quelle que soit la bonne volonté de l'appelant.
  */
-export const runConnector = async (
-  connector: JobSourceConnector,
+export const runConnector = async <TTarget>(
+  connector: JobSourceConnector<TTarget>,
   registration: ConnectorRegistration,
-  target: CollectionTarget,
+  target: TTarget,
   deps: RunConnectorDeps,
-): Promise<ConnectorRunOutcome> => {
+): Promise<ConnectorRunOutcome<TTarget>> => {
   const startedAt = deps.now();
 
   const decision = decideCollectionAccess(connector.name, registration, startedAt);

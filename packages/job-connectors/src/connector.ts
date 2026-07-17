@@ -30,6 +30,20 @@ export interface CollectionTarget {
 }
 
 /**
+ * Ce qu'on cherche, quand la source cherche au lieu de lister.
+ *
+ * Toutes les sources ne s'interrogent pas entreprise par entreprise. Workable
+ * expose une recherche sur l'ensemble de son réseau : lui demander « le board
+ * de telle entreprise » n'a pas de sens, et détourner `atsIdentifier` pour y
+ * loger une requête serait mentir sur ce que le champ nomme.
+ */
+export interface SearchTarget {
+  readonly query: string;
+  /** Zone telle que la source la comprend : « Paris », « France ». */
+  readonly location: string;
+}
+
+/**
  * Ce qu'un connecteur reçoit pour travailler. `fetchJson` est son seul accès
  * réseau : il annonce l'identité de Findit et respecte la cadence de la source.
  * Un connecteur ne fabrique donc jamais sa propre requête.
@@ -49,7 +63,7 @@ export interface CollectionContext {
  * registre `Connector` en base ; et sa cadence réelle, appliquée par le client
  * HTTP que lui passe l'exécuteur.
  */
-export interface JobSourceConnector {
+export interface JobSourceConnector<TTarget = CollectionTarget> {
   /** Doit correspondre à `Connector.name` en base. */
   readonly name: string;
   readonly atsKind: AtsKind;
@@ -61,7 +75,7 @@ export interface JobSourceConnector {
 
   collect(
     permit: CollectionPermit,
-    target: CollectionTarget,
+    target: TTarget,
     context: CollectionContext,
   ): Promise<readonly RawJob[]>;
 }

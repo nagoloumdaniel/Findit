@@ -3,6 +3,7 @@ import { AtsKind, ConnectorStatus, SourceAccessStatus, type PrismaClient } from 
 import type { ConnectorRegistration } from "./access-policy.js";
 import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
+import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
 
 /**
  * Une ligne du registre, telle que docs/legal-compliance.md l'a établie.
@@ -43,6 +44,23 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
       "Flux public. Crawl-delay: 1 imposé par la source. Content signal : search=yes, ai-train=no.",
   },
   {
+    name: WORKABLE_CONNECTOR_NAME,
+    atsKind: AtsKind.WORKABLE,
+    accessStatus: SourceAccessStatus.PUBLIC_FEED,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_07_17,
+    notes:
+      "Flux public. robots.txt n'interdit rien. Content signal : search=yes, ai-input=yes, ai-train=no.",
+  },
+  {
+    name: "smartrecruiters-www",
+    atsKind: AtsKind.SMARTRECRUITERS,
+    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
+    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
+    termsCheckedAt: VERIFIED_2026_07_17,
+    notes: "Pages publiques permises sauf 73 entreprises nommées. Voie non empruntée à ce jour.",
+  },
+  {
     name: "ashby",
     atsKind: AtsKind.ASHBY,
     accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
@@ -55,8 +73,8 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     atsKind: AtsKind.SMARTRECRUITERS,
     accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
     status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: null,
-    notes: "Aucun accès contrôlé à ce jour.",
+    termsCheckedAt: VERIFIED_2026_07_17,
+    notes: "robots.txt n'ouvre /v1/companies/ qu'à LinkedInBot et interdit tout à User-agent: *.",
   },
   {
     name: "teamtailor",

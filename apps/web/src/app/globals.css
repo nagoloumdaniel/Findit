@@ -279,7 +279,7 @@ p {
 h1 {
   max-width: var(--measure-prose);
   margin: 1rem 0 0;
-  font-size: var(--text-subtitle);
+  font-size: var(--text-title);
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-title);
   line-height: var(--leading-title);
@@ -287,14 +287,14 @@ h1 {
 }
 
 .intro {
-  max-width: 44rem;
-  margin: clamp(1.75rem, 4vw, 2.75rem) 0 0;
+  max-width: 100%;
+  margin: clamp(1.75rem, 2vw, 2.75rem) 0 0;
   color: var(--fg-muted);
-  font-size: var(--text-lead);
+  font-size: var(--text-md);
   font-weight: var(--weight-regular);
   letter-spacing: var(--tracking-lead);
   line-height: var(--leading-snug);
-  text-wrap: balance;
+  text-wrap: wrap;
 }
 
 .hero-note {

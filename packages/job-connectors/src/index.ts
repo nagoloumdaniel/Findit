@@ -10,6 +10,7 @@ export type {
   CollectionTarget,
   JobSourceConnector,
   RawJob,
+  SearchTarget,
 } from "./connector.js";
 
 export {
@@ -46,3 +47,10 @@ export type { ConnectorRunOutcome, RunConnectorDeps } from "./run.js";
  * sans passer par `runConnector`, qui vérifie le droit de collecter.
  */
 export type { CollectionPermit } from "./permit.js";
+
+export {
+  WORKABLE_CONNECTOR_NAME,
+  WORKABLE_REQUEST_INTERVAL_MS,
+  WorkableShapeError,
+  workableConnector,
+} from "./workable.js";

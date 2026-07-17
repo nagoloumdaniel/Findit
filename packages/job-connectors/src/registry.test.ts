@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { COLLECTION_ALLOWED_STATUSES } from "./access-policy.js";
 import { greenhouseConnector } from "./greenhouse.js";
 import { leverConnector } from "./lever.js";
+import { workableConnector } from "./workable.js";
 import { CONNECTOR_REGISTRY_ENTRIES } from "./registry.js";
 
 const entryFor = (name: string) =>
@@ -35,7 +36,7 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   });
 
   it("holds a line for every connector that exists, under the name it answers to", () => {
-    for (const connector of [greenhouseConnector, leverConnector]) {
+    for (const connector of [greenhouseConnector, leverConnector, workableConnector]) {
       const entry = entryFor(connector.name);
 
       expect(entry).toBeDefined();
@@ -65,8 +66,26 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   });
 
   it("leaves unverified sources without a check date rather than inventing one", () => {
-    for (const name of ["smartrecruiters", "teamtailor", "recruitee", "workday"]) {
+    // SmartRecruiters a quitté cette liste le 2026-07-17 : il est vérifié, et
+    // fermé. Son robots.txt n'ouvre l'API qu'à LinkedInBot.
+    for (const name of ["teamtailor", "recruitee", "workday"]) {
       expect(entryFor(name)?.termsCheckedAt).toBeNull();
     }
+  });
+
+  it("records that a verified source can be verified as closed", () => {
+    expect(entryFor("smartrecruiters")).toMatchObject({
+      status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
+    });
+    expect(entryFor("smartrecruiters")?.termsCheckedAt).not.toBeNull();
+    expect(entryFor("smartrecruiters")?.notes).toContain("LinkedInBot");
+  });
+
+  it("holds a line for Workable, the source that grants ai-input", () => {
+    expect(entryFor("workable")).toMatchObject({
+      status: ConnectorStatus.ACTIVE,
+      accessStatus: SourceAccessStatus.PUBLIC_FEED,
+    });
+    expect(entryFor("workable")?.notes).toContain("ai-input=yes");
   });
 });
