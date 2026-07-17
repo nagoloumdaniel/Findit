@@ -2,6 +2,8 @@ import { PageShell } from "@findit/ui";
 
 import { JobCard } from "../components/job-card";
 import { JobFilters } from "../components/job-filters";
+import { JobPagination } from "../components/job-pagination";
+import { JobSearch } from "../components/job-search";
 import { Logo } from "../components/logo";
 import { fetchFilterOptions, fetchJobs, fetchStats } from "../lib/api";
 import { exactDateTime } from "../lib/labels";
@@ -69,6 +71,8 @@ export default async function HomePage({ searchParams }: PageProps) {
         )}
       </header>
 
+      <JobSearch current={search} />
+
       {options.ok ? <JobFilters options={options.data} current={search} /> : null}
 
       <section className="results" aria-label="Offres">
@@ -84,14 +88,15 @@ export default async function HomePage({ searchParams }: PageProps) {
           <div className="state-panel" role="status">
             <h2>Aucune offre ne correspond.</h2>
             <p>
-              Aucune offre publiée ne correspond à ces filtres. Élargir à « 3 derniers jours » ou
-              retirer un filtre peut donner des résultats.
+              {search.get("q")
+                ? `Aucune offre publiée ne correspond à « ${search.get("q")} » avec ces filtres. Élargir à « 3 derniers jours », retirer un filtre ou chercher un autre terme peut donner des résultats.`
+                : "Aucune offre publiée ne correspond à ces filtres. Élargir à « 3 derniers jours » ou retirer un filtre peut donner des résultats."}
             </p>
           </div>
         ) : (
           <>
             <p className="results-count">
-              {jobs.data.total} offre{jobs.data.total > 1 ? "s" : ""}
+              {`${jobs.data.total} offre${jobs.data.total > 1 ? "s" : ""}`}
             </p>
             <ul className="job-grid">
               {jobs.data.items.map((job) => (
@@ -100,6 +105,12 @@ export default async function HomePage({ searchParams }: PageProps) {
                 </li>
               ))}
             </ul>
+            <JobPagination
+              current={search}
+              page={jobs.data.page}
+              pageSize={jobs.data.pageSize}
+              total={jobs.data.total}
+            />
           </>
         )}
       </section>

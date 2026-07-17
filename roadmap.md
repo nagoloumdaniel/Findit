@@ -25,7 +25,7 @@
 
 ## Phase 2 — Base fonctionnelle
 
-- [ ] API des offres, recherche, filtres, liste et détail
+- [x] API des offres, recherche, filtres, liste et détail
 
 ## Phase 3 — Collecte autorisée
 

@@ -6,7 +6,7 @@ L'application ne permettra jamais de postuler directement : elle affichera les i
 
 ## État actuel
 
-Le dépôt contient l'initialisation technique et le modèle de données. Les tables existent mais aucune n'est alimentée : aucune offre réelle, collecte, analyse de CV, correspondance ou génération de lettre n'est disponible aujourd'hui. La page web affiche le périmètre validé et rien d'autre : aucun compteur, aucune statistique et aucune offre simulée.
+Le dépôt contient l'initialisation technique, le modèle de données et la consultation des offres. Aucune collecte réelle n'existe encore : les seules offres visibles sont celles du jeu de démonstration, signalées comme telles. L'analyse de CV, la correspondance et la génération de lettre ne sont pas disponibles.
 
 ## Périmètre validé
 
@@ -108,12 +108,12 @@ Le navigateur utilise le web Next.js. Le web appelle l'API NestJS et ne se conne
 | PostgreSQL et Redis locaux         | Disponible | Services Docker avec healthchecks                                                  |
 | Configuration validée              | Disponible | Schémas Zod par runtime, échec rapide                                              |
 | Santé API                          | Disponible | `GET /health`                                                                      |
-| Page web de périmètre              | Disponible | Périmètre validé, sans offre ni compteur                                           |
+| Page web publique                  | Disponible | Liste, détail et compteurs calculés sur les offres réellement en base              |
 | Système de couleurs et typographie | Disponible | Noir, blanc, gris et accents or ; contrastes WCAG AA vérifiés dans les deux thèmes |
 | Modèle de données métier           | Disponible | 24 tables, migrations et index ; règles métier tenues par la base                  |
 | Worker BullMQ                      | Préparée   | Connexion et fermeture propre, sans processeur métier                              |
 | Similarité sémantique              | Préparée   | Extension pgvector activée, aucune colonne d'embedding                             |
-| Recherche et filtres d'offres      | Absente    | Étape distincte de la roadmap                                                      |
+| Recherche et filtres d'offres      | Disponible | Liste, filtres, recherche, pagination et page détail, en rendu serveur             |
 | Collecte des sources               | Absente    | Aucun connecteur actif, aucune table alimentée                                     |
 | Déduplication                      | Absente    | Tables présentes, aucun moteur                                                     |
 | CV, score et lettre                | Absente    | Tables présentes, aucun traitement de données personnelles actif                   |
