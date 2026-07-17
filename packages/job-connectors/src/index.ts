@@ -12,6 +12,12 @@ export type {
   RawJob,
 } from "./connector.js";
 
+export {
+  GREENHOUSE_CONNECTOR_NAME,
+  GreenhouseShapeError,
+  greenhouseConnector,
+} from "./greenhouse.js";
+
 export { FINDIT_USER_AGENT, HttpRequestError } from "./http.js";
 
 export { CollectionRefusedError, runConnector } from "./run.js";
