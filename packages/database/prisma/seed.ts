@@ -1,6 +1,11 @@
-import "dotenv/config";
+import { fileURLToPath } from "node:url";
+
+import { config } from "dotenv";
 
 import { createPrismaClient } from "../src/client.js";
+
+/* Le `.env` est à la racine du dépôt, pas dans ce paquet. */
+config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 
 /*
  * Données de démonstration.
