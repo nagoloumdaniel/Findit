@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import type { ConnectorRegistration } from "./access-policy.js";
 import type { CollectionTarget, JobSourceConnector, RawJob } from "./connector.js";
 import { HttpRequestError } from "./http.js";
-import type { ClosedRun, ConnectorRunStore, RecordedError } from "./recorded-run.js";
+import type {
+  ClosedRun,
+  ConnectorRunStore,
+  DecisionCounts,
+  RecordedError,
+} from "./recorded-run.js";
 import { ConnectorNotRegisteredError, runRecordedConnector } from "./recorded-run.js";
 import type { RunConnectorDeps } from "./run.js";
 import { CollectionRefusedError } from "./run.js";
@@ -45,6 +50,7 @@ interface StoredError {
 class InMemoryRunStore implements ConnectorRunStore {
   readonly runs: OpenedRun[] = [];
   readonly errors: StoredError[] = [];
+  readonly decisionCounts = new Map<string, DecisionCounts>();
 
   constructor(private readonly registration: ConnectorRegistration | null) {}
 
@@ -70,6 +76,11 @@ class InMemoryRunStore implements ConnectorRunStore {
 
   recordError(connectorName: string, runId: string | null, error: RecordedError): Promise<void> {
     this.errors.push({ connectorName, runId, error });
+    return Promise.resolve();
+  }
+
+  recordDecisionCounts(runId: string, counts: DecisionCounts): Promise<void> {
+    this.decisionCounts.set(runId, counts);
     return Promise.resolve();
   }
 }

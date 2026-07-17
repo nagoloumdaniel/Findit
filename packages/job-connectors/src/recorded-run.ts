@@ -33,6 +33,18 @@ export interface ClosedRun {
 }
 
 /**
+ * Ce que le tri des offres a donné, une fois la collecte finie. Séparé de
+ * `ClosedRun` parce que ces comptes ne sont connus qu'après la décision
+ * d'ingestion, qui a lieu hors de ce paquet : l'exécuteur ferme la collecte,
+ * l'orchestrateur y ajoute le sort des offres.
+ */
+export interface DecisionCounts {
+  readonly jobsAccepted: number;
+  readonly jobsRejected: number;
+  readonly jobsQuarantined: number;
+}
+
+/**
  * Ce que l'exécution a besoin de lire et d'écrire. L'interface existe pour que
  * l'enchaînement — lire le registre, ouvrir, fermer, consigner — soit
  * vérifiable sans base, et que la base ne soit qu'une implémentation parmi
@@ -43,6 +55,7 @@ export interface ConnectorRunStore {
   openRun(connectorName: string, correlationId: string, startedAt: Date): Promise<string>;
   closeRun(runId: string, result: ClosedRun): Promise<void>;
   recordError(connectorName: string, runId: string | null, error: RecordedError): Promise<void>;
+  recordDecisionCounts(runId: string, counts: DecisionCounts): Promise<void>;
 }
 
 export const createPrismaConnectorRunStore = (prisma: PrismaClient): ConnectorRunStore => {
@@ -78,6 +91,10 @@ export const createPrismaConnectorRunStore = (prisma: PrismaClient): ConnectorRu
 
     closeRun: async (runId, result) => {
       await prisma.connectorRun.update({ where: { id: runId }, data: result });
+    },
+
+    recordDecisionCounts: async (runId, counts) => {
+      await prisma.connectorRun.update({ where: { id: runId }, data: counts });
     },
 
     recordError: async (connectorName, runId, error) => {
@@ -117,12 +134,19 @@ const describeError = (error: unknown): RecordedError => {
  * Le droit de collecter est lu en base, à chaque exécution. Un registre modifié
  * s'applique donc à la collecte suivante sans qu'aucun code ne change.
  */
+/**
+ * Une issue de collecte, augmentée de l'identifiant de son exécution. Le
+ * `runId` permet à l'orchestrateur d'ajouter le sort des offres à la même ligne
+ * `ConnectorRun`, une fois la décision d'ingestion prise.
+ */
+export type RecordedRunOutcome<TTarget> = ConnectorRunOutcome<TTarget> & { readonly runId: string };
+
 export const runRecordedConnector = async <TTarget>(
   store: ConnectorRunStore,
   connector: JobSourceConnector<TTarget>,
   target: TTarget,
   deps: RunConnectorDeps,
-): Promise<ConnectorRunOutcome<TTarget>> => {
+): Promise<RecordedRunOutcome<TTarget>> => {
   const registration = await store.loadRegistration(connector.name);
   if (registration === null) {
     // Sans ligne, il n'existe même pas de connecteur auquel rattacher l'erreur.
@@ -177,7 +201,7 @@ export const runRecordedConnector = async <TTarget>(
       errorCount: 0,
     });
 
-    return outcome;
+    return { ...outcome, runId };
   } catch (error) {
     await store.recordError(connector.name, runId, describeError(error));
     await store.closeRun(runId, {

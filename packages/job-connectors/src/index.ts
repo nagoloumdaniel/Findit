@@ -33,7 +33,13 @@ export {
   createPrismaConnectorRunStore,
   runRecordedConnector,
 } from "./recorded-run.js";
-export type { ClosedRun, ConnectorRunStore, RecordedError } from "./recorded-run.js";
+export type {
+  ClosedRun,
+  ConnectorRunStore,
+  DecisionCounts,
+  RecordedError,
+  RecordedRunOutcome,
+} from "./recorded-run.js";
 
 export { CONNECTOR_REGISTRY_ENTRIES, loadRegistration, syncConnectorRegistry } from "./registry.js";
 export type { ConnectorRegistryEntry } from "./registry.js";

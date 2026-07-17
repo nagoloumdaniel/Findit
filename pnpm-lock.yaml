@@ -124,6 +124,18 @@ importers:
       '@findit/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@findit/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@findit/job-connectors':
+        specifier: workspace:*
+        version: link:../../packages/job-connectors
+      '@findit/job-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/job-pipeline
+      '@findit/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)
