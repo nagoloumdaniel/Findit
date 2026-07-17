@@ -1,95 +1,107 @@
-import {
-  DEFAULT_MAX_AGE_HOURS,
-  EXTENDED_MAX_AGE_HOURS,
-  JOB_CONTRACTS,
-  JOB_ROLE_CATEGORIES,
-} from "@findit/shared";
 import { PageShell } from "@findit/ui";
 
+import { JobCard } from "../components/job-card";
+import { JobFilters } from "../components/job-filters";
 import { Logo } from "../components/logo";
+import { fetchFilterOptions, fetchJobs, fetchStats } from "../lib/api";
+import { exactDateTime } from "../lib/labels";
 
-const contractLabels = {
-  ALTERNANCE: "Alternance",
-  INTERNSHIP: "Stage",
-} as const;
+/// Les offres changent d'heure en heure : la page est rendue à chaque requête.
+export const dynamic = "force-dynamic";
 
-const roleLabels = {
-  FRONTEND: "Front-end",
-  BACKEND: "Back-end",
-  FULLSTACK: "Full-stack",
-  MOBILE: "Développement mobile",
-  DATA_ANALYST: "Data Analyst",
-  DATA_ENGINEER: "Data Engineer",
-} as const;
+/*
+ * Ne transmet à l'API que les paramètres qu'elle accepte. Une valeur invalide
+ * n'est pas corrigée en silence : l'API la rejette et la page l'affiche.
+ */
+const ALLOWED = ["freshness", "role", "contract", "department", "workMode", "q", "sort", "page"];
 
-export default function HomePage() {
+const toSearchParams = (params: Record<string, string | string[] | undefined>): URLSearchParams => {
+  const search = new URLSearchParams();
+
+  for (const key of ALLOWED) {
+    const value = params[key];
+    if (typeof value === "string" && value.length > 0) {
+      search.set(key, value);
+    }
+  }
+
+  return search;
+};
+
+type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
+
+export default async function HomePage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const search = toSearchParams(params);
+  const now = new Date();
+
+  const [jobs, options, stats] = await Promise.all([
+    fetchJobs(search),
+    fetchFilterOptions(
+      new URLSearchParams(
+        search.get("freshness") ? { freshness: search.get("freshness") as string } : {},
+      ),
+    ),
+    fetchStats(),
+  ]);
+
   return (
     <PageShell>
       <header className="hero">
         <Logo />
-        <p className="eyebrow">Initialisation technique</p>
-        <h1>Findit</h1>
+        <h1>Les nouvelles alternances et stages développeur en Île-de-France</h1>
         <p className="intro">
-          Alternances et stages récents en Île-de-France, dans les métiers du développement et de la
-          data.
+          Offres Front-end, Back-end, Full-stack, Mobile, Data Analyst et Data Engineer publiées au
+          cours des dernières 24 heures.
         </p>
-        <p className="hero-note">
-          Le socle est en construction. Cette page présente uniquement le périmètre validé, sans
-          résultat simulé.
-        </p>
+
+        {stats.ok ? (
+          <p className="hero-note">
+            {stats.data.publishedLast24h === 0
+              ? "Aucune offre publiée durant les dernières 24 heures."
+              : `${stats.data.publishedLast24h} offre${stats.data.publishedLast24h > 1 ? "s" : ""} publiée${stats.data.publishedLast24h > 1 ? "s" : ""} durant les dernières 24 heures.`}
+            {stats.data.lastPublishedAt
+              ? ` Dernière publication le ${exactDateTime(stats.data.lastPublishedAt)}.`
+              : null}
+          </p>
+        ) : (
+          <p className="hero-note">Le décompte des offres n’a pas pu être vérifié.</p>
+        )}
       </header>
 
-      <section className="scope" aria-labelledby="scope-title">
-        <div className="section-heading">
-          <p className="section-label">Périmètre validé</p>
-          <h2 id="scope-title">Une recherche cadrée avant la collecte.</h2>
-        </div>
+      {options.ok ? <JobFilters options={options.data} current={search} /> : null}
 
-        <div className="scope-grid">
-          <article className="scope-card">
-            <p className="card-index" aria-hidden="true">
-              01
+      <section className="results" aria-label="Offres">
+        {!jobs.ok ? (
+          <div className="state-panel" role="status">
+            <h2>Les offres ne sont pas disponibles.</h2>
+            <p>
+              Le service qui les fournit est injoignable. Aucune offre n’est affichée tant que la
+              liste ne peut pas être vérifiée : mieux vaut ne rien montrer qu’une liste incomplète.
             </p>
-            <h3>Contrats</h3>
-            <ul className="tag-list" aria-label="Types de contrats ciblés">
-              {JOB_CONTRACTS.map((contract) => (
-                <li key={contract}>{contractLabels[contract]}</li>
+          </div>
+        ) : jobs.data.total === 0 ? (
+          <div className="state-panel" role="status">
+            <h2>Aucune offre ne correspond.</h2>
+            <p>
+              Aucune offre publiée ne correspond à ces filtres. Élargir à « 3 derniers jours » ou
+              retirer un filtre peut donner des résultats.
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="results-count">
+              {jobs.data.total} offre{jobs.data.total > 1 ? "s" : ""}
+            </p>
+            <ul className="job-grid">
+              {jobs.data.items.map((job) => (
+                <li key={job.slug}>
+                  <JobCard job={job} now={now} />
+                </li>
               ))}
             </ul>
-          </article>
-
-          <article className="scope-card scope-card-wide">
-            <p className="card-index" aria-hidden="true">
-              02
-            </p>
-            <h3>Développement logiciel, mobile et data</h3>
-            <ul className="tag-list" aria-label="Métiers ciblés">
-              {JOB_ROLE_CATEGORIES.map((role) => (
-                <li key={role}>{roleLabels[role]}</li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="scope-card">
-            <p className="card-index" aria-hidden="true">
-              03
-            </p>
-            <h3>Fraîcheur prévue</h3>
-            <p className="freshness-copy">
-              Fenêtre principale de <strong>{DEFAULT_MAX_AGE_HOURS} heures</strong>, extensible
-              jusqu’à <strong>{EXTENDED_MAX_AGE_HOURS} heures</strong> lorsque le périmètre l’exige.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section className="status-panel" aria-labelledby="status-title">
-        <div className="status-mark" aria-hidden="true" />
-        <div>
-          <p className="section-label">État actuel</p>
-          <h2 id="status-title">Aucune offre n’est affichée.</h2>
-          <p>La collecte réelle doit être opérationnelle et vérifiée avant toute publication.</p>
-        </div>
+          </>
+        )}
       </section>
     </PageShell>
   );

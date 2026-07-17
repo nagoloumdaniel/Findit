@@ -216,8 +216,7 @@ body {
 }
 
 /* Les libellés en capitales ont besoin d'approche pour rester lisibles. */
-.eyebrow,
-.section-label {
+.eyebrow {
   margin: 0;
   color: var(--accent);
   font-size: var(--text-xs);
@@ -266,67 +265,6 @@ h1 {
   line-height: var(--leading-relaxed);
 }
 
-.scope {
-  margin-top: clamp(4.5rem, 11vw, 8.5rem);
-}
-
-.section-heading {
-  display: grid;
-  grid-template-columns: minmax(9rem, 0.55fr) minmax(0, 1.45fr);
-  gap: 1.5rem;
-  align-items: start;
-  margin-bottom: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
-}
-
-.section-heading h2 {
-  max-width: 30ch;
-  margin: 0;
-  font-size: var(--text-title);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-  text-wrap: balance;
-}
-
-.scope-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.scope-card {
-  min-height: 14rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-}
-
-.scope-card-wide {
-  grid-row: span 2;
-}
-
-/* Les index sont des données : chiffres à chasse fixe, alignés. */
-.card-index {
-  margin: 0 0 clamp(2.5rem, 5vw, 4.5rem);
-  color: var(--accent-ui);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: var(--text-2xs);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-caps);
-}
-
-.scope-card h3 {
-  max-width: 22ch;
-  margin: 0;
-  font-size: var(--text-xl);
-  font-weight: var(--weight-medium);
-  letter-spacing: var(--tracking-lead);
-  line-height: var(--leading-title);
-}
-
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -347,57 +285,6 @@ h1 {
   line-height: 1.2;
 }
 
-.freshness-copy {
-  max-width: var(--measure-lead);
-  margin: 1.25rem 0 0;
-  color: var(--fg-subtle);
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-}
-
-.freshness-copy strong {
-  color: var(--fg);
-  font-variant-numeric: tabular-nums;
-  font-weight: var(--weight-semibold);
-}
-
-.status-panel {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-  margin-top: 0.75rem;
-  padding: clamp(1.5rem, 4vw, 2.5rem);
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-lg);
-  background: var(--accent-wash);
-}
-
-.status-mark {
-  width: 0.65rem;
-  height: 0.65rem;
-  margin-top: 0.45rem;
-  border: 2px solid var(--accent-ui);
-  border-radius: 50%;
-}
-
-.status-panel h2 {
-  max-width: 24ch;
-  margin: 0.5rem 0 0;
-  font-size: var(--text-subtitle);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-title);
-  line-height: var(--leading-title);
-}
-
-.status-panel p:last-child {
-  max-width: var(--measure-prose);
-  margin: 0.75rem 0 0;
-  color: var(--fg-muted);
-  font-size: var(--text-md);
-  line-height: var(--leading-relaxed);
-}
-
 :focus-visible {
   outline: 2px solid var(--accent-ui);
   outline-offset: 3px;
@@ -408,24 +295,391 @@ h1 {
     width: min(100% - 1.25rem, 72rem);
   }
 
-  .section-heading,
-  .scope-grid {
-    grid-template-columns: 1fr;
+  .filters {
+    gap: 1.25rem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Filtres : des liens, donc chaque état est une adresse partageable.  */
+/* ------------------------------------------------------------------ */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.filter-title {
+  margin: 0 0 0.75rem;
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter-chip:hover {
+    border-color: var(--fg-subtle);
+    color: var(--fg);
+  }
+}
+
+/* L'état actif est porté par aria-current : le style suit l'accessibilité. */
+.filter-chip[aria-current="true"] {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: var(--weight-medium);
+}
+
+.filter-count {
+  color: inherit;
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+/* ------------------------------------------------------------------ */
+/* Résultats                                                           */
+/* ------------------------------------------------------------------ */
+
+.results {
+  margin-top: 2.5rem;
+}
+
+.results-count {
+  margin: 0 0 1rem;
+  color: var(--fg-subtle);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.job-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.role-badge {
+  margin: 0;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.job-age {
+  margin: 0;
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.job-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lead);
+  line-height: var(--leading-title);
+}
+
+.job-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* La carte entière est cliquable sans imbriquer de lien dans un lien. */
+.job-title a::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.job-card {
+  position: relative;
+}
+
+.job-company {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin: 0;
+  padding: 0;
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+  list-style: none;
+}
+
+.job-quality {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+.job-source {
+  margin: auto 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+}
+
+/* ------------------------------------------------------------------ */
+/* Signalement des offres de démonstration                             */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Une offre factice ne doit jamais pouvoir passer pour authentique. Le
+ * signalement est donc visible avant le titre, pas relégué en bas de carte.
+ */
+.demo-flag {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px dashed var(--accent-ui);
+  border-radius: var(--radius-sm);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.4;
+}
+
+.demo-flag-page {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------------ */
+/* États : indisponible, aucun résultat                                */
+/* ------------------------------------------------------------------ */
+
+.state-panel {
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.state-panel h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lead);
+}
+
+.state-panel p {
+  max-width: var(--measure-prose);
+  margin: 0.75rem 0 0;
+  color: var(--fg-muted);
+  line-height: var(--leading-relaxed);
+}
+
+/* ------------------------------------------------------------------ */
+/* Page détail                                                         */
+/* ------------------------------------------------------------------ */
+
+.eyebrow a {
+  color: var(--accent);
+}
+
+.detail-head {
+  max-width: var(--measure-prose);
+  margin-top: 1.5rem;
+}
+
+.detail-title {
+  margin: 0.75rem 0 0;
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-title);
+  text-wrap: balance;
+}
+
+.detail-company {
+  margin: 0.75rem 0 0;
+  color: var(--fg-muted);
+  font-size: var(--text-lg);
+}
+
+.detail-date {
+  margin: 0.4rem 0 0;
+  color: var(--fg-subtle);
+  font-size: var(--text-sm);
+}
+
+.detail-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 1px;
+  margin: 2.5rem 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.detail-facts > div {
+  padding: 1rem;
+  background: var(--surface);
+}
+
+.detail-facts dt {
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.detail-facts dd {
+  margin: 0.4rem 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.detail-section {
+  max-width: var(--measure-prose);
+  margin-top: 2.5rem;
+}
+
+.detail-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-lead);
+}
+
+.detail-section p {
+  margin: 0;
+  color: var(--fg-muted);
+  line-height: var(--leading-relaxed);
+}
+
+.detail-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--fg-muted);
+  line-height: var(--leading-relaxed);
+}
+
+.detail-note {
+  margin: 0 0 1rem;
+  color: var(--fg-subtle);
+  font-size: var(--text-sm);
+}
+
+.source-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+/* Retour immédiat à l'appui : l'interface accuse réception du geste. */
+.source-primary:active {
+  transform: scale(0.97);
+}
+
+.source-list {
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.source-list a {
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
+
+.source-checked {
+  color: var(--fg-subtle);
+  font-size: var(--text-2xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-chip,
+  .source-primary {
+    transition: none;
   }
 
-  .section-heading {
-    gap: 1rem;
-  }
-
-  .scope-card-wide {
-    grid-row: auto;
-  }
-
-  .scope-card {
-    min-height: 0;
-  }
-
-  .card-index {
-    margin-bottom: 2.5rem;
+  .source-primary:active {
+    transform: none;
   }
 }

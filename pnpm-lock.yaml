@@ -87,6 +87,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@findit/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@findit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
