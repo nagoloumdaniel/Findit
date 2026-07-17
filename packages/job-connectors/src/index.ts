@@ -57,3 +57,12 @@ export {
 
 export { decideRobots, groupFor, parseContentSignal, parseRobots } from "./robots.js";
 export type { RobotsDecision, RobotsFile, RobotsGroup, RobotsVerdict } from "./robots.js";
+
+export { BraveSearchProvider, WebSearchError } from "./web-search.js";
+export type {
+  BraveSearchProviderOptions,
+  WebSearchProvider,
+  WebSearchProviderHealth,
+  WebSearchQuery,
+  WebSearchResult,
+} from "./web-search.js";

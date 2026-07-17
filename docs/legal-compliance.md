@@ -206,22 +206,41 @@ Ce que le registre dynamique ne permet toujours pas :
 
 ### Brave Search
 
-| Élément    | Valeur                                                          |
-| ---------- | --------------------------------------------------------------- |
-| Statut     | `SEARCH_ENGINE_DISCOVERY_ONLY` — **retenu, pas encore vérifié** |
-| Accès      | API officielle, avec clé                                        |
-| Vérifié le | **Pas encore vérifié**                                          |
+| Élément          | Valeur                                                         |
+| ---------------- | -------------------------------------------------------------- |
+| Statut           | `SEARCH_ENGINE_DISCOVERY_ONLY`                                 |
+| Accès            | `GET https://api.search.brave.com/res/v1/web/search`, avec clé |
+| Authentification | En-tête `X-Subscription-Token`, clé serveur                    |
+| Plan             | Free : 5 $ de crédits/mois, carte exigée mais non débitée      |
+| Cadence          | 1 requête/seconde                                              |
+| **Conservation** | **Interdite. Résultats transitoires uniquement.**              |
+| Vérifié le       | 2026-07-17 (CGU lues, API testée avec la clé)                  |
 
-Choisi le 2026-07-17. **Ses conditions d'utilisation n'ont pas encore été lues** : la ligne reste
-donc incomplète, et aucun connecteur ne sera écrit avant qu'elle le soit. Deux points à établir
-précisément, parce qu'ils touchent au cœur de l'usage envisagé : ce que Brave autorise à **conserver**
-de ses résultats, et ce qu'il autorise à en faire.
+La contrainte porteuse est la conservation. Les CGU disent :
 
-Le régime, lui, est déjà tranché et ne dépend pas de cette lecture : `SEARCH_ENGINE_DISCOVERY_ONLY`.
-Le moteur **signale** qu'une offre existe ; Findit remonte ensuite à la source officielle pour la
-collecter, sous le régime du registre dynamique ci-dessus. **Un résultat de moteur ne suffit jamais à
-publier une offre.** C'est ce qui garde LinkedIn, Indeed et Glassdoor hors de portée : leurs pages
-peuvent apparaître dans des résultats, elles ne seront pas récupérées pour autant.
+> « store, cache, or create a database of Search Results, in whole or in part, other than transient
+> storage required for operation »
+
+**Les résultats de Brave ne sont jamais écrits en base.** Ils vivent en mémoire le temps d'en extraire
+une URL, puis sont jetés. Cela tombe exactement sur le régime déjà retenu,
+`SEARCH_ENGINE_DISCOVERY_ONLY` : le moteur **signale** qu'une offre existe, Findit remonte à la source
+officielle pour la collecter — et c'est cette offre-là, venue de la source, qui est stockée, pas le
+résultat de Brave.
+
+Conséquence sur le modèle de données : la table `WebSearchResult` prévue au §26 de l'extension **ne
+doit pas contenir les résultats de Brave**. Elle ne peut porter que ce qui est à nous — le texte de la
+requête, un décompte, un horodatage — jamais les titres, extraits ou classements rendus par Brave.
+
+Les CGU rappellent aussi que Brave n'accorde aucun droit sur les pages tierces : « Customers who
+access URLs displayed in the Brave Search API must ensure their access to those webpages complies with
+the copyright terms of the page publishers. » C'est précisément ce que le lecteur de `robots.txt`
+vérifie avant toute collecte d'une page découverte.
+
+**Un résultat de moteur ne suffit jamais à publier une offre.** C'est ce qui garde LinkedIn, Indeed,
+Glassdoor et Welcome to the Jungle hors de portée : le test réel du 2026-07-17 montre qu'une requête
+naïve les remonte en tête — ils peuvent apparaître dans les résultats, mais ne seront pas récupérés
+pour autant. Les requêtes utiles visent les sites carrières et les ATS ouverts (`site:`,
+`inurl:careers`), pas les agrégateurs fermés.
 
 ## Démarche pour ouvrir une source
 
