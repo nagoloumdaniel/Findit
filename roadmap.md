@@ -31,6 +31,24 @@
 
 - [ ] Connecteurs ATS prioritaires et registre de conformité
 
+Le registre est écrit et vérifié : voir [docs/legal-compliance.md](docs/legal-compliance.md). Il décide de ce qui a le droit de tourner.
+
+Ce que la vérification du 2026-07-17 a établi :
+
+- **Greenhouse** et **Lever** sont les deux seules sources activables aujourd'hui, en `PUBLIC_FEED`.
+- **Lever impose `Crawl-delay: 1`**. Le connecteur doit attendre une seconde entre deux requêtes, même si le débit en souffre. C'est une contrainte de la source, pas un réglage.
+- **Ashby** répond `200` en JSON sans authentification, mais son `robots.txt` renvoie `Unauthorized`. Une réponse `200` n'est pas une permission : il reste désactivé.
+- SmartRecruiters, Teamtailor, Recruitee et Workday n'ont **pas encore été vérifiés**. Ne pas les supposer ouverts.
+- LinkedIn, Indeed, Glassdoor et Welcome to the Jungle restent désactivés faute d'accès autorisé.
+
+Reste à faire :
+
+- [ ] Interface `JobSourceConnector` dans `packages/job-connectors`
+- [ ] Garde-fou refusant d'exécuter un connecteur dont le `SourceAccessStatus` ne l'autorise pas, pour que la règle soit structurelle et non déclarative
+- [ ] Connecteur Greenhouse, vérifié contre l'API réelle
+- [ ] Connecteur Lever, avec son délai d'une seconde, vérifié contre l'API réelle
+- [ ] Alimentation des tables `Connector`, `ConnectorRun` et `ConnectorError`
+
 ## Phase 4 — Qualité des offres
 
 - [ ] Normalisation, validation, classification, détection d'écoles et déduplication
