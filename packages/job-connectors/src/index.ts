@@ -76,4 +76,7 @@ export type {
 export { collectDiscoveries, recognizeTarget } from "./discovery.js";
 export type { DiscoveredTarget, DiscoveryOutcome } from "./discovery.js";
 
+export { listCollectableSources, registerDiscoveredSource } from "./discovered-sources.js";
+export type { CollectableSource, DiscoveredSource } from "./discovered-sources.js";
+
 export { buildDiscoveryQueries } from "./discovery-queries.js";

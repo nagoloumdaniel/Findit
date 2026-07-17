@@ -26,7 +26,8 @@ describe("recognizeTarget", () => {
     expect(target).toMatchObject({
       kind: "known",
       connectorName: "greenhouse",
-      target: { atsIdentifier: "ivalua", companyName: "Alternance" },
+      // Le nom d'affichage n'est pas fiable au titre : on garde le jeton ATS.
+      target: { atsIdentifier: "ivalua", companyName: "ivalua" },
     });
   });
 

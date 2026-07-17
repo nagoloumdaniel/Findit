@@ -71,12 +71,18 @@ export const recognizeTarget = (result: WebSearchResult): DiscoveredTarget | nul
     return null;
   }
 
-  const companyName = result.title.split(/[-–—|]/u)[0]?.trim() ?? token;
+  /*
+   * L'identifiant d'entreprise est le jeton de l'ATS — « ivalua », « mirakllabs ».
+   * Le nom d'affichage, lui, n'est pas fiable à ce stade : le titre du résultat
+   * commence souvent par « Alternance » ou le métier, pas par l'entreprise. On
+   * s'en tient donc au jeton, quitte à l'améliorer plus tard depuis la collecte.
+   */
+  const atsIdentifier = decodeURIComponent(token);
 
   return {
     kind: "known",
     connectorName,
-    target: { atsIdentifier: decodeURIComponent(token), companyName: companyName || token },
+    target: { atsIdentifier, companyName: atsIdentifier },
     sourceUrl: result.url,
   };
 };
