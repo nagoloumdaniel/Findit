@@ -54,6 +54,19 @@ Ce que la vérification du 2026-07-17 a établi :
 - SmartRecruiters, Teamtailor, Recruitee et Workday n'ont **pas encore été vérifiés**. Ne pas les supposer ouverts.
 - LinkedIn, Indeed, Glassdoor et Welcome to the Jungle restent désactivés faute d'accès autorisé.
 
+Ce que la vérification du 2026-07-17 a établi en plus, en cherchant un gisement d'alternances dev :
+
+- **Workable est activable** : `Disallow:` vide, et un content signal qui **accorde `ai-input`** — le
+  premier à le faire. Son API `jobs.workable.com/api/v1/jobs` cherche à travers tout le réseau et rend
+  une localisation structurée portant « Île-de-France ».
+- **SmartRecruiters est fermé** : son `robots.txt` n'ouvre `/v1/companies/` qu'à `LinkedInBot` et
+  interdit tout le reste à `User-agent: *`. L'API répondrait `200`, mais se faire passer pour LinkedIn
+  tomberait sous l'interdiction de falsifier le user-agent.
+- **Le gisement d'alternances dev n'existe pas sur ces ATS.** Mesuré sur 462 offres réelles de six
+  boards Greenhouse et Lever, puis sur la recherche Workable : zéro offre ayant à la fois un contrat du
+  périmètre et un métier de développement. Voir
+  [packages/job-classification](packages/job-classification/README.md).
+
 Fait, et vérifié contre les API réelles :
 
 - [x] Interface `JobSourceConnector` dans `packages/job-connectors`

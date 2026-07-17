@@ -104,7 +104,49 @@ Les bots d'IA nommément désignés — `GPTBot`, `ClaudeBot`, `CCBot`, `Google-
 
 L'API répond `200` en JSON sans authentification, mais l'absence de `robots.txt` lisible ne vaut pas autorisation. Tant que les conditions d'utilisation n'ont pas été lues et que la position de l'éditeur n'est pas établie, le connecteur reste désactivé. Une réponse `200` n'est pas une permission.
 
-### SmartRecruiters, Teamtailor, Recruitee, Workday
+### SmartRecruiters
+
+| Élément               | Valeur                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Statut                | `DISABLED_PENDING_PERMISSION`                                                                 |
+| Accès envisagé        | `GET https://api.smartrecruiters.com/v1/companies/{id}/postings`                              |
+| `robots.txt` (`api.`) | **`User-agent: LinkedInBot` → `Allow: /v1/companies/`, puis `User-agent: *` → `Disallow: /`** |
+| `robots.txt` (`www.`) | `User-agent: *`, aucun `Disallow: /`, mais 73 entreprises nommément interdites                |
+| Vérifié le            | 2026-07-17                                                                                    |
+
+**L'API n'est ouverte qu'à LinkedIn.** `FinditBot` relève de `User-agent: *`, et ce groupe interdit
+tout le chemin. L'API répondrait `200` sans authentification — mais une réponse n'est pas une
+permission, et se faire passer pour `LinkedInBot` tomberait sous l'interdiction absolue de falsifier
+le user-agent. Le connecteur reste désactivé.
+
+Les pages carrières publiques de `www.smartrecruiters.com` sont, elles, permises — sauf pour les 73
+entreprises que le fichier nomme. Cette voie reste ouverte si elle est un jour empruntée : elle
+imposerait de relire ce `robots.txt` à chaque collecte, la liste des interdits étant propre à chaque
+entreprise.
+
+### Workable
+
+| Élément                 | Valeur                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| Statut                  | `PUBLIC_FEED` — **activable**                                                                         |
+| Accès                   | `GET https://jobs.workable.com/api/v1/jobs?query=…&location=…`                                        |
+| Authentification        | Aucune                                                                                                |
+| `robots.txt` (`apply.`) | `User-agent: *`, **`Disallow:` vide — rien n'est interdit**                                           |
+| `robots.txt` (`jobs.`)  | `User-agent: *`, `Allow: /search/*`, interdits sur `/search…` et `/profile*` ; `/api/` n'est pas visé |
+| Content signal          | **`search=yes, ai-input=yes, ai-train=no`**                                                           |
+| Limite annoncée         | Aucun `Crawl-delay`                                                                                   |
+| Cadence à appliquer     | 1 requête/seconde, par prudence                                                                       |
+| Vérifié le              | 2026-07-17                                                                                            |
+
+Workable est la première source à **accorder explicitement `ai-input`**. Envoyer une de ses offres à
+un modèle pour l'analyser est donc permis, ce que Lever ne dit ni ne refuse. `ai-train=no` reste
+identique à Lever : aucune offre Workable ne doit servir à entraîner un modèle.
+
+L'API `jobs.workable.com/api/v1/jobs` cherche à travers tout le réseau Workable, pas une entreprise à
+la fois, et rend une localisation **structurée** — `{ city, subregion, countryName }`, où `subregion`
+vaut « Île-de-France ». Aucun des autres ATS vérifiés ne donne cette information.
+
+### Teamtailor, Recruitee, Workday
 
 | Élément    | Valeur                        |
 | ---------- | ----------------------------- |
