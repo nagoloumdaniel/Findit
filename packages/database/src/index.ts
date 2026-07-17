@@ -1,8 +1,12 @@
 export { createPrismaClient } from "./client.js";
 export { PrismaClient, Prisma } from "./generated/prisma/client.js";
 export {
+  AtsKind,
+  ConnectorRunStatus,
+  ConnectorStatus,
   ContractType,
   RoleCategory,
+  SourceAccessStatus,
   WorkMode,
   SalaryPeriod,
   JobStatus,

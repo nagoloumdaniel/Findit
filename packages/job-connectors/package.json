@@ -1,0 +1,27 @@
+{
+  "name": "@findit/job-connectors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src sync-registry.ts --max-warnings=0",
+    "registry:sync": "tsx sync-registry.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@findit/config": "workspace:*",
+    "@findit/database": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "tsx": "4.23.1"
+  }
+}
