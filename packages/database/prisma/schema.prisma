@@ -656,6 +656,7 @@ model ProcessingLog {
 enum ResumeFileType {
   PDF
   DOCX
+  TXT
 }
 
 enum ResumeStatus {
@@ -919,4 +920,26 @@ model CandidateProfile {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// CV source du propriétaire, importé dans l'espace privé. À la différence de
+/// `Resume` — dépôt public anonyme et éphémère — celui-ci est durable et privé.
+///
+/// Le texte extrait est conservé ; le fichier d'origine ne l'est pas encore, ce
+/// qui suffit pour lire et analyser, pas pour ré-exporter l'original. La
+/// déduplication par empreinte évite de stocker deux fois le même import.
+model SourceResume {
+  id String @id @default(uuid(7))
+
+  fileType         ResumeFileType
+  originalFileName String
+  fileSize         Int
+  contentHash      String @unique
+
+  extractedText String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }

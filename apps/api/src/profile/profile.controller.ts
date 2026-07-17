@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Inject,
   NotFoundException,
   Patch,
   Put,
@@ -23,7 +24,7 @@ import type { CandidateProfileView } from "./profile.service.js";
 @Controller("api/profile")
 @UseGuards(WorkspaceGuard)
 export class ProfileController {
-  constructor(private readonly profile: ProfileService) {}
+  constructor(@Inject(ProfileService) private readonly profile: ProfileService) {}
 
   @Get()
   async get(): Promise<CandidateProfileView> {
