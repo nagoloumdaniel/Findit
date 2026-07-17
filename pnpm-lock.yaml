@@ -209,6 +209,18 @@ importers:
         specifier: 8.0.1
         version: 8.0.1
 
+  packages/job-pipeline:
+    dependencies:
+      '@findit/job-classification':
+        specifier: workspace:*
+        version: link:../job-classification
+      '@findit/job-normalization':
+        specifier: workspace:*
+        version: link:../job-normalization
+      '@findit/shared':
+        specifier: workspace:*
+        version: link:../shared
+
   packages/shared: {}
 
   packages/ui:
