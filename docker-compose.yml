@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:18.4-alpine
+    # Même PostgreSQL 18.4 que l'image officielle, avec l'extension pgvector
+    # nécessaire à la similarité sémantique des étapes suivantes.
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-findit}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-findit-local-only}

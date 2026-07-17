@@ -9,3 +9,213 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+/// Seuls ces deux contrats sont dans le périmètre.
+enum ContractType {
+  ALTERNANCE
+  INTERNSHIP
+}
+
+/// Seuls ces métiers sont dans le périmètre.
+enum RoleCategory {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+  MOBILE
+  DATA_ANALYST
+  DATA_ENGINEER
+}
+
+enum WorkMode {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+enum SalaryPeriod {
+  HOUR
+  MONTH
+  YEAR
+}
+
+/// États du pipeline. Seul PUBLISHED est visible publiquement.
+enum JobStatus {
+  DISCOVERED
+  FETCHED
+  NORMALIZED
+  VALIDATED
+  QUARANTINED
+  REJECTED
+  DUPLICATE
+  PUBLISHED
+  EXPIRED
+  SOURCE_UNAVAILABLE
+}
+
+enum SkillKind {
+  PROGRAMMING_LANGUAGE
+  FRAMEWORK
+  DATABASE
+  CLOUD_TOOL
+  DEV_TOOL
+  SOFT_SKILL
+  LANGUAGE
+}
+
+/// Distingue une compétence exigée d'une compétence souhaitée, car le score
+/// CV/offre les pondère différemment.
+enum SkillRequirement {
+  REQUIRED
+  PREFERRED
+}
+
+model Company {
+  id   String @id @default(uuid(7))
+  slug String @unique
+
+  name String
+  /// Nom réduit à une forme comparable, utilisé pour rapprocher les doublons.
+  normalizedName String
+
+  website    String?
+  careerUrl  String?
+  logoUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs Job[]
+
+  @@index([normalizedName])
+}
+
+model Job {
+  id   String @id @default(uuid(7))
+  slug String @unique
+
+  title String
+  /// Titre débarrassé des mentions H/F, du type de contrat et des codes
+  /// internes, afin de comparer deux publications de la même offre.
+  normalizedTitle String
+  roleCategory    RoleCategory
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  description      String
+  responsibilities String[]
+  requirements     String[]
+  benefits         String[]
+
+  contractType ContractType
+  workMode     WorkMode
+
+  city String
+  /// Restreint aux départements d'Île-de-France par une contrainte de contrôle.
+  departmentCode String
+  postalCode     String?
+  latitude       Float?
+  longitude      Float?
+
+  salaryMin    Int?
+  salaryMax    Int?
+  salaryPeriod SalaryPeriod?
+  salaryText   String?
+
+  studyLevel String?
+  startDate  DateTime?
+  duration   String?
+
+  /// Date de publication réelle à la source. Jamais renseignée avec la date de
+  /// découverte : une offre sans date fiable ne peut pas être publiée.
+  publishedAt DateTime
+  /// Premier passage du collecteur sur cette offre.
+  firstSeenAt DateTime
+  /// Dernier passage ayant confirmé que l'offre est toujours en ligne.
+  lastSeenAt  DateTime
+  updatedAt   DateTime @updatedAt
+  /// publishedAt + 72 h. Stocké pour que l'expiration soit indexable.
+  expiresAt   DateTime
+
+  canonicalUrl String
+  applyUrl     String?
+
+  externalId    String?
+  requisitionId String?
+
+  duplicateGroupId    String?
+  duplicateConfidence Float?
+
+  schoolRiskScore   Int
+  schoolRiskReasons String[]
+  fraudRiskScore    Int
+  fraudRiskReasons  String[]
+  dataQualityScore  Int
+  confidenceScore   Int
+
+  status JobStatus
+
+  sources JobSource[]
+  skills  JobSkill[]
+
+  /// Une même source ne peut pas décrire deux fois la même offre.
+  @@unique([companyId, externalId])
+  /// Sert la liste publique : offres publiées, triées par date de publication.
+  @@index([status, publishedAt])
+  /// Sert les filtres de la liste.
+  @@index([status, roleCategory, publishedAt])
+  @@index([status, departmentCode, publishedAt])
+  @@index([status, contractType, publishedAt])
+  /// Sert le travail d'expiration.
+  @@index([status, expiresAt])
+  @@index([duplicateGroupId])
+  @@index([normalizedTitle])
+}
+
+/// Chaque endroit où une offre a été vue. La fusion des doublons conserve tous
+/// les liens : aucun n'est perdu au profit de la source retenue.
+model JobSource {
+  id String @id @default(uuid(7))
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  name String
+  url  String
+  /// Rang de confiance de la source. Le plus élevé devient la source canonique.
+  priority Int
+  /// Dernière vérification que ce lien répond toujours.
+  checkedAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, url])
+  @@index([jobId, priority])
+}
+
+model Skill {
+  id   String @id @default(uuid(7))
+  slug String @unique
+
+  name String
+  kind SkillKind
+
+  createdAt DateTime @default(now())
+
+  jobs JobSkill[]
+
+  @@index([kind])
+}
+
+model JobSkill {
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  skillId String
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Restrict)
+
+  requirement SkillRequirement
+
+  @@id([jobId, skillId])
+  @@index([skillId])
+}
