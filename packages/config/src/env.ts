@@ -21,6 +21,18 @@ export const apiEnvSchema = z.object({
 export const workerEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   REDIS_URL: url,
+  DATABASE_URL: url,
+  /*
+   * La recherche web est facultative : sans clé, le worker collecte quand même
+   * les entreprises déjà connues du registre, il ne découvre simplement rien de
+   * nouveau. La clé reste côté serveur — jamais dans le navigateur ni un log.
+   */
+  BRAVE_SEARCH_API_KEY: z.string().min(1).optional(),
+  /// Cron de la collecte. Toutes les 4 heures par défaut, heure de Paris.
+  JOB_COLLECTION_CRON: z.string().min(1).default("0 */4 * * *"),
+  JOB_COLLECTION_TIMEZONE: z.string().min(1).default("Europe/Paris"),
+  /// Plafond de requêtes de recherche par cycle, pour borner la découverte.
+  WEB_SEARCH_MAX_QUERIES_PER_RUN: z.coerce.number().int().min(0).default(6),
 });
 
 export const webEnvSchema = z.object({

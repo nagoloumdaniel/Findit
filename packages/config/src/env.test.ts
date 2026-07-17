@@ -26,10 +26,27 @@ describe("environment parsing", () => {
   });
 
   it("parses worker and public web URLs", () => {
-    expect(parseWorkerEnv({ REDIS_URL: required.REDIS_URL }).REDIS_URL).toBe(required.REDIS_URL);
+    const worker = parseWorkerEnv({
+      REDIS_URL: required.REDIS_URL,
+      DATABASE_URL: required.DATABASE_URL,
+    });
+    expect(worker.REDIS_URL).toBe(required.REDIS_URL);
     expect(parseWebEnv({ NEXT_PUBLIC_API_URL: "http://localhost:4000" }).NEXT_PUBLIC_API_URL).toBe(
       "http://localhost:4000/",
     );
+  });
+
+  it("defaults the collection schedule and treats the Brave key as optional", () => {
+    const worker = parseWorkerEnv({
+      REDIS_URL: required.REDIS_URL,
+      DATABASE_URL: required.DATABASE_URL,
+    });
+
+    expect(worker.JOB_COLLECTION_CRON).toBe("0 */4 * * *");
+    expect(worker.JOB_COLLECTION_TIMEZONE).toBe("Europe/Paris");
+    expect(worker.WEB_SEARCH_MAX_QUERIES_PER_RUN).toBe(6);
+    // Sans clé, la découverte est neutralisée — pas une erreur de configuration.
+    expect(worker.BRAVE_SEARCH_API_KEY).toBeUndefined();
   });
 });
 

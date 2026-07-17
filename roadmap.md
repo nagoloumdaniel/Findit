@@ -143,7 +143,7 @@ Trois points restent à trancher avant d'atteindre les phases concernées :
 - **Les moteurs de recherche.** Chaque fournisseur envisagé doit passer par le registre avant d'être
   écrit.
 
-- [ ] Phase 8 — Chaîne asynchrone : planification toutes les 4 h, files, verrou, reprise, journal
+- [x] Phase 8 — Chaîne asynchrone : cron 4 h (Europe/Paris), file BullMQ, verrou de concurrence, découverte Brave, registre d'entreprises, collecte et écriture en base. Vérifié contre Redis et PostgreSQL réels.
 - [ ] Phase 9 — Telegram : nouvelles offres uniquement, jamais un message pour dire qu'il n'y a rien
 - [ ] Phase 10 — Espace privé et profil candidat
 - [ ] Phase 11 — CV source : import, extraction, structure, versions
