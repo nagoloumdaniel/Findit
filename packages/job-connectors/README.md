@@ -92,6 +92,33 @@ touché la source, et déclarer zéro serait faux.
 Le compte des offres retenues, rejetées ou mises en quarantaine reste à zéro : ces décisions
 appartiennent à la phase 4, qui n'existe pas encore.
 
+## Découverte par moteur de recherche
+
+Un moteur de recherche ne collecte pas — il **découvre**. Brave rend des `WebSearchResult`
+transitoires (jamais écrits en base : ses CGU l'interdisent), dont on extrait quelles entreprises de
+nos ATS déjà autorisés publient ce qu'on cherche.
+
+Le test réel a tranché la forme des requêtes. Une requête libre remonte les agrégateurs fermés —
+Indeed, Welcome to the Jungle — qu'on ne peut pas collecter. Une requête `site:boards.greenhouse.io`
+remonte les entreprises de cet ATS. `buildDiscoveryQueries` ne vise donc que les ATS qu'on sait lire ;
+`recognizeTarget` lit le jeton d'entreprise dans l'URL (par `URL`, pas par expression régulière, ce
+qui coupe proprement les paramètres) ; `collectDiscoveries` déduplique — `ivalua` vu dix fois est
+collecté une fois, mais toutes les URLs qui l'ont fait découvrir sont conservées comme preuve.
+
+Un domaine inconnu n'est **pas** collecté ici : il est marqué `unknown` et relève du registre
+dynamique, qui exige de lire son `robots.txt` avant toute visite (voir `decideRobots`).
+
+Ce que la preuve de bout en bout du 2026-07-17 a établi. Une requête `site:boards.greenhouse.io
+alternance développeur Paris` a découvert 12 entreprises ; leurs boards ont rendu 273 offres réelles,
+toutes passées par la classification et la localisation. **Zéro retenue.** Ce n'est pas une panne : la
+chaîne fonctionne. Brave avait indexé des alternances dev que les boards vivants n'ont plus — soit
+elles ont expiré, soit la correspondance `site:` de Brave est approximative — et ce qui reste est hors
+Île-de-France ou hors du flux par défaut. C'est le même constat que depuis le début, vérifié une fois
+de plus sur du réel : **mi-juillet, hors saison, le gisement d'alternances dev franciliennes est
+mince**, quel que soit le canal.
+
 ## État
 
-Le socle, Greenhouse, Lever et le registre en base sont en place.
+Le socle, Greenhouse, Lever, Workable, le registre, le lecteur de `robots.txt`, la recherche Brave et
+la découverte sont en place. La chaîne va de la requête à la classification. Reste à l'orchestrer dans
+le worker et à écrire les offres retenues en base.

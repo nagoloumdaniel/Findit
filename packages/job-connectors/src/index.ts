@@ -66,3 +66,8 @@ export type {
   WebSearchQuery,
   WebSearchResult,
 } from "./web-search.js";
+
+export { collectDiscoveries, recognizeTarget } from "./discovery.js";
+export type { DiscoveredTarget, DiscoveryOutcome } from "./discovery.js";
+
+export { buildDiscoveryQueries } from "./discovery-queries.js";

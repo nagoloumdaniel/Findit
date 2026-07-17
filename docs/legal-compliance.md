@@ -206,15 +206,15 @@ Ce que le registre dynamique ne permet toujours pas :
 
 ### Brave Search
 
-| Élément          | Valeur                                                         |
-| ---------------- | -------------------------------------------------------------- |
-| Statut           | `SEARCH_ENGINE_DISCOVERY_ONLY`                                 |
-| Accès            | `GET https://api.search.brave.com/res/v1/web/search`, avec clé |
-| Authentification | En-tête `X-Subscription-Token`, clé serveur                    |
-| Plan             | Free : 5 $ de crédits/mois, carte exigée mais non débitée      |
-| Cadence          | 1 requête/seconde                                              |
-| **Conservation** | **Interdite. Résultats transitoires uniquement.**              |
-| Vérifié le       | 2026-07-17 (CGU lues, API testée avec la clé)                  |
+| Élément           | Valeur                                                               |
+| ----------------- | -------------------------------------------------------------------- |
+| Statut            | `SEARCH_ENGINE_DISCOVERY_ONLY`                                       |
+| Accès             | `GET https://api.search.brave.com/res/v1/web/search`, avec clé       |
+| Authentification  | En-tête `X-Subscription-Token`, clé serveur                          |
+| Plan              | Free : 50 requêtes/seconde, illimité par mois, carte non débitée     |
+| Cadence appliquée | 1 requête/seconde (le plafond de 50/s est un maximum, pas une cible) |
+| **Conservation**  | **Interdite. Résultats transitoires uniquement.**                    |
+| Vérifié le        | 2026-07-17 (CGU lues, API testée avec la clé)                        |
 
 La contrainte porteuse est la conservation. Les CGU disent :
 
