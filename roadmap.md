@@ -88,7 +88,7 @@ Ce que la construction a établi en plus :
 
 ## Phase 4 — Qualité des offres
 
-- [ ] Normalisation, validation, classification, détection d'écoles et déduplication
+- [x] Normalisation, validation, classification, détection d'écoles et déduplication
 
 Ce que le modèle de données a déjà tranché, et qui commande le découpage :
 
@@ -108,8 +108,8 @@ Découpage :
 - [ ] Extraction des sections : responsabilités, prérequis, avantages
 - [ ] Normalisation de la localisation : ville et département, périmètre Île-de-France
 - [ ] Classification : contrat et métier, avec confiance et raisons citées
-- [ ] Détection d'écoles et d'organismes de formation
-- [ ] Déduplication et conservation de toutes les sources
+- [x] Détection d'écoles et d'organismes de formation
+- [x] Déduplication et conservation de toutes les sources
 - [ ] Écriture en base : `Job`, décisions, `ProcessingLog`, et compteurs de `ConnectorRun`
 
 ## Phase 5 — CV et correspondance
