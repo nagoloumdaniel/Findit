@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --hostname 0.0.0.0 --port 3000",
+    "build": "node run-next.mjs build",
+    "dev": "node run-next.mjs dev",
     "lint": "eslint src --max-warnings=0",
-    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "start": "node run-next.mjs start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

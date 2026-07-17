@@ -64,19 +64,20 @@ Les cas de rejet prévus par la spécification — un CDI, un poste DevOps, une 
 
 Toutes les variables sont documentées dans `.env.example`. Elles sont validées par Zod au démarrage : une valeur requise absente ou invalide arrête le processus concerné avec une erreur explicite. Le fichier `.env` local n'est jamais commité.
 
-| Variable                                                                                       | Utilisée par   | Rôle                                                     |
-| ---------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------- |
-| `NODE_ENV`                                                                                     | api, worker    | Mode d'exécution                                         |
-| `API_PORT`                                                                                     | api            | Port d'écoute de l'API                                   |
-| `DATABASE_URL`                                                                                 | api, database  | Connexion PostgreSQL                                     |
-| `REDIS_URL`                                                                                    | api, worker    | Connexion Redis et BullMQ                                |
-| `CORS_ORIGIN`                                                                                  | api            | Origine autorisée                                        |
-| `INTERNAL_API_KEY`                                                                             | api            | Clé des futurs endpoints internes, 32 caractères minimum |
-| `RESUME_RETENTION_HOURS`                                                                       | api            | Durée de conservation prévue d'un CV, de 1 à 168         |
-| `NEXT_PUBLIC_API_URL`                                                                          | web            | URL publique de l'API                                    |
-| `AI_PROVIDER`, `OPENAI_API_KEY`                                                                | api            | Fournisseur IA, désactivé par défaut                     |
-| `SEARCH_API_PROVIDER`, `SEARCH_API_KEY`                                                        | api            | Moteur de découverte, désactivé par défaut               |
-| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `REDIS_PORT`, `WEB_PORT` | docker compose | Services locaux                                          |
+| Variable                                                                           | Utilisée par   | Rôle                                                     |
+| ---------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------- |
+| `NODE_ENV`                                                                         | api, worker    | Mode d'exécution                                         |
+| `API_PORT`                                                                         | api            | Port d'écoute de l'API                                   |
+| `DATABASE_URL`                                                                     | api, database  | Connexion PostgreSQL                                     |
+| `REDIS_URL`                                                                        | api, worker    | Connexion Redis et BullMQ                                |
+| `CORS_ORIGIN`                                                                      | api            | Origine autorisée ; doit suivre `WEB_PORT`               |
+| `INTERNAL_API_KEY`                                                                 | api            | Clé des futurs endpoints internes, 32 caractères minimum |
+| `RESUME_RETENTION_HOURS`                                                           | api            | Durée de conservation prévue d'un CV, de 1 à 168         |
+| `NEXT_PUBLIC_API_URL`                                                              | web            | URL publique de l'API                                    |
+| `AI_PROVIDER`, `OPENAI_API_KEY`                                                    | api            | Fournisseur IA, désactivé par défaut                     |
+| `SEARCH_API_PROVIDER`, `SEARCH_API_KEY`                                            | api            | Moteur de découverte, désactivé par défaut               |
+| `WEB_PORT`                                                                         | web            | Port d'écoute du site, 3100 par défaut                   |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `REDIS_PORT` | docker compose | Services locaux                                          |
 
 Les valeurs de `.env.example` sont locales et non secrètes. `INTERNAL_API_KEY` et `POSTGRES_PASSWORD` doivent être remplacées hors développement local.
 
@@ -86,7 +87,7 @@ Les valeurs de `.env.example` sont locales et non secrètes. `INTERNAL_API_KEY` 
 pnpm dev
 ```
 
-- Web : `http://localhost:3000`
+- Web : `http://localhost:3100`, ou le port de `WEB_PORT`
 - Santé API : `http://localhost:4000/health`
 
 ## Qualité
