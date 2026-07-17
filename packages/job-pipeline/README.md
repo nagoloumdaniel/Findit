@@ -52,7 +52,34 @@ Passé sur 293 offres réelles collectées via la découverte Brave chez cinq en
 retenue — le gisement d'alternances dev franciliennes est mince à cette date, ce que chaque étape de la
 chaîne a confirmé tour à tour.
 
+## L'écriture ferme la boucle, sans rien perdre
+
+`persistDecision` écrit ce que la décision a établi. Une offre retenue ou en quarantaine devient une
+ligne `Job` avec sa source ; une offre rejetée n'a pas de ligne `Job` — le modèle l'interdit — mais
+laisse une trace dans `ProcessingLog`, le seul endroit prévu pour une offre écartée.
+
+Deux propriétés tenues, vérifiées contre la vraie base :
+
+- **Idempotence.** L'unicité `(entreprise, identifiant de source)` fait qu'une même offre recollectée
+  met à jour sa ligne au lieu d'en créer une seconde. `firstSeenAt` n'est écrit qu'à la création,
+  `lastSeenAt` suit chaque passage. Toutes les sources d'une offre sont conservées.
+- **Honnêteté du score d'école.** La détection d'écoles n'est pas faite, donc `schoolRiskScore` reste
+  à 0 **avec une raison qui le dit** : elle devra tourner avant d'ingérer une page carrière découverte,
+  où le risque d'école est réel. Sur un ATS d'employeur, il est faible.
+
+La réconciliation fine des variantes de nom d'entreprise relève de `CompanyAlias`, pas d'ici : le slug
+du nom suffit à retomber sur la même entreprise d'une collecte à l'autre.
+
+## Vérification de l'écriture
+
+Une offre dev fraîche à Paris, fabriquée pour le test et clairement marquée, a parcouru toute la chaîne
+contre la base réelle : décidée `ACCEPTED`, écrite en `Job` `PUBLISHED`, ses sections extraites, sa
+source enregistrée. Elle **apparaîtrait dans le flux public** (filtre 24 h / alternance / dev).
+Recollectée, elle a mis à jour sa ligne sans doublon. Une offre hors périmètre a laissé un rejet dans
+`ProcessingLog` sans ligne `Job`. Tout a été supprimé après coup : la base est revenue à ses six offres
+de démonstration.
+
 ## État
 
-Le décideur d'ingestion est fait. L'écriture en base — `Job`, `JobSource`, `ProcessingLog`, compteurs
-de `ConnectorRun` — et l'orchestration dans le worker suivent.
+Le décideur d'ingestion et l'écriture en base sont faits. Reste à orchestrer la chaîne dans le worker
+— cron toutes les 4 h, file, verrou — et à tenir les compteurs de `ConnectorRun` au fil des décisions.

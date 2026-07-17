@@ -211,6 +211,9 @@ importers:
 
   packages/job-pipeline:
     dependencies:
+      '@findit/database':
+        specifier: workspace:*
+        version: link:../database
       '@findit/job-classification':
         specifier: workspace:*
         version: link:../job-classification
