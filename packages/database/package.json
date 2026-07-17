@@ -10,12 +10,12 @@
     }
   },
   "scripts": {
-    "build": "pnpm prisma:generate && tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src prisma.config.ts --max-warnings=0",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
-    "test": "pnpm prisma:generate && vitest run",
-    "typecheck": "pnpm prisma:generate && tsc --noEmit"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.8.0",

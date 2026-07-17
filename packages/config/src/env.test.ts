@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseApiEnv, parseWebEnv, parseWorkerEnv } from "./env.js";
+import { parseApiEnv, parseDatabaseEnv, parseWebEnv, parseWorkerEnv } from "./env.js";
 
 const required = {
   DATABASE_URL: "postgresql://findit:findit@localhost:5432/findit",
@@ -30,5 +30,25 @@ describe("environment parsing", () => {
     expect(parseWebEnv({ NEXT_PUBLIC_API_URL: "http://localhost:4000" }).NEXT_PUBLIC_API_URL).toBe(
       "http://localhost:4000/",
     );
+  });
+});
+
+describe("parseDatabaseEnv", () => {
+  it("needs the database URL alone", () => {
+    expect(parseDatabaseEnv({ DATABASE_URL: required.DATABASE_URL }).DATABASE_URL).toBe(
+      required.DATABASE_URL,
+    );
+  });
+
+  it("ignores settings that have nothing to do with the database", () => {
+    expect(() => parseDatabaseEnv({ DATABASE_URL: required.DATABASE_URL })).not.toThrow();
+    expect(() =>
+      parseDatabaseEnv({ DATABASE_URL: required.DATABASE_URL, INTERNAL_API_KEY: "short" }),
+    ).not.toThrow();
+  });
+
+  it("still rejects a missing or malformed database URL", () => {
+    expect(() => parseDatabaseEnv({})).toThrow();
+    expect(() => parseDatabaseEnv({ DATABASE_URL: "not-a-url" })).toThrow();
   });
 });

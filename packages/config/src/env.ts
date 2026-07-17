@@ -27,10 +27,23 @@ export const webEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: url,
 });
 
+/*
+ * Ce dont l'accès à la base a besoin, et rien d'autre. Séparé de `apiEnvSchema`
+ * pour qu'ouvrir une connexion n'exige pas la clé des endpoints internes ni
+ * l'URL Redis : un contexte qui ne touche qu'à PostgreSQL ne doit pas échouer
+ * parce qu'une variable sans rapport manque.
+ */
+export const databaseEnvSchema = z.object({
+  DATABASE_URL: url,
+});
+
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 export type WebEnv = z.infer<typeof webEnvSchema>;
+export type DatabaseEnv = z.infer<typeof databaseEnvSchema>;
 
 export const parseApiEnv = (env: NodeJS.ProcessEnv): ApiEnv => apiEnvSchema.parse(env);
 export const parseWorkerEnv = (env: NodeJS.ProcessEnv): WorkerEnv => workerEnvSchema.parse(env);
 export const parseWebEnv = (env: NodeJS.ProcessEnv): WebEnv => webEnvSchema.parse(env);
+export const parseDatabaseEnv = (env: NodeJS.ProcessEnv): DatabaseEnv =>
+  databaseEnvSchema.parse(env);
