@@ -879,3 +879,44 @@ model TelegramJobNotification {
   @@index([type, createdAt])
   @@index([jobId])
 }
+
+// ---------------------------------------------------------------------------
+// Espace privé du propriétaire
+// ---------------------------------------------------------------------------
+
+/// Profil du propriétaire de la plateforme. À la différence de `Resume`, qui
+/// est un dépôt public anonyme et éphémère, ce profil est privé et durable :
+/// il n'est accessible que derrière la clé de l'espace privé.
+///
+/// La plateforme est personnelle : ce profil n'existe qu'en un seul exemplaire.
+/// La contrainte est portée par une valeur fixe de `singleton`, unique.
+model CandidateProfile {
+  id String @id @default(uuid(7))
+
+  /// Toujours « owner ». Rend le profil unique par construction.
+  singleton String @unique @default("owner")
+
+  fullName String
+  email    String?
+  phone    String?
+  city     String?
+
+  targetRoles     String[]
+  availability    String?
+  studyProgram    String?
+  school          String?
+  workStudyRhythm String?
+
+  portfolioUrl String?
+  githubUrl    String?
+  linkedinUrl  String?
+
+  /// Langues et préférences, en JSON : leur forme évolue sans migration.
+  languages   Json @default("[]")
+  preferences Json @default("{}")
+
+  activeResumeId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
