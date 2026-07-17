@@ -64,6 +64,28 @@ Ce que la construction a établi en plus :
 
 - [ ] Normalisation, validation, classification, détection d'écoles et déduplication
 
+Ce que le modèle de données a déjà tranché, et qui commande le découpage :
+
+- **Une offre rejetée n'est pas stockable.** `Job` exige `roleCategory`, `contractType`, `city`,
+  `departmentCode` et `publishedAt` non nuls, et une contrainte de contrôle limite le département à
+  l'Île-de-France. Un CDI, un poste DevOps ou une offre lyonnaise ne peut donc pas exister en base,
+  même avec `status = REJECTED`. Le rejet a lieu **avant** qu'une ligne `Job` n'existe.
+- **La trace d'un rejet va dans `ProcessingLog`**, dont le `jobId` est facultatif. C'est le seul
+  endroit où une offre écartée laisse une trace. `JobClassificationDecision` exige un `jobId` : elle
+  ne peut donc expliquer que le sort d'une offre retenue ou mise en quarantaine.
+- La quarantaine, elle, suppose une offre complète : tous les champs obligatoires doivent être connus.
+  Une offre dont le métier est illisible est rejetée, pas mise en quarantaine.
+
+Découpage :
+
+- [ ] Normalisation du texte : HTML des sources → texte fidèle, et titre comparable
+- [ ] Extraction des sections : responsabilités, prérequis, avantages
+- [ ] Normalisation de la localisation : ville et département, périmètre Île-de-France
+- [ ] Classification : contrat et métier, avec confiance et raisons citées
+- [ ] Détection d'écoles et d'organismes de formation
+- [ ] Déduplication et conservation de toutes les sources
+- [ ] Écriture en base : `Job`, décisions, `ProcessingLog`, et compteurs de `ConnectorRun`
+
 ## Phase 5 — CV et correspondance
 
 - [ ] Import sécurisé, extraction, score explicable et suppression
