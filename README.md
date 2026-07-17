@@ -6,7 +6,7 @@ L'application ne permettra jamais de postuler directement : elle affichera les i
 
 ## État actuel
 
-Le dépôt contient uniquement l'initialisation technique. Aucune offre réelle, collecte, analyse de CV, correspondance ou génération de lettre n'est disponible aujourd'hui. La page web affiche le périmètre validé et rien d'autre : aucun compteur, aucune statistique et aucune offre simulée.
+Le dépôt contient l'initialisation technique et le modèle de données. Les tables existent mais aucune n'est alimentée : aucune offre réelle, collecte, analyse de CV, correspondance ou génération de lettre n'est disponible aujourd'hui. La page web affiche le périmètre validé et rien d'autre : aucun compteur, aucune statistique et aucune offre simulée.
 
 ## Périmètre validé
 
@@ -91,19 +91,21 @@ Le navigateur utilise le web Next.js. Le web appelle l'API NestJS et ne se conne
 
 ## Fonctionnalités
 
-| Élément                       | État       | Détail                                                |
-| ----------------------------- | ---------- | ----------------------------------------------------- |
-| Monorepo et contrôles qualité | Disponible | Installation, lint, tests, typecheck et build         |
-| PostgreSQL et Redis locaux    | Disponible | Services Docker avec healthchecks                     |
-| Configuration validée         | Disponible | Schémas Zod par runtime, échec rapide                 |
-| Santé API                     | Disponible | `GET /health`                                         |
-| Page web de périmètre         | Disponible | Périmètre validé, sans offre ni compteur              |
-| Worker BullMQ                 | Préparée   | Connexion et fermeture propre, sans processeur métier |
-| Modèle de données métier      | Absente    | Datasource Prisma seule, aucun modèle                 |
-| Recherche et filtres d'offres | Absente    | Étape distincte de la roadmap                         |
-| Collecte des sources          | Absente    | Aucun connecteur actif                                |
-| Déduplication                 | Absente    | Frontière réservée                                    |
-| CV, score et lettre           | Absente    | Aucun traitement de données personnelles actif        |
+| Élément                            | État       | Détail                                                                             |
+| ---------------------------------- | ---------- | ---------------------------------------------------------------------------------- |
+| Monorepo et contrôles qualité      | Disponible | Installation, lint, tests, typecheck et build                                      |
+| PostgreSQL et Redis locaux         | Disponible | Services Docker avec healthchecks                                                  |
+| Configuration validée              | Disponible | Schémas Zod par runtime, échec rapide                                              |
+| Santé API                          | Disponible | `GET /health`                                                                      |
+| Page web de périmètre              | Disponible | Périmètre validé, sans offre ni compteur                                           |
+| Système de couleurs et typographie | Disponible | Noir, blanc, gris et accents or ; contrastes WCAG AA vérifiés dans les deux thèmes |
+| Modèle de données métier           | Disponible | 24 tables, migrations et index ; règles métier tenues par la base                  |
+| Worker BullMQ                      | Préparée   | Connexion et fermeture propre, sans processeur métier                              |
+| Similarité sémantique              | Préparée   | Extension pgvector activée, aucune colonne d'embedding                             |
+| Recherche et filtres d'offres      | Absente    | Étape distincte de la roadmap                                                      |
+| Collecte des sources               | Absente    | Aucun connecteur actif, aucune table alimentée                                     |
+| Déduplication                      | Absente    | Tables présentes, aucun moteur                                                     |
+| CV, score et lettre                | Absente    | Tables présentes, aucun traitement de données personnelles actif                   |
 
 ## Méthode de travail
 

@@ -21,7 +21,7 @@
 
 ## Phase 1 — Modèle de données
 
-- [ ] Schéma métier, migrations et index
+- [x] Schéma métier, migrations et index
 
 ## Phase 2 — Base fonctionnelle
 
