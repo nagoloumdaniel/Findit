@@ -34,3 +34,20 @@ export const jobQuerySchema = z.object({
 });
 
 export type JobQuery = z.infer<typeof jobQuerySchema>;
+
+/// Pour les routes qui n'acceptent que la fenêtre de fraîcheur.
+export const freshnessQuerySchema = jobQuerySchema.pick({ freshness: true });
+export type FreshnessQuery = z.infer<typeof freshnessQuerySchema>;
+
+/*
+ * Un slug est composé de minuscules, de chiffres et de tirets. Le motif est
+ * strict pour qu'aucune valeur d'URL ne parte vers la base sans forme connue.
+ */
+export const jobSlugSchema = z.object({
+  slug: z
+    .string()
+    .min(1)
+    .max(140)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug invalide"),
+});
+export type JobSlug = z.infer<typeof jobSlugSchema>;

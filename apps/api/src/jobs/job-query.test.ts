@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { jobQuerySchema } from "./job-query.js";
+import { freshnessQuerySchema, jobQuerySchema, jobSlugSchema } from "./job-query.js";
 
 describe("jobQuerySchema", () => {
   it("defaults to the last 24 hours across the whole scope", () => {
@@ -52,5 +52,29 @@ describe("jobQuerySchema", () => {
   it("requires a search term long enough to be meaningful", () => {
     expect(() => jobQuerySchema.parse({ q: "a" })).toThrow();
     expect(jobQuerySchema.parse({ q: "  react  " }).q).toBe("react");
+  });
+});
+
+describe("freshnessQuerySchema", () => {
+  it("defaults to the last 24 hours and offers no wider window", () => {
+    expect(freshnessQuerySchema.parse({}).freshness).toBe("LAST_24H");
+    expect(freshnessQuerySchema.parse({ freshness: "LAST_72H" }).freshness).toBe("LAST_72H");
+    expect(() => freshnessQuerySchema.parse({ freshness: "LAST_7D" })).toThrow();
+  });
+});
+
+describe("jobSlugSchema", () => {
+  it("accepts a lowercase hyphenated slug", () => {
+    expect(jobSlugSchema.parse({ slug: "alternance-dev-front-end-75" }).slug).toBe(
+      "alternance-dev-front-end-75",
+    );
+  });
+
+  it("rejects anything that is not a plain slug", () => {
+    expect(() => jobSlugSchema.parse({ slug: "Alternance-Dev" })).toThrow();
+    expect(() => jobSlugSchema.parse({ slug: "dev/../../etc" })).toThrow();
+    expect(() => jobSlugSchema.parse({ slug: "dev job" })).toThrow();
+    expect(() => jobSlugSchema.parse({ slug: "-dev" })).toThrow();
+    expect(() => jobSlugSchema.parse({ slug: "" })).toThrow();
   });
 });
