@@ -42,8 +42,11 @@ Copy-Item .env.example .env
 pnpm install
 pnpm infra:up
 pnpm db:migrate
+pnpm registry:sync
 pnpm db:seed
 ```
+
+`pnpm registry:sync` reporte le registre de [docs/legal-compliance.md](docs/legal-compliance.md) dans la table `Connector`. C'est cette table que le garde-fou lit pour autoriser ou refuser une collecte : sans elle, aucun connecteur ne peut s'exécuter. La commande est rejouable, et doit être rejouée après toute modification du registre.
 
 `pnpm infra:up` démarre PostgreSQL et Redis. `pnpm infra:down` les arrête.
 

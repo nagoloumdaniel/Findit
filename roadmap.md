@@ -29,7 +29,7 @@
 
 ## Phase 3 — Collecte autorisée
 
-- [ ] Connecteurs ATS prioritaires et registre de conformité
+- [x] Connecteurs ATS prioritaires et registre de conformité
 
 Le registre est écrit et vérifié : voir [docs/legal-compliance.md](docs/legal-compliance.md). Il décide de ce qui a le droit de tourner.
 
@@ -41,13 +41,24 @@ Ce que la vérification du 2026-07-17 a établi :
 - SmartRecruiters, Teamtailor, Recruitee et Workday n'ont **pas encore été vérifiés**. Ne pas les supposer ouverts.
 - LinkedIn, Indeed, Glassdoor et Welcome to the Jungle restent désactivés faute d'accès autorisé.
 
-Reste à faire :
+Fait, et vérifié contre les API réelles :
 
-- [ ] Interface `JobSourceConnector` dans `packages/job-connectors`
-- [ ] Garde-fou refusant d'exécuter un connecteur dont le `SourceAccessStatus` ne l'autorise pas, pour que la règle soit structurelle et non déclarative
-- [ ] Connecteur Greenhouse, vérifié contre l'API réelle
-- [ ] Connecteur Lever, avec son délai d'une seconde, vérifié contre l'API réelle
-- [ ] Alimentation des tables `Connector`, `ConnectorRun` et `ConnectorError`
+- [x] Interface `JobSourceConnector` dans `packages/job-connectors`
+- [x] Garde-fou refusant d'exécuter un connecteur dont le `SourceAccessStatus` ne l'autorise pas, pour que la règle soit structurelle et non déclarative
+- [x] Connecteur Greenhouse, vérifié contre l'API réelle
+- [x] Connecteur Lever, avec son délai d'une seconde, vérifié contre l'API réelle
+- [x] Alimentation des tables `Connector`, `ConnectorRun` et `ConnectorError`
+
+Ce que la construction a établi en plus :
+
+- **Lever déclare `Content-Signal: search=yes,ai-train=no`.** La liste publique est couverte par
+  `search=yes`. Mais `ai-train=no` engage la phase 6 : aucune offre venant de Lever ne doit servir à
+  entraîner un modèle, ni partir chez un fournisseur qui s'autorise à entraîner sur ce qu'il reçoit.
+  `ai-input` n'est pas déclaré — analyser une offre par un modèle demandera une décision explicite.
+- Le registre est relu à chaque exécution : fermer une source en base l'arrête à la collecte suivante,
+  sans toucher au code.
+- La collecte s'arrête à la donnée brute. Rien n'est encore normalisé, classé ni dédoublonné, et
+  `ConnectorRun` laisse à zéro les compteurs qui relèvent de la phase 4.
 
 ## Phase 4 — Qualité des offres
 
