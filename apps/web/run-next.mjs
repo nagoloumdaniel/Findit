@@ -13,7 +13,22 @@ import { loadRootEnv } from "@findit/config";
  * Sans lui, WEB_PORT serait une variable que personne ne lit, et
  * NEXT_PUBLIC_API_URL manquerait au moment de la compilation.
  */
+const nodeEnvFromShell = process.env.NODE_ENV;
+
 loadRootEnv();
+
+/*
+ * Le `.env` porte `NODE_ENV=development`, ce qui convient à l'API et au worker.
+ * Mais il ne doit pas décider du mode de compilation du site : `next build` le
+ * lirait et compilerait en développement, ce qui casse le prérendu. Chaque
+ * commande de Next choisit elle-même son mode ; le terminal peut la contredire,
+ * un fichier partagé non.
+ */
+if (nodeEnvFromShell === undefined) {
+  delete process.env.NODE_ENV;
+} else {
+  process.env.NODE_ENV = nodeEnvFromShell;
+}
 
 const DEFAULT_PORT = "3100";
 
