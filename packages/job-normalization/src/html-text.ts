@@ -14,6 +14,15 @@ export interface TextBlock {
   readonly text: string;
   /** Niveau du titre, de 1 à 6. Absent pour les autres blocs. */
   readonly level?: number;
+  /**
+   * Vrai quand tout le contenu du bloc tenait dans du `<strong>` ou du `<b>`.
+   * C'est un fait porté par le balisage, pas une interprétation : beaucoup
+   * d'employeurs écrivent leurs intertitres ainsi plutôt qu'en `<h2>`. Ce que ce
+   * gras signifie est décidé ailleurs — voir `extractSections`.
+   *
+   * Absent quand le bloc n'était pas entièrement en gras.
+   */
+  readonly emphasised?: true;
 }
 
 /**
@@ -80,6 +89,29 @@ const isTextNode = (node: ChildNode): node is DefaultTreeAdapterTypes.TextNode =
 const hasChildren = (node: ChildNode): node is ChildNode & ParentNode =>
   "childNodes" in node && Array.isArray(node.childNodes);
 
+const EMPHASIS_ELEMENTS = new Set(["strong", "b"]);
+
+const isBlank = (node: ChildNode): boolean => isTextNode(node) && node.value.trim() === "";
+
+/**
+ * Tout le contenu du bloc tenait-il dans du gras ? Les blancs qui séparent deux
+ * balises ne comptent pas : ils viennent de l'indentation du HTML.
+ *
+ * « <p><strong>Missions</strong></p> » est vrai. « <p>Un <strong>expert</strong>
+ * confirmé</p> » est faux : le gras n'y souligne qu'un mot.
+ */
+const isWhollyEmphasised = (node: ChildNode): boolean => {
+  if (!hasChildren(node)) {
+    return false;
+  }
+
+  const meaningful = node.childNodes.filter((child) => !isBlank(child));
+
+  return (
+    meaningful.length > 0 && meaningful.every((child) => EMPHASIS_ELEMENTS.has(child.nodeName))
+  );
+};
+
 /**
  * Réduit les blancs à un espace unique. L'espace insécable en fait partie : il
  * est abondant dans le HTML des offres, et le laisser passer produirait des
@@ -99,7 +131,11 @@ export const htmlToBlocks = (html: string): readonly TextBlock[] => {
   const blocks: TextBlock[] = [];
   let buffer = "";
 
-  const flush = (kind: TextBlock["kind"] = "paragraph", level?: number): void => {
+  const flush = (
+    kind: TextBlock["kind"] = "paragraph",
+    level?: number,
+    emphasised = false,
+  ): void => {
     const text = collapseWhitespace(buffer);
     buffer = "";
 
@@ -107,7 +143,12 @@ export const htmlToBlocks = (html: string): readonly TextBlock[] => {
       return;
     }
 
-    blocks.push(level === undefined ? { kind, text } : { kind, text, level });
+    blocks.push({
+      kind,
+      text,
+      ...(level === undefined ? {} : { level }),
+      ...(emphasised ? { emphasised: true as const } : {}),
+    });
   };
 
   const walk = (node: ChildNode): void => {
@@ -145,7 +186,7 @@ export const htmlToBlocks = (html: string): readonly TextBlock[] => {
       const kind =
         name === "li" ? "listItem" : level === undefined ? ("paragraph" as const) : "heading";
 
-      flush(kind, level);
+      flush(kind, level, isWhollyEmphasised(node));
     }
   };
 

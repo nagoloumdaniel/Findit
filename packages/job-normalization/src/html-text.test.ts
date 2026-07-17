@@ -95,12 +95,25 @@ describe("htmlToText", () => {
     );
   });
 
-  it("does not promote a bold paragraph to a heading", () => {
-    // Cas fréquent chez Greenhouse : l'employeur écrit ses intertitres en
-    // « <p><strong> » plutôt qu'en « <h2> ». Deviner qu'il s'agit d'un titre
-    // reviendrait à inventer une structure que le balisage ne porte pas.
+  it("records that a paragraph was all bold without promoting it to a heading", () => {
+    // Cas fréquent : l'employeur écrit ses intertitres en « <p><strong> »
+    // plutôt qu'en « <h2> ». Le gras est un fait du balisage et il est noté ;
+    // en déduire un titre ici inventerait une structure que le balisage ne
+    // porte pas. C'est `extractSections` qui décide de ce que ce gras signifie.
     expect(htmlToBlocks("<p><strong>Missions</strong></p>")).toEqual([
-      { kind: "paragraph", text: "Missions" },
+      { kind: "paragraph", text: "Missions", emphasised: true },
+    ]);
+  });
+
+  it("does not call a paragraph bold when only a word inside it is", () => {
+    expect(htmlToBlocks("<p>Nous cherchons un <strong>expert</strong> confirmé.</p>")).toEqual([
+      { kind: "paragraph", text: "Nous cherchons un expert confirmé." },
+    ]);
+  });
+
+  it("sees through the whitespace the source's indentation leaves between tags", () => {
+    expect(htmlToBlocks("<p>\n  <strong>Missions</strong>\n</p>")).toEqual([
+      { kind: "paragraph", text: "Missions", emphasised: true },
     ]);
   });
 
