@@ -40,11 +40,14 @@ corepack enable
 corepack prepare pnpm@11.13.1 --activate
 Copy-Item .env.example .env
 pnpm install
+pnpm setup:hooks
 pnpm infra:up
 pnpm db:migrate
 pnpm registry:sync
 pnpm db:seed
 ```
+
+`pnpm setup:hooks` active le garde-fou anti-secret (`.githooks/pre-commit`) : il refuse tout commit qui ajoute un fichier `.env` ou contient une chaîne ressemblant à une clé d'API. Les secrets vivent dans `.env`, jamais dans un commit.
 
 `pnpm registry:sync` reporte le registre de [docs/legal-compliance.md](docs/legal-compliance.md) dans la table `Connector`. C'est cette table que le garde-fou lit pour autoriser ou refuser une collecte : sans elle, aucun connecteur ne peut s'exécuter. La commande est rejouable, et doit être rejouée après toute modification du registre.
 

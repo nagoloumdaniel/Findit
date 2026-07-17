@@ -19,7 +19,8 @@
     "infra:down": "docker compose down",
     "db:seed": "pnpm --filter @findit/database db:seed",
     "registry:sync": "pnpm --filter @findit/job-connectors registry:sync",
-    "db:migrate": "pnpm --filter @findit/database exec prisma migrate deploy"
+    "db:migrate": "pnpm --filter @findit/database exec prisma migrate deploy",
+    "setup:hooks": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

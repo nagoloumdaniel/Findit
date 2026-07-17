@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Garde-fou anti-secret. Refuse tout commit qui :
+#   1. ajoute un fichier .env (les secrets y vivent, ignorés, jamais commités) ;
+#   2. contient une chaîne ressemblant à une clé d'API ou un token.
+#
+# Posé après qu'une clé Brave a fuité dans .env.example : ce contrôle ferme ce
+# risque à la source. Il ne réimprime jamais le secret qu'il détecte.
+
+fail() {
+  echo "✖ Commit refusé par le garde-fou anti-secret." >&2
+  echo "  $1" >&2
+  echo "  Un secret vit dans .env (ignoré par git), jamais dans un commit." >&2
+  exit 1
+}
+
+# 1. Un fichier .env ajouté ou modifié — sauf .env.example, qui est un modèle.
+staged_env=$(git diff --cached --name-only | grep -E '(^|/)\.env($|\.)' | grep -vE '\.env\.example$')
+if [ -n "$staged_env" ]; then
+  fail "Un fichier .env est présent dans le commit : $(echo "$staged_env" | tr '\n' ' ')"
+fi
+
+# 2. Motifs de secrets connus dans les lignes ajoutées.
+#    Brave (BSAK…), OpenAI (sk-…), GitHub (ghp_/gho_…), token Telegram, Slack.
+patterns='BSAK[A-Za-z0-9_/+-]{16}|sk-[A-Za-z0-9]{20}|gh[pousr]_[A-Za-z0-9]{30}|[0-9]{8,10}:[A-Za-z0-9_-]{35}|xox[baprs]-[A-Za-z0-9-]{10}'
+count=$(git diff --cached --unified=0 -- . ':(exclude).githooks/**' | grep -E '^\+' | grep -vE '^\+\+\+' | grep -cE "$patterns")
+if [ "$count" -gt 0 ]; then
+  fail "$count ligne(s) ressemblent à une clé d'API ou un token."
+fi
+
+exit 0
