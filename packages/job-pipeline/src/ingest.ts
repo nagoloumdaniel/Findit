@@ -1,4 +1,4 @@
-import { classifyJob } from "@findit/job-classification";
+import { classifyJob, detectSchoolRisk } from "@findit/job-classification";
 import {
   extractSections,
   htmlToBlocks,
@@ -60,6 +60,9 @@ export interface JobDraft {
   readonly confidenceScore: number;
   /** Complétude sur 100 : combien des champs facultatifs sont réellement remplis. */
   readonly dataQualityScore: number;
+  /** Risque d'école sur 100, mesuré par la détection. */
+  readonly schoolRiskScore: number;
+  readonly schoolRiskReasons: readonly string[];
   /** `PUBLISHED` pour une offre acceptée, `QUARANTINED` pour une offre en doute. */
   readonly status: "PUBLISHED" | "QUARANTINED";
 }
@@ -170,8 +173,20 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
   const description = htmlToText(offer.descriptionHtml ?? "");
   const sections = extractSections(blocks);
 
+  // 4. École. Une école ne doit jamais paraître comme employeur : un risque
+  //    élevé écarte l'offre, un risque incertain la met en quarantaine.
+  const school = detectSchoolRisk({
+    companyName: offer.companyName,
+    title: offer.title,
+    description,
+  });
+
+  if (school.excluded) {
+    return { outcome: "REJECTED", stage: "école", reasons: school.reasons };
+  }
+
   const workModeKnown = location.workMode !== null;
-  const quarantined = classification.outcome === "QUARANTINED";
+  const quarantined = classification.outcome === "QUARANTINED" || school.riskScore >= 40;
 
   const draft: JobDraft = {
     title: offer.title,
@@ -200,12 +215,14 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
       workModeKnown,
       dateKnown: true,
     }),
+    schoolRiskScore: school.riskScore,
+    schoolRiskReasons: [...school.reasons],
     status: quarantined ? "QUARANTINED" : "PUBLISHED",
   };
 
   return {
     outcome: quarantined ? "QUARANTINED" : "ACCEPTED",
     draft,
-    reasons: classification.reasons,
+    reasons: [...classification.reasons, ...(school.riskScore >= 40 ? school.reasons : [])],
   };
 };

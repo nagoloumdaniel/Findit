@@ -122,6 +122,36 @@ describe("decideIngestion", () => {
     expect(decision.draft.roleCategory).toBe("DATA_ENGINEER");
   });
 
+  it("rejects an offer from a school, at the school stage", () => {
+    const decision = decideIngestion(
+      offer({
+        companyName: "Campus Numérique",
+        descriptionHtml:
+          "<p>Intégrez notre formation. Nous vous plaçons dans une de nos entreprises partenaires.</p>",
+      }),
+      NOW,
+    );
+
+    expect(decision).toMatchObject({ outcome: "REJECTED", stage: "école" });
+  });
+
+  it("writes the measured school risk onto an accepted offer", () => {
+    const decision = decideIngestion(offer(), NOW);
+    if (decision.outcome === "REJECTED") throw new Error("attendu accepté");
+
+    // Un employeur réel : risque nul, mais le champ est bien renseigné.
+    expect(decision.draft.schoolRiskScore).toBe(0);
+    expect(decision.draft.schoolRiskReasons.length).toBeGreaterThan(0);
+  });
+
+  it("quarantines an offer whose name alone looks like a school", () => {
+    const decision = decideIngestion(offer({ companyName: "Institut Data" }), NOW);
+
+    expect(decision.outcome).toBe("QUARANTINED");
+    if (decision.outcome === "REJECTED") throw new Error("attendu quarantaine");
+    expect(decision.draft.schoolRiskScore).toBeGreaterThanOrEqual(40);
+  });
+
   it("never decides without a reason", () => {
     for (const o of [
       offer(),

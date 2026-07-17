@@ -42,8 +42,8 @@ Deux conventions documentées plutôt qu'inventées :
   courant d'une alternance, et c'est une convention, pas un fait affirmé sur l'offre.
 - Le `dataQualityScore` est une **complétude** : la part des champs facultatifs réellement remplis.
 
-Ce qui n'est pas encore fait et n'est pas simulé : la détection d'écoles et la déduplication. Le
-brouillon ne porte donc pas de score d'école, et l'écriture en base reste à venir.
+La détection d'écoles tourne à l'ingestion : voir plus bas. La déduplication croisée reste à venir et
+n'est pas simulée.
 
 ## Vérification
 
@@ -63,9 +63,10 @@ Deux propriétés tenues, vérifiées contre la vraie base :
 - **Idempotence.** L'unicité `(entreprise, identifiant de source)` fait qu'une même offre recollectée
   met à jour sa ligne au lieu d'en créer une seconde. `firstSeenAt` n'est écrit qu'à la création,
   `lastSeenAt` suit chaque passage. Toutes les sources d'une offre sont conservées.
-- **Honnêteté du score d'école.** La détection d'écoles n'est pas faite, donc `schoolRiskScore` reste
-  à 0 **avec une raison qui le dit** : elle devra tourner avant d'ingérer une page carrière découverte,
-  où le risque d'école est réel. Sur un ATS d'employeur, il est faible.
+- **Le score d'école est mesuré.** La détection d'écoles (dans `@findit/job-classification`) tourne à
+  l'ingestion : un risque élevé écarte l'offre à l'étape « école », un risque incertain la met en
+  quarantaine, et le score réel est écrit sur la ligne `Job`. Vérifiée sur 462 offres réelles, elle
+  n'a produit aucun faux positif.
 
 La réconciliation fine des variantes de nom d'entreprise relève de `CompanyAlias`, pas d'ici : le slug
 du nom suffit à retomber sur la même entreprise d'une collecte à l'autre.

@@ -20,10 +20,6 @@ export type PersistResult =
   | { readonly kind: "created" | "updated"; readonly jobId: string; readonly status: string }
   | { readonly kind: "rejected"; readonly stage: string };
 
-/** Ce que la source réelle porte comme risque d'école : rien de mesuré ici. */
-const SCHOOL_DETECTION_NOT_RUN =
-  "Détection d'écoles non exécutée : à faire avant d'ingérer des pages carrières découvertes.";
-
 const normalizedName = (name: string): string =>
   name
     .toLowerCase()
@@ -80,8 +76,8 @@ const writeJob = async (
     publishedAt: draft.publishedAt,
     expiresAt: draft.expiresAt,
     canonicalUrl: draft.canonicalUrl,
-    schoolRiskScore: 0,
-    schoolRiskReasons: [SCHOOL_DETECTION_NOT_RUN],
+    schoolRiskScore: draft.schoolRiskScore,
+    schoolRiskReasons: [...draft.schoolRiskReasons],
     fraudRiskScore: 0,
     fraudRiskReasons: [],
     dataQualityScore: draft.dataQualityScore,

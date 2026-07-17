@@ -6,3 +6,6 @@ export type { ContractSignal } from "./contract.js";
 
 export { readRole } from "./role.js";
 export type { RoleSignal } from "./role.js";
+
+export { detectSchoolRisk } from "./school.js";
+export type { OrganisationKind, SchoolDetection, SchoolDetectionInput } from "./school.js";
