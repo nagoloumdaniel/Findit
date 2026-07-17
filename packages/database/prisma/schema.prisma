@@ -159,6 +159,12 @@ model Job {
 
   status JobStatus
 
+  /// Vrai pour une offre de démonstration produite par le script de seed. Elle
+  /// ne correspond à aucun employeur réel et l'interface doit la signaler. Le
+  /// drapeau est porté par la donnée elle-même plutôt que déduit d'un nom, afin
+  /// qu'une offre factice ne puisse jamais passer pour authentique.
+  isDemo Boolean @default(false)
+
   sources                JobSource[]
   skills                 JobSkill[]
   classificationDecision JobClassificationDecision[]

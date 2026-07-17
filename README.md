@@ -41,10 +41,21 @@ corepack prepare pnpm@11.13.1 --activate
 Copy-Item .env.example .env
 pnpm install
 pnpm infra:up
-pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
 ```
 
 `pnpm infra:up` démarre PostgreSQL et Redis. `pnpm infra:down` les arrête.
+
+## Données de démonstration
+
+`pnpm db:seed` insère quelques offres fictives afin que l'interface soit visible avant que la collecte réelle n'existe. Elles portent toutes `isDemo = true`, sont rattachées à des entreprises inventées sur le domaine `demo.invalid`, et l'interface doit les signaler : elles ne correspondent à aucun employeur réel et il ne faut pas y postuler.
+
+La commande est rejouable et ne supprime que ce qu'elle a créé. Elle ne touche jamais à une offre réelle.
+
+Le jeu comprend aussi une offre expirée et une offre en quarantaine. Elles existent en base mais ne sortent d'aucun filtre : leur présence rend ce comportement vérifiable.
+
+Les cas de rejet prévus par la spécification — un CDI, un poste DevOps, une offre sans date de publication, une offre hors Île-de-France — ne figurent pas dans le jeu de données parce qu'ils ne sont pas stockables : les enums, la contrainte `NOT NULL` sur `publishedAt` et la contrainte de contrôle sur le département les refusent à l'écriture. Ils relèvent des tests du pipeline de collecte.
 
 ## Variables d'environnement
 

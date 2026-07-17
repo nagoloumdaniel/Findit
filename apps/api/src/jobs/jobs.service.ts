@@ -7,6 +7,9 @@ import type { JobQuery } from "./job-query.js";
 
 export type JobListItem = {
   slug: string;
+  /// Vrai pour une offre de démonstration. L'interface doit la signaler : elle
+  /// ne correspond à aucun employeur réel.
+  isDemo: boolean;
   title: string;
   roleCategory: string;
   companyName: string;
@@ -127,6 +130,7 @@ export class JobsService {
     return {
       items: rows.map((row) => ({
         slug: row.slug,
+        isDemo: row.isDemo,
         title: row.title,
         roleCategory: row.roleCategory,
         companyName: row.company.name,
@@ -178,6 +182,7 @@ export class JobsService {
 
     return {
       slug: row.slug,
+      isDemo: row.isDemo,
       title: row.title,
       roleCategory: row.roleCategory,
       companyName: row.company.name,

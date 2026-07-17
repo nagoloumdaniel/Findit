@@ -16,7 +16,9 @@
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @findit/database prisma:generate",
     "infra:up": "docker compose up -d postgres redis",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "db:seed": "pnpm --filter @findit/database db:seed",
+    "db:migrate": "pnpm --filter @findit/database exec prisma migrate deploy"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
