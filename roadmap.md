@@ -10,10 +10,23 @@
 
 ## Périmètre validé
 
+Ce qui a le droit d'exister en base :
+
 - Contrats : alternance et stage.
-- Métiers : Front-end, Back-end, Full-stack, Développement mobile, Data Analyst, Data Engineer.
+- Métiers : Front-end, Back-end, Full-stack, Software Engineering, autre développement, mobile,
+  Data Analyst, Data Engineer.
 - Zone : Île-de-France.
 - Fraîcheur : 24 heures par défaut, 72 heures au maximum.
+
+Ce que le flux montre sans filtre — un réglage, pas une règle de la base :
+
+- Contrat : alternance.
+- Métiers : les cinq du développement.
+
+Stocker et montrer sont deux choses. Un stage ou un poste data est collecté, stocké et atteignable par
+un filtre ; il n'est simplement pas montré d'office. Changer d'avis est alors un réglage de
+`@findit/shared`, jamais une migration. Décidé le 2026-07-17 — voir
+[docs/premium-extension-report.md](docs/premium-extension-report.md).
 
 ## Phase 0 — Initialisation
 
@@ -97,3 +110,32 @@ Découpage :
 ## Phase 7 — Durcissement
 
 - [ ] Tests complets, sécurité, accessibilité, observabilité et documentation finale
+
+## Extension premium
+
+Demandée le 2026-07-17. Analyse et contradictions :
+[docs/premium-extension-report.md](docs/premium-extension-report.md).
+
+Findit devient aussi une plateforme personnelle. **Le flux public reste public** ; tout ce qui touche
+au profil, au CV, aux dépôts privés et aux candidatures vit derrière un espace protégé.
+
+Trois points restent à trancher avant d'atteindre les phases concernées :
+
+- **Le fournisseur IA.** `ai-train=no` de Lever interdit qu'une offre serve à entraîner un modèle : le
+  fournisseur ne doit pas s'en arroger le droit sur ce qu'il reçoit. Et `ai-input` n'étant pas
+  déclaré, envoyer une offre à un modèle demande une décision explicite, pas un silence lu comme un
+  oui.
+- **Le télétravail hors département.** `Job.departmentCode` est NOT NULL et contraint à l'Île-de-France :
+  une offre « Remote — France » n'est pas stockable en l'état.
+- **Les moteurs de recherche.** Chaque fournisseur envisagé doit passer par le registre avant d'être
+  écrit.
+
+- [ ] Phase 8 — Chaîne asynchrone : planification toutes les 4 h, files, verrou, reprise, journal
+- [ ] Phase 9 — Telegram : nouvelles offres uniquement, jamais un message pour dire qu'il n'y a rien
+- [ ] Phase 10 — Espace privé et profil candidat
+- [ ] Phase 11 — CV source : import, extraction, structure, versions
+- [ ] Phase 12 — GitHub : synchronisation, analyse par preuves, résumé nettoyé avant tout envoi IA
+- [ ] Phase 13 — Correspondance et scores : CV original, projets, CV optimisé, décision
+- [ ] Phase 14 — Génération : CV optimisé, lettre, préparation d'entretien, exports DOCX et PDF
+- [ ] Phase 15 — Candidatures : dossier, statuts, historique, rappels, rétention des offres expirées
+- [ ] Phase 16 — Recherche web : la source la plus incertaine juridiquement, donc la dernière
