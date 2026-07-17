@@ -54,3 +54,6 @@ export {
   WorkableShapeError,
   workableConnector,
 } from "./workable.js";
+
+export { decideRobots, groupFor, parseContentSignal, parseRobots } from "./robots.js";
+export type { RobotsDecision, RobotsFile, RobotsGroup, RobotsVerdict } from "./robots.js";

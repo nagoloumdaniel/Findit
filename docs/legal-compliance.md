@@ -170,6 +170,59 @@ Aucune de ces plateformes n'expose d'accès public autorisé pour cet usage. Leu
 
 En attendant, la seule voie envisageable est `SEARCH_ENGINE_DISCOVERY_ONLY` : une API de moteur de recherche autorisée peut signaler l'existence d'une offre, et Findit remonte alors à la page carrière officielle de l'entreprise pour la collecter à la source. Le résultat du moteur ne suffit jamais à publier une offre.
 
+## Le registre dynamique
+
+Décidé le 2026-07-17. **Findit a le droit de collecter un domaine qu'il découvre lui-même**, sans
+qu'il ait été inscrit à la main — mais seulement après avoir lu ce que ce domaine autorise.
+
+C'est un assouplissement réel de la règle précédente, où une source sans ligne écrite d'avance ne
+pouvait pas s'exécuter. Il n'affaiblit pas le principe, il le déplace : le contrôle passe d'une liste
+tenue à la main à une lecture faite à chaque découverte. Ce qui ne change pas : **rien ne se collecte
+sans permission constatée**.
+
+Les conditions sont cumulatives. Un domaine découvert n'est collectable que si :
+
+1. son `robots.txt` a été lu et **autorise explicitement** le chemin visé pour `FinditBot` ;
+2. le verdict est `ALLOWED`. Un `UNKNOWN` — aucun groupe ne vise `FinditBot`, pas même `*` — **n'est
+   pas un oui** : le domaine est laissé de côté ;
+3. un `robots.txt` illisible, absent ou répondant autre chose qu'un fichier vaut refus, comme pour
+   Ashby ;
+4. le `Crawl-delay` annoncé est appliqué ; à défaut, une requête par seconde ;
+5. la décision est **écrite en base** avec sa date, sa preuve et son verdict, et relue comme n'importe
+   quelle autre ligne du registre. Une source découverte n'a pas moins de traçabilité qu'une source
+   écrite à la main — elle en a autant.
+
+Le lecteur de `robots.txt` est vérifié contre les cinq fichiers réels de ce document. Le cas décisif
+est SmartRecruiters : son groupe `LinkedInBot` ne doit **jamais** s'appliquer à `FinditBot`, qui tombe
+sous le `Disallow: /` de `User-agent: *`.
+
+Ce que le registre dynamique ne permet toujours pas :
+
+- collecter une source dont le `robots.txt` interdit le chemin, même si elle répond `200` ;
+- se présenter sous un autre nom que `FinditBot` pour obtenir un groupe plus permissif ;
+- interpréter un silence comme une autorisation, ni dans `robots.txt`, ni dans un content signal.
+
+## Moteurs de recherche
+
+### Brave Search
+
+| Élément    | Valeur                                                          |
+| ---------- | --------------------------------------------------------------- |
+| Statut     | `SEARCH_ENGINE_DISCOVERY_ONLY` — **retenu, pas encore vérifié** |
+| Accès      | API officielle, avec clé                                        |
+| Vérifié le | **Pas encore vérifié**                                          |
+
+Choisi le 2026-07-17. **Ses conditions d'utilisation n'ont pas encore été lues** : la ligne reste
+donc incomplète, et aucun connecteur ne sera écrit avant qu'elle le soit. Deux points à établir
+précisément, parce qu'ils touchent au cœur de l'usage envisagé : ce que Brave autorise à **conserver**
+de ses résultats, et ce qu'il autorise à en faire.
+
+Le régime, lui, est déjà tranché et ne dépend pas de cette lecture : `SEARCH_ENGINE_DISCOVERY_ONLY`.
+Le moteur **signale** qu'une offre existe ; Findit remonte ensuite à la source officielle pour la
+collecter, sous le régime du registre dynamique ci-dessus. **Un résultat de moteur ne suffit jamais à
+publier une offre.** C'est ce qui garde LinkedIn, Indeed et Glassdoor hors de portée : leurs pages
+peuvent apparaître dans des résultats, elles ne seront pas récupérées pour autant.
+
 ## Démarche pour ouvrir une source
 
 1. Lire les conditions d'utilisation et `robots.txt`, et dater la lecture.
