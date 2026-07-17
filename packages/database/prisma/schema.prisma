@@ -184,6 +184,7 @@ model Job {
   processingLogs         ProcessingLog[]
   matches                JobMatch[]
   coverLetters           CoverLetter[]
+  telegramNotifications  TelegramJobNotification[]
 
   /// Une même source ne peut pas décrire deux fois la même offre.
   @@unique([companyId, externalId])
@@ -833,4 +834,48 @@ model PromptVersion {
 
   @@unique([name, version])
   @@index([name, active])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  NEW_JOB
+  APPLICATION_REMINDER
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  /// Envoi non effectué à dessein : mode simulation ou canal désactivé.
+  SKIPPED
+}
+
+/// Une notification pour une offre, vers un chat. La clé d'idempotence empêche
+/// de notifier deux fois la même offre — y compris quand une nouvelle source
+/// s'ajoute à une offre déjà connue.
+///
+/// Aucun secret ici : ni le token du bot, ni rien qui permette de le
+/// reconstituer. Le champ `detail` porte une éventuelle erreur, jamais le token.
+model TelegramJobNotification {
+  id String @id @default(uuid(7))
+
+  /// hash(chatId + jobId + type). Une seule notification par triplet.
+  idempotencyKey String @unique
+
+  chatId String
+  type   NotificationType
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  status NotificationStatus
+  detail String?
+
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  @@index([type, createdAt])
+  @@index([jobId])
 }

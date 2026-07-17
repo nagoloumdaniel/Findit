@@ -1,5 +1,6 @@
 import type { WorkerEnv } from "@findit/config";
 import type { PrismaClient } from "@findit/database";
+import { TelegramSender } from "@findit/notifications";
 import {
   Inject,
   Injectable,
@@ -8,6 +9,8 @@ import {
 } from "@nestjs/common";
 import type { ConnectionOptions, Queue } from "bullmq";
 import { Worker } from "bullmq";
+
+import { notifyAfterCycle } from "./notify-after-cycle.js";
 
 import {
   COLLECTION_CYCLE_JOB,
@@ -56,6 +59,8 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
         const started = new Date();
         const summary = await runCycle(createCycleDeps(this.prisma, this.env));
 
+        const notified = await this.#notify(started);
+
         // Journal structuré : une ligne par cycle, lisible et filtrable.
         console.log(
           JSON.stringify({
@@ -68,6 +73,7 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
             accepted: summary.collection.totalAccepted,
             quarantined: summary.collection.totalQuarantined,
             rejected: summary.collection.totalRejected,
+            notified,
           }),
         );
 
@@ -75,6 +81,45 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       },
       { connection: this.connection, concurrency: 1 },
     );
+  }
+
+  /**
+   * Notifie les nouvelles offres du cycle, si les deux interrupteurs sont mis
+   * et qu'un token et un chat sont fournis. Éteint par défaut : sans cela, la
+   * collecte tourne sans jamais rien envoyer.
+   */
+  async #notify(since: Date): Promise<{ sent: number; simulated: number } | "disabled"> {
+    const { TELEGRAM_NOTIFICATIONS_ENABLED, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = this.env;
+
+    if (
+      !TELEGRAM_NOTIFICATIONS_ENABLED ||
+      TELEGRAM_BOT_TOKEN === undefined ||
+      TELEGRAM_CHAT_ID === undefined
+    ) {
+      return "disabled";
+    }
+
+    const sender = new TelegramSender({
+      botToken: TELEGRAM_BOT_TOKEN,
+      chatId: TELEGRAM_CHAT_ID,
+      dryRun: this.env.TELEGRAM_DRY_RUN,
+      fetch: globalThis.fetch,
+    });
+
+    const summary = await notifyAfterCycle({
+      prisma: this.prisma,
+      sender,
+      since,
+      now: new Date(),
+      appUrl: this.env.APP_URL ?? null,
+      options: {
+        chatId: TELEGRAM_CHAT_ID,
+        maxJobsPerMessage: this.env.TELEGRAM_MAX_JOBS_PER_MESSAGE,
+        maxJobsPerRun: this.env.TELEGRAM_MAX_JOBS_PER_RUN,
+      },
+    });
+
+    return { sent: summary.sent, simulated: summary.simulated };
   }
 
   async onApplicationShutdown(): Promise<void> {

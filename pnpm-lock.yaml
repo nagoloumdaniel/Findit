@@ -133,6 +133,9 @@ importers:
       '@findit/job-pipeline':
         specifier: workspace:*
         version: link:../../packages/job-pipeline
+      '@findit/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
       '@findit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -237,6 +240,12 @@ importers:
       '@findit/shared':
         specifier: workspace:*
         version: link:../shared
+
+  packages/notifications:
+    dependencies:
+      '@findit/database':
+        specifier: workspace:*
+        version: link:../database
 
   packages/shared: {}
 

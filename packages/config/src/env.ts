@@ -4,6 +4,18 @@ const nodeEnv = z.enum(["development", "test", "production"]).default("developme
 const url = z.url().transform((value) => new URL(value).toString());
 const origin = z.url().transform((value) => new URL(value).origin);
 
+/**
+ * Booléen lu depuis une variable d'environnement, toujours une chaîne. Seul
+ * « true » vaut vrai : une valeur absente, vide ou inattendue reste fausse, ce
+ * qui fait qu'un réglage sensible — comme l'envoi Telegram — est éteint par
+ * défaut plutôt qu'allumé par accident.
+ */
+const boolFromEnv = (fallback: boolean) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined ? fallback : value.trim().toLowerCase() === "true"));
+
 export const apiEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
@@ -33,6 +45,20 @@ export const workerEnvSchema = z.object({
   JOB_COLLECTION_TIMEZONE: z.string().min(1).default("Europe/Paris"),
   /// Plafond de requêtes de recherche par cycle, pour borner la découverte.
   WEB_SEARCH_MAX_QUERIES_PER_RUN: z.coerce.number().int().min(0).default(6),
+
+  /*
+   * Telegram. Éteint par défaut, et en simulation par défaut : sans les deux
+   * interrupteurs à « true » et un token, rien n'est envoyé. Le token reste
+   * côté serveur — jamais dans le navigateur, un log ou la base.
+   */
+  TELEGRAM_NOTIFICATIONS_ENABLED: boolFromEnv(false),
+  TELEGRAM_DRY_RUN: boolFromEnv(true),
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+  TELEGRAM_MAX_JOBS_PER_MESSAGE: z.coerce.number().int().min(1).max(20).default(8),
+  TELEGRAM_MAX_JOBS_PER_RUN: z.coerce.number().int().min(1).default(30),
+  /// URL publique du site, pour les liens « Analyser sur le site ».
+  APP_URL: url.optional(),
 });
 
 export const webEnvSchema = z.object({

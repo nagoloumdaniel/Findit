@@ -16,6 +16,7 @@
     "@findit/database": "workspace:*",
     "@findit/job-connectors": "workspace:*",
     "@findit/job-pipeline": "workspace:*",
+    "@findit/notifications": "workspace:*",
     "@findit/shared": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",

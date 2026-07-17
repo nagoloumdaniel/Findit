@@ -12,6 +12,8 @@ export {
   JobStatus,
   SkillKind,
   SkillRequirement,
+  NotificationType,
+  NotificationStatus,
 } from "./generated/prisma/enums.js";
 
 /*
