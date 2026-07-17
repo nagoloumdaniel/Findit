@@ -15,6 +15,12 @@ import { z } from "zod";
  */
 export const jobQuerySchema = z.object({
   freshness: z.enum(["LAST_24H", "LAST_72H"]).default("LAST_24H"),
+  /*
+   * Sans filtre, le flux s'en tient au défaut de `@findit/shared` : les
+   * alternances des métiers du développement. `role=DATA_ANALYST` ou
+   * `contract=INTERNSHIP` restent servis — ils sont dans le périmètre, ils ne
+   * sont simplement pas montrés d'office.
+   */
   role: z.enum(JOB_ROLE_CATEGORIES).optional(),
   contract: z.enum(JOB_CONTRACTS).optional(),
   department: z.enum(ILE_DE_FRANCE_DEPARTMENTS).optional(),

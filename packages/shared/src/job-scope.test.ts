@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_CONTRACTS,
   DEFAULT_MAX_AGE_HOURS,
+  DEFAULT_ROLE_CATEGORIES,
   EXTENDED_MAX_AGE_HOURS,
   ILE_DE_FRANCE_DEPARTMENTS,
   JOB_CONTRACTS,
@@ -17,6 +19,8 @@ describe("job scope", () => {
       "FRONTEND",
       "BACKEND",
       "FULLSTACK",
+      "SOFTWARE_ENGINEERING",
+      "OTHER_DEVELOPER",
       "MOBILE",
       "DATA_ANALYST",
       "DATA_ENGINEER",
@@ -53,5 +57,38 @@ describe("publishedAfterFor", () => {
     );
 
     expect(now.getTime() - oldest).toBe(EXTENDED_MAX_AGE_HOURS * 60 * 60 * 1000);
+  });
+});
+
+describe("default flux", () => {
+  it("shows only alternance by default, without dropping the internship from the scope", () => {
+    expect(DEFAULT_CONTRACTS).toEqual(["ALTERNANCE"]);
+    expect(JOB_CONTRACTS).toContain("INTERNSHIP");
+  });
+
+  it("shows only the development roles by default", () => {
+    expect(DEFAULT_ROLE_CATEGORIES).toEqual([
+      "FRONTEND",
+      "BACKEND",
+      "FULLSTACK",
+      "SOFTWARE_ENGINEERING",
+      "OTHER_DEVELOPER",
+    ]);
+  });
+
+  it("keeps data and mobile storable, because a filter reaches them", () => {
+    for (const role of ["MOBILE", "DATA_ANALYST", "DATA_ENGINEER"] as const) {
+      expect(JOB_ROLE_CATEGORIES).toContain(role);
+      expect(DEFAULT_ROLE_CATEGORIES).not.toContain(role);
+    }
+  });
+
+  it("never defaults to something the scope does not allow", () => {
+    for (const role of DEFAULT_ROLE_CATEGORIES) {
+      expect(JOB_ROLE_CATEGORIES).toContain(role);
+    }
+    for (const contract of DEFAULT_CONTRACTS) {
+      expect(JOB_CONTRACTS).toContain(contract);
+    }
   });
 });

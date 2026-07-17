@@ -17,10 +17,20 @@ enum ContractType {
 }
 
 /// Seuls ces métiers sont dans le périmètre.
+///
+/// SOFTWARE_ENGINEERING accueille les postes clairement orientés développement
+/// que les trois premiers ne décrivent pas, et OTHER_DEVELOPER ceux dont la
+/// spécialité n'est pas tranchée. Aucun des deux n'est un fourre-tout : une
+/// offre hors développement est rejetée, pas rangée ici.
+///
+/// La data et le mobile restent stockables : le flux ne les montre pas par
+/// défaut, ce qui est un réglage de `@findit/shared` et non une règle de la base.
 enum RoleCategory {
   FRONTEND
   BACKEND
   FULLSTACK
+  SOFTWARE_ENGINEERING
+  OTHER_DEVELOPER
   MOBILE
   DATA_ANALYST
   DATA_ENGINEER

@@ -6,6 +6,8 @@ export const roleLabels: Record<string, string> = {
   FRONTEND: "Front-end",
   BACKEND: "Back-end",
   FULLSTACK: "Full-stack",
+  SOFTWARE_ENGINEERING: "Software Engineering",
+  OTHER_DEVELOPER: "Autre développement",
   MOBILE: "Mobile",
   DATA_ANALYST: "Data Analyst",
   DATA_ENGINEER: "Data Engineer",

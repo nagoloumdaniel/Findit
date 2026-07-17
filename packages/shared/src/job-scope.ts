@@ -5,11 +5,32 @@ export const JOB_ROLE_CATEGORIES = [
   "FRONTEND",
   "BACKEND",
   "FULLSTACK",
+  "SOFTWARE_ENGINEERING",
+  "OTHER_DEVELOPER",
   "MOBILE",
   "DATA_ANALYST",
   "DATA_ENGINEER",
 ] as const;
 export type JobRoleCategory = (typeof JOB_ROLE_CATEGORIES)[number];
+
+/*
+ * Ce que le flux montre quand personne n'a rien demandé.
+ *
+ * Stocker et montrer sont deux choses. Le périmètre ci-dessus dit ce qui a le
+ * droit d'exister en base ; celui-ci dit seulement ce qui s'affiche par défaut.
+ * Une offre hors de ce défaut reste collectée, stockée et atteignable par un
+ * filtre — changer d'avis est alors un réglage, jamais une migration.
+ */
+export const DEFAULT_CONTRACTS: readonly JobContract[] = ["ALTERNANCE"];
+
+/** Les métiers du développement. La data et le mobile restent à un filtre près. */
+export const DEFAULT_ROLE_CATEGORIES: readonly JobRoleCategory[] = [
+  "FRONTEND",
+  "BACKEND",
+  "FULLSTACK",
+  "SOFTWARE_ENGINEERING",
+  "OTHER_DEVELOPER",
+];
 
 export const JOB_WORK_MODES = ["ONSITE", "HYBRID", "REMOTE"] as const;
 export type JobWorkMode = (typeof JOB_WORK_MODES)[number];

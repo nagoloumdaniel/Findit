@@ -1,5 +1,5 @@
 import { type PrismaClient, JobStatus } from "@findit/database";
-import { publishedAfterFor } from "@findit/shared";
+import { DEFAULT_CONTRACTS, DEFAULT_ROLE_CATEGORIES, publishedAfterFor } from "@findit/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
@@ -89,8 +89,14 @@ export class JobsService {
       status: JobStatus.PUBLISHED,
       publishedAt: { gte: publishedAfterFor(query.freshness, now) },
       expiresAt: { gt: now },
-      ...(query.role ? { roleCategory: query.role } : {}),
-      ...(query.contract ? { contractType: query.contract } : {}),
+      /*
+       * Sans filtre explicite, le flux s'en tient au défaut : les alternances
+       * des métiers du développement. Un filtre demandé l'emporte et peut aller
+       * chercher un stage ou un poste data — ils sont dans le périmètre, ils ne
+       * sont simplement pas montrés d'office.
+       */
+      roleCategory: query.role ?? { in: [...DEFAULT_ROLE_CATEGORIES] },
+      contractType: query.contract ?? { in: [...DEFAULT_CONTRACTS] },
       ...(query.department ? { departmentCode: query.department } : {}),
       ...(query.workMode ? { workMode: query.workMode } : {}),
       ...(query.city ? { city: { equals: query.city, mode: "insensitive" as const } } : {}),
