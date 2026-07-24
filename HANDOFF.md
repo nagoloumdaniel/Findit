@@ -4,7 +4,7 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au commit `c14b1b5` (2026-07-24).
+À jour au 2026-07-24, après le réalignement de [roadmap.md](roadmap.md).
 
 ---
 
@@ -102,8 +102,8 @@ curl http://localhost:11434/api/tags   # doit lister qwen2.5:7b
   `no-unused-vars` (mode `after-used`), `require-await`,
   `no-unnecessary-type-assertion`.
 - Imports relatifs avec l'extension `.js` (modules NodeNext).
-- Commentaires et documentation **en français**, et ils expliquent le *pourquoi*,
-  pas le *quoi*.
+- Commentaires et documentation **en français**, et ils expliquent le _pourquoi_,
+  pas le _quoi_.
 - Tables Markdown **alignées** (la règle MD060 avertit sinon).
 - Messages de commit **en anglais**, minuscule, avec portée :
   `feat(ai): run the model locally, and validate what it answers`. Le corps dit
@@ -115,8 +115,9 @@ curl http://localhost:11434/api/tags   # doit lister qwen2.5:7b
 
 ## 6. État réel du travail
 
-⚠️ **Les cases de [roadmap.md](roadmap.md) sont en retard sur la réalité.** Se
-fier au code et aux commits, pas aux cases. Ce qui suit fait autorité.
+[roadmap.md](roadmap.md) a été réaligné sur cette réalité le 2026-07-24 : ses
+cases et celles de ce document disent désormais la même chose. En cas de doute,
+le code et les commits tranchent.
 
 ### Fait, vérifié contre le réel, poussé
 
@@ -257,13 +258,13 @@ Paquet `@findit/ai` ([packages/ai/src/](packages/ai/src/)).
 import { createOllamaModel, AiOutputError } from "@findit/ai";
 
 const model = createOllamaModel({
-  baseUrl: env.OLLAMA_BASE_URL,   // http://localhost:11434
+  baseUrl: env.OLLAMA_BASE_URL, // http://localhost:11434
   model: env.AI_MODEL_EXTRACTION, // qwen2.5:7b
 });
 
 // Sortie structurée : le schéma contraint le modèle ET revalide sa réponse.
 const cv = await model.generateStructured({
-  schema: CvSchema,               // un schéma Zod
+  schema: CvSchema, // un schéma Zod
   system: "Tu extrais des données d'un CV. N'invente rien.",
   prompt: texteDuCv,
 });
@@ -273,7 +274,7 @@ const lettre = await model.generateText({ prompt, system });
 ```
 
 Le point important : **une contrainte n'est pas une garantie**. Le schéma est
-envoyé à Ollama pour contraindre le décodage, *et* la réponse est revalidée
+envoyé à Ollama pour contraindre le décodage, _et_ la réponse est revalidée
 ensuite. Toute sortie hors schéma lève `AiOutputError` au lieu de passer pour un
 texte fabriqué. Serveur injoignable ou en erreur → `AiUnavailableError`.
 `AiDisabledError` est prévu pour la couche application quand
@@ -298,8 +299,9 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
    auxquelles on postule** — pas pour toutes les offres collectées.
 5. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
 
-Un chantier de fond reste ouvert : les cases de `roadmap.md` doivent être
-réalignées sur la réalité décrite au §6.
+Deux dettes connues, plus petites : les **commandes du bot Telegram**
+(`/start`, `/status`, `/latest`, `/help`) et l'**effacement d'un CV** — l'API
+sait recevoir, lister et rendre un CV, pas le supprimer.
 
 ---
 

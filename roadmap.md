@@ -81,6 +81,8 @@ Ce que la construction a établi en plus :
   `search=yes`. Mais `ai-train=no` engage la phase 6 : aucune offre venant de Lever ne doit servir à
   entraîner un modèle, ni partir chez un fournisseur qui s'autorise à entraîner sur ce qu'il reçoit.
   `ai-input` n'est pas déclaré — analyser une offre par un modèle demandera une décision explicite.
+  **Tranché depuis** : l'IA tourne en local, donc rien ne part chez un tiers et ces deux signaux
+  deviennent sans objet. Voir « Extension premium » plus bas.
 - Le registre est relu à chaque exécution : fermer une source en base l'arrête à la collecte suivante,
   sans toucher au code.
 - La collecte s'arrête à la donnée brute. Rien n'est encore normalisé, classé ni dédoublonné, et
@@ -104,21 +106,33 @@ Ce que le modèle de données a déjà tranché, et qui commande le découpage :
 
 Découpage :
 
-- [ ] Normalisation du texte : HTML des sources → texte fidèle, et titre comparable
-- [ ] Extraction des sections : responsabilités, prérequis, avantages
-- [ ] Normalisation de la localisation : ville et département, périmètre Île-de-France
-- [ ] Classification : contrat et métier, avec confiance et raisons citées
+- [x] Normalisation du texte : HTML des sources → texte fidèle, et titre comparable
+- [x] Extraction des sections : responsabilités, prérequis, avantages
+- [x] Normalisation de la localisation : ville et département, périmètre Île-de-France
+- [x] Classification : contrat et métier, avec confiance et raisons citées
 - [x] Détection d'écoles et d'organismes de formation
 - [x] Déduplication et conservation de toutes les sources
-- [ ] Écriture en base : `Job`, décisions, `ProcessingLog`, et compteurs de `ConnectorRun`
+- [x] Écriture en base : `Job`, décisions, `ProcessingLog`, et compteurs de `ConnectorRun`
+
+La localisation s'appuie sur les 1262 communes d'Île-de-France tirées de `geo.api.gouv.fr`, et non sur
+une liste écrite à la main. La classification écoute deux voix — le contrat et le métier — et cite les
+raisons qui l'ont fait pencher. L'écriture en base passe par `job-pipeline`, qui décide avant d'écrire :
+une offre hors périmètre ne crée jamais de ligne `Job`, elle laisse une trace dans `ProcessingLog`.
 
 ## Phase 5 — CV et correspondance
 
 - [ ] Import sécurisé, extraction, score explicable et suppression
 
+Partiellement fait, sous la phase 11 de l'extension : l'import gardé et l'extraction du texte tiennent
+et sont vérifiés. Restent le **score explicable** et la **suppression** — l'API expose aujourd'hui
+l'envoi, la liste et le détail d'un CV, pas son effacement.
+
 ## Phase 6 — IA et lettre
 
 - [ ] Analyse IA encadrée, génération et export de lettre
+
+Le fournisseur est tranché et la couche existe (`@findit/ai`, voir plus bas) : un modèle local dont la
+sortie est validée contre un schéma. L'analyse encadrée, la génération et l'export restent à écrire.
 
 ## Phase 7 — Durcissement
 
@@ -132,7 +146,7 @@ Demandée le 2026-07-17. Analyse et contradictions :
 Findit devient aussi une plateforme personnelle. **Le flux public reste public** ; tout ce qui touche
 au profil, au CV, aux dépôts privés et aux candidatures vit derrière un espace protégé.
 
-Points à trancher avant d'atteindre les phases concernées :
+Points structurants, tranchés ou encore ouverts :
 
 - **Le fournisseur IA.** Tranché le 2026-07-17 : **IA locale via Ollama** (modèle `qwen2.5:7b`). Rien
   ne quitte le poste → `ai-train`/`ai-input` de Lever sans objet, et zéro token facturé. Les modèles de
@@ -142,12 +156,17 @@ Points à trancher avant d'atteindre les phases concernées :
 - **Le télétravail hors département.** `Job.departmentCode` est NOT NULL et contraint à l'Île-de-France :
   une offre « Remote — France » n'est pas stockable en l'état.
 - **Les moteurs de recherche.** Chaque fournisseur envisagé doit passer par le registre avant d'être
-  écrit.
+  écrit. Fait pour **Brave** : découverte seulement, et ses résultats ne sont **jamais** écrits en base,
+  ses conditions l'interdisent. La règle reste entière pour tout autre fournisseur.
+
+La couche IA est posée et vérifiée contre le modèle réel : `@findit/ai` rend une sortie structurée
+**validée contre un schéma**, car contraindre un modèle n'est pas le garantir — une réponse hors schéma
+lève au lieu de passer pour un texte fabriqué. Elle sert les phases 11 à 14.
 
 - [x] Phase 8 — Chaîne asynchrone : cron 4 h (Europe/Paris), file BullMQ, verrou de concurrence, découverte Brave, registre d'entreprises, collecte et écriture en base. Vérifié contre Redis et PostgreSQL réels.
-- [ ] Phase 9 — Telegram : nouvelles offres uniquement, jamais un message pour dire qu'il n'y a rien
-- [ ] Phase 10 — Espace privé et profil candidat
-- [ ] Phase 11 — CV source : import, extraction, structure, versions
+- [x] Phase 9 — Telegram : nouvelles offres uniquement, jamais un message pour dire qu'il n'y a rien. Envoi idempotent par empreinte, token jamais exposé, simulation active par défaut. Les commandes du bot (`/start`, `/status`, `/latest`, `/help`) restent à écrire.
+- [x] Phase 10 — Espace privé et profil candidat : garde sur l'en-tête `x-workspace-key`, comparaison à temps constant, profil en exemplaire unique. Vérifié contre l'API et la base réelles.
+- [ ] Phase 11 — CV source : import, extraction, structure, versions. **Import et extraction faits** (PDF, DOCX, TXT, déduplication par empreinte de contenu) ; la **structure** et les **versions** restent — c'est la brique suivante.
 - [ ] Phase 12 — GitHub : synchronisation, analyse par preuves, résumé nettoyé avant tout envoi IA
 - [ ] Phase 13 — Correspondance et scores : CV original, projets, CV optimisé, décision
 - [ ] Phase 14 — Génération : CV optimisé, lettre, préparation d'entretien, exports DOCX et PDF
