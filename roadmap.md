@@ -132,12 +132,13 @@ Demandée le 2026-07-17. Analyse et contradictions :
 Findit devient aussi une plateforme personnelle. **Le flux public reste public** ; tout ce qui touche
 au profil, au CV, aux dépôts privés et aux candidatures vit derrière un espace protégé.
 
-Trois points restent à trancher avant d'atteindre les phases concernées :
+Points à trancher avant d'atteindre les phases concernées :
 
-- **Le fournisseur IA.** `ai-train=no` de Lever interdit qu'une offre serve à entraîner un modèle : le
-  fournisseur ne doit pas s'en arroger le droit sur ce qu'il reçoit. Et `ai-input` n'étant pas
-  déclaré, envoyer une offre à un modèle demande une décision explicite, pas un silence lu comme un
-  oui.
+- **Le fournisseur IA.** Tranché le 2026-07-17 : **IA locale via Ollama** (modèle `qwen2.5:7b`). Rien
+  ne quitte le poste → `ai-train`/`ai-input` de Lever sans objet, et zéro token facturé. Les modèles de
+  CV et de lettre sont pré-conçus ; l'IA ne fait que remplir le texte et des analyses courtes, le PDF
+  est déterministe. Consigné dans [docs/legal-compliance.md](docs/legal-compliance.md) → « Fournisseur
+  IA ».
 - **Le télétravail hors département.** `Job.departmentCode` est NOT NULL et contraint à l'Île-de-France :
   une offre « Remote — France » n'est pas stockable en l'état.
 - **Les moteurs de recherche.** Chaque fournisseur envisagé doit passer par le registre avant d'être

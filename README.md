@@ -77,7 +77,7 @@ Toutes les variables sont documentées dans `.env.example`. Elles sont validées
 | `INTERNAL_API_KEY`                                                                 | api            | Clé des futurs endpoints internes, 32 caractères minimum |
 | `RESUME_RETENTION_HOURS`                                                           | api            | Durée de conservation prévue d'un CV, de 1 à 168         |
 | `NEXT_PUBLIC_API_URL`                                                              | web            | URL publique de l'API                                    |
-| `AI_PROVIDER`, `OPENAI_API_KEY`                                                    | api            | Fournisseur IA, désactivé par défaut                     |
+| `AI_PROVIDER`, `OLLAMA_BASE_URL`, `AI_MODEL_*`                                     | api            | IA locale (Ollama), désactivée par défaut                |
 | `SEARCH_API_PROVIDER`, `SEARCH_API_KEY`                                            | api            | Moteur de découverte, désactivé par défaut               |
 | `WEB_PORT`                                                                         | web            | Port d'écoute du site, 3100 par défaut                   |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`, `REDIS_PORT` | docker compose | Services locaux                                          |

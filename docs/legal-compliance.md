@@ -242,6 +242,38 @@ naïve les remonte en tête — ils peuvent apparaître dans les résultats, mai
 pour autant. Les requêtes utiles visent les sites carrières et les ATS ouverts (`site:`,
 `inurl:careers`), pas les agrégateurs fermés.
 
+## Fournisseur IA
+
+| Élément            | Valeur                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| Fournisseur retenu | **IA locale via Ollama**, modèle `qwen2.5:7b`                                                  |
+| Accès              | Serveur local `http://localhost:11434`, API HTTP Ollama                                        |
+| Réseau             | **Aucun appel sortant.** Le modèle tourne sur la machine ; ni offre ni CV ne quitte le poste   |
+| Coût               | Nul. Aucun token facturé, aucune clé à gérer                                                   |
+| Matériel           | RTX 2060 6 Go + 32 Go RAM ; modèle 7B quantifié, accéléré GPU                                  |
+| Vérifié le         | 2026-07-17 (Ollama installé et serveur testé ; génération réelle validée à la première brique) |
+
+Décision tranchée le 2026-07-17. Un premier choix (Anthropic, API distante) a été retenu puis écarté
+le même jour au profit d'une **IA locale**, pour deux raisons : ne pas payer de tokens à chaque offre,
+et surtout **ne rien envoyer en ligne**. Le modèle tourne sur la machine ; aucune offre, aucun CV,
+aucune donnée ne quitte le poste.
+
+Conséquence sur la conformité : la question `ai-train`/`ai-input` de Lever **disparaît**. Ces signaux
+encadrent ce qu'un tiers a le droit de faire d'un contenu qu'on lui **envoie** ; ici on n'envoie rien.
+`ai-train=no` est respecté trivialement — aucun contenu ne part vers un modèle tiers, donc rien ne peut
+servir à en entraîner un. La sous-décision `ai-input` (envoyer une offre à un modèle) n'a plus d'objet
+tant que l'IA reste locale ; elle ne renaîtrait que si un fournisseur distant était réintroduit.
+
+Le rôle de l'IA reste volontairement étroit, pour le coût comme pour la robustesse : les modèles de CV
+et de lettre sont **pré-conçus et designés à part** ; l'IA ne fait que remplir le texte et produire des
+analyses courtes. Le rendu PDF est déterministe, sans IA.
+
+Deux règles tiennent quelle que soit la suite :
+
+- **Rien ne sort du poste.** Le serveur Ollama n'est jamais exposé au navigateur ni au réseau public.
+- **Rien n'est inventé.** Une sortie du modèle qui ne valide pas son schéma attendu lève une erreur
+  explicite plutôt que de laisser passer un texte fabriqué.
+
 ## Démarche pour ouvrir une source
 
 1. Lire les conditions d'utilisation et `robots.txt`, et dater la lecture.

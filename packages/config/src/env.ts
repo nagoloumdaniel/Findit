@@ -24,8 +24,19 @@ export const apiEnvSchema = z.object({
   CORS_ORIGIN: origin.default("http://localhost:3000"),
   INTERNAL_API_KEY: z.string().min(32),
   RESUME_RETENTION_HOURS: z.coerce.number().int().min(1).max(168).default(24),
-  AI_PROVIDER: z.enum(["disabled", "openai"]).default("disabled"),
-  OPENAI_API_KEY: z.string().default(""),
+  /*
+   * Fournisseur IA. Retenu : IA locale via Ollama — le modèle tourne sur la
+   * machine, rien ne part en ligne. Pas de clé, pas de token facturé, et la
+   * question ai-train/ai-input de Lever disparaît : aucune donnée ne quitte le
+   * poste. Voir docs/legal-compliance.md. Éteint par défaut.
+   */
+  AI_PROVIDER: z.enum(["disabled", "ollama"]).default("disabled"),
+  /// Serveur Ollama local. Jamais exposé au navigateur.
+  OLLAMA_BASE_URL: url.default("http://localhost:11434"),
+  /// Modèles par usage. Un seul modèle local pour l'instant ; deux variables
+  /// pour pouvoir spécialiser plus tard sans changer les appelants.
+  AI_MODEL_REASONING: z.string().min(1).default("qwen2.5:7b"),
+  AI_MODEL_EXTRACTION: z.string().min(1).default("qwen2.5:7b"),
   SEARCH_API_PROVIDER: z.enum(["disabled", "brave", "serper"]).default("disabled"),
   SEARCH_API_KEY: z.string().default(""),
 });
