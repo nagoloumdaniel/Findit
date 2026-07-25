@@ -1,174 +1,719 @@
 # Roadmap Findit
 
-## Méthode
+## 1. Informations generales
 
-- On avance une étape à la fois, sous ordre explicite de l'utilisateur.
-- Une étape est implémentée, puis vérifiée par des commandes réelles dont le résultat est présenté.
-- Une case est cochée uniquement après validation utilisateur de l'étape complète.
-- Chaque fonctionnalité validée donne lieu à un commit et un push sur `main`.
-- Aucune fonctionnalité n'est présentée comme terminée si elle repose encore sur un mock.
+| Champ                 | Valeur                                                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nom du projet         | Findit                                                                                                                                                   |
+| Objectif              | Agreger des offres d'alternance et de stage developpeur en Ile-de-France, puis aider le proprietaire a analyser son CV, ses projets et ses candidatures. |
+| Source de verite      | `roadmap.md`, alignee avec `HANDOFF.md` le 2026-07-25                                                                                                    |
+| Branche analysee      | `main`                                                                                                                                                   |
+| Commit analyse        | `b418bfc1b20ad1c2f405867ec9295fc452fa4379`                                                                                                               |
+| Date du dernier audit | 2026-07-24                                                                                                                                               |
+| Environnement teste   | Windows, PowerShell, Node `v24.18.0`, pnpm `11.13.1`, PostgreSQL Docker, Redis Docker                                                                    |
+| Statut global         | Socle public avance et testable ; extension personnelle encore majoritairement a construire                                                              |
+| Progression estimee   | 45 % environ, estimation d'audit et non mesure contractuelle                                                                                             |
 
-## Périmètre validé
+Deux mondes restent separes :
 
-Ce qui a le droit d'exister en base :
+- flux public des offres : liste, recherche, filtres, detail, collecte autorisee ;
+- espace prive : profil, CV, analyse, generation, candidatures, notifications personnelles.
 
-- Contrats : alternance et stage.
-- Métiers : Front-end, Back-end, Full-stack, Software Engineering, autre développement, mobile,
-  Data Analyst, Data Engineer.
-- Zone : Île-de-France.
-- Fraîcheur : 24 heures par défaut, 72 heures au maximum.
+## 2. Methode et legende
 
-Ce que le flux montre sans filtre — un réglage, pas une règle de la base :
+- On avance une etape a la fois, sous ordre explicite de l'utilisateur.
+- Une etape est implementee, puis verifiee par des commandes reelles dont le resultat est presente.
+- Une case est cochee uniquement apres validation utilisateur de l'etape complete.
+- Chaque fonctionnalite validee donne lieu a un commit et un push sur `main`, seulement sur demande.
+- Aucune fonctionnalite n'est presentee comme terminee si elle repose encore sur un mock.
+- Le registre de conformite fait foi : aucune source nouvelle n'est collectee sans inscription et date de verification.
+- Ne jamais toucher au port `3000` : Findit utilise le port web `3100`.
 
-- Contrat : alternance.
-- Métiers : les cinq du développement.
+Legende :
 
-Stocker et montrer sont deux choses. Un stage ou un poste data est collecté, stocké et atteignable par
-un filtre ; il n'est simplement pas montré d'office. Changer d'avis est alors un réglage de
-`@findit/shared`, jamais une migration. Décidé le 2026-07-17 — voir
-[docs/premium-extension-report.md](docs/premium-extension-report.md).
+- [ ] A faire
+- [~] En cours ou partiellement fait
+- [x] Termine et valide
+- [!] Bloque
+- [-] Annule ou non pertinent
 
-## Phase 0 — Initialisation
+Priorites :
 
-- [x] Monorepo pnpm/Turborepo, applications, packages, Docker, Prisma, configuration, README et contrôles qualité
+- `P0` : bloque le fonctionnement ou expose un risque critique.
+- `P1` : indispensable pour une premiere version complete.
+- `P2` : amelioration importante.
+- `P3` : optimisation ou fonctionnalite secondaire.
 
-## Phase 1 — Modèle de données
+Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 
-- [x] Schéma métier, migrations et index
+## 3. Resume executif
 
-## Phase 2 — Base fonctionnelle
+### Ce qui fonctionne
 
-- [x] API des offres, recherche, filtres, liste et détail
+- Monorepo pnpm/Turborepo, TypeScript strict, lint, typecheck, tests et build.
+- Infrastructure locale PostgreSQL + Redis via Docker Compose.
+- Prisma 7.8.0, migrations appliquees, contraintes et index metier.
+- API publique des offres : liste, filtres, statistiques, detail par slug.
+- Frontend public Next.js : page liste, filtres par liens, recherche, pagination, detail d'offre, etats vides et etats API indisponible.
+- Connecteurs Greenhouse, Lever et Workable avec validation de forme, cadence et registre de conformite.
+- Garde-fou de collecte : un connecteur non autorise par le registre ne peut pas s'executer.
+- Normalisation, classification contrat/metier, localisation Ile-de-France, detection d'ecoles et decision d'ingestion.
+- Worker BullMQ : cron 4 h, scheduler idempotent, concurrence 1, cycle de decouverte puis collecte, logs structures.
+- Notifications Telegram pour nouvelles offres uniquement, avec idempotence et mode simulation par defaut.
+- Espace prive minimal : `WorkspaceGuard` sur `x-workspace-key`, comparaison a temps constant, profil candidat unique.
+- Import de CV source prive : PDF, DOCX, TXT, limite de taille, extraction de texte, deduplication par empreinte.
+- Structure JSON du CV source : route gardee, Ollama local, schema Zod strict, stockage des faits/warnings/confiance.
+- Couche IA locale `@findit/ai` : Ollama, sortie structuree revalidee par Zod, erreurs explicites.
 
-## Phase 3 — Collecte autorisée
+### Ce qui est partiellement fonctionnel
 
-- [x] Connecteurs ATS prioritaires et registre de conformité
+- Base locale : 6 offres presentes, toutes marquees `isDemo = true`; les logs de traitement existent mais aucune offre reelle publiee n'est presente dans l'environnement local audite.
+- Workable est documente et teste comme connecteur actif, mais le cycle worker courant ne l'execute pas encore dans `createCycleDeps`.
+- Deduplication : le score et la decision existent, mais l'ecriture `DuplicateGroup` / `DuplicateDecision` n'est pas branchee dans l'ingestion.
+- CV : texte extrait, structure JSON, suppression et retention effectives et prouvees sur le reel ; il manque encore versions et binaire chiffre.
+- IA : le client local est teste avec faux transport et utilise par la route privee de structuration CV ; pas encore utilise pour matching ou generation.
+- Telegram : l'alerte de nouvelles offres existe, mais les commandes bot (`/start`, `/status`, `/latest`, `/help`) sont absentes.
+- Documentation : `HANDOFF.md`, cette roadmap, `README.md` et `docs/architecture.md` sont realignes.
 
-Le registre est écrit et vérifié : voir [docs/legal-compliance.md](docs/legal-compliance.md). Il décide de ce qui a le droit de tourner.
+### Ce qui est simule ou mocke
 
-Ce que la vérification du 2026-07-17 a établi :
+- Le jeu de donnees local audite contient uniquement des offres de demonstration.
+- Les tests utilisent des doubles de `fetch`, de Prisma ou de BullMQ selon le module ; ces doubles sont acceptables car limites aux tests.
+- Telegram est en simulation par defaut tant que `TELEGRAM_NOTIFICATIONS_ENABLED`, `TELEGRAM_DRY_RUN`, le token et le chat ne sont pas regles pour un envoi reel.
 
-- **Greenhouse** et **Lever** sont les deux seules sources activables aujourd'hui, en `PUBLIC_FEED`.
-- **Lever impose `Crawl-delay: 1`**. Le connecteur doit attendre une seconde entre deux requêtes, même si le débit en souffre. C'est une contrainte de la source, pas un réglage.
-- **Ashby** répond `200` en JSON sans authentification, mais son `robots.txt` renvoie `Unauthorized`. Une réponse `200` n'est pas une permission : il reste désactivé.
-- SmartRecruiters, Teamtailor, Recruitee et Workday n'ont **pas encore été vérifiés**. Ne pas les supposer ouverts.
-- LinkedIn, Indeed, Glassdoor et Welcome to the Jungle restent désactivés faute d'accès autorisé.
+### Ce qui est casse
 
-Ce que la vérification du 2026-07-17 a établi en plus, en cherchant un gisement d'alternances dev :
+- Aucun echec applicatif bloquant n'est confirme par les controles automatises lances separement.
+- Un smoke test runtime manuel via `Start-Process` a ete bloque par la politique locale d'execution ; il n'a pas demarre les serveurs et ne prouve pas un defaut applicatif.
 
-- **Workable est activable** : `Disallow:` vide, et un content signal qui **accorde `ai-input`** — le
-  premier à le faire. Son API `jobs.workable.com/api/v1/jobs` cherche à travers tout le réseau et rend
-  une localisation structurée portant « Île-de-France ».
-- **SmartRecruiters est fermé** : son `robots.txt` n'ouvre `/v1/companies/` qu'à `LinkedInBot` et
-  interdit tout le reste à `User-agent: *`. L'API répondrait `200`, mais se faire passer pour LinkedIn
-  tomberait sous l'interdiction de falsifier le user-agent.
-- **Le gisement d'alternances dev n'existe pas sur ces ATS.** Mesuré sur 462 offres réelles de six
-  boards Greenhouse et Lever, puis sur la recherche Workable : zéro offre ayant à la fois un contrat du
-  périmètre et un métier de développement. Voir
-  [packages/job-classification](packages/job-classification/README.md).
+### Ce qui manque
 
-Fait, et vérifié contre les API réelles :
+- Conservation chiffree et versionnee du binaire original du CV.
+- Score explicable offre / profil.
+- Generation de CV, lettre, messages recruteurs et exports PDF/DOCX.
+- Analyse GitHub et selection de projets.
+- Suivi des candidatures, historique, rappels et statuts.
+- Commandes Telegram.
+- Recherche web en production complete, avec politique de non-stockage des resultats Brave maintenue.
+- Administration, observabilite, monitoring, sauvegardes, CI/CD.
 
-- [x] Interface `JobSourceConnector` dans `packages/job-connectors`
-- [x] Garde-fou refusant d'exécuter un connecteur dont le `SourceAccessStatus` ne l'autorise pas, pour que la règle soit structurelle et non déclarative
-- [x] Connecteur Greenhouse, vérifié contre l'API réelle
-- [x] Connecteur Lever, avec son délai d'une seconde, vérifié contre l'API réelle
-- [x] Alimentation des tables `Connector`, `ConnectorRun` et `ConnectorError`
+### Risques principaux
 
-Ce que la construction a établi en plus :
+- Risque documentaire residuel : maintenir `HANDOFF.md`, `roadmap.md`, `README.md` et `docs/architecture.md` alignes a chaque brique.
+- Risque fonctionnel : Workable est actif dans le registre mais pas raccorde au cycle worker courant.
+- Risque donnees personnelles : le CV source se supprime et expire desormais, mais le binaire original n'est ni conserve chiffre ni versionne.
+- Risque securite locale : `.env` contient une variable obsolete `OPENAI_API_KEY`; elle n'est pas committee mais doit etre nettoyee si l'IA locale reste la decision.
+- Historique Git : un incident Brave a existe et est documente comme traite ; ne jamais remettre de valeur reelle dans `.env.example`.
 
-- **Lever déclare `Content-Signal: search=yes,ai-train=no`.** La liste publique est couverte par
-  `search=yes`. Mais `ai-train=no` engage la phase 6 : aucune offre venant de Lever ne doit servir à
-  entraîner un modèle, ni partir chez un fournisseur qui s'autorise à entraîner sur ce qu'il reçoit.
-  `ai-input` n'est pas déclaré — analyser une offre par un modèle demandera une décision explicite.
-  **Tranché depuis** : l'IA tourne en local, donc rien ne part chez un tiers et ces deux signaux
-  deviennent sans objet. Voir « Extension premium » plus bas.
-- Le registre est relu à chaque exécution : fermer une source en base l'arrête à la collecte suivante,
-  sans toucher au code.
-- La collecte s'arrête à la donnée brute. Rien n'est encore normalisé, classé ni dédoublonné, et
-  `ConnectorRun` laisse à zéro les compteurs qui relèvent de la phase 4.
+## 4. Stack detectee
 
-## Phase 4 — Qualité des offres
+| Couche            | Technologie / version detectee                                    | Role                                       |
+| ----------------- | ----------------------------------------------------------------- | ------------------------------------------ |
+| Monorepo          | pnpm workspaces `11.13.1`, Turborepo `2.10.5`                     | Orchestration build/lint/test/typecheck    |
+| Langage           | TypeScript `6.0.3`, Node `v24.18.0`                               | Code applicatif strict                     |
+| Frontend          | Next.js `16.2.10`, React `19.2.7`                                 | Liste et detail publics d'offres           |
+| Backend           | NestJS `11.1.28`, Fastify `5.10.0`                                | API HTTP et routes privees                 |
+| Worker            | NestJS, BullMQ `5.80.5`                                           | Collecte planifiee et jobs asynchrones     |
+| Base              | PostgreSQL `pgvector/pgvector:pg18`, Prisma `7.8.0`, `pg` adapter | Persistance, migrations, contraintes       |
+| Cache / queue     | Redis `8.8.0-alpine`                                              | File BullMQ                                |
+| Validation        | Zod `4.4.3`                                                       | Environnement, queries, body et sorties IA |
+| CV                | `unpdf`, `mammoth`                                                | Extraction PDF/DOCX/TXT                    |
+| IA                | Ollama local, modele par defaut `qwen2.5:7b`                      | Generation structuree et texte libre       |
+| Notifications     | Telegram Bot API via `fetch`                                      | Alertes de nouvelles offres                |
+| Qualite           | ESLint `10.7.0`, Prettier `3.9.5`, Vitest `4.1.10`                | Lint, format, tests                        |
+| Deploiement local | Docker Compose                                                    | PostgreSQL et Redis locaux                 |
 
-- [x] Normalisation, validation, classification, détection d'écoles et déduplication
+## 5. Architecture actuelle
 
-Ce que le modèle de données a déjà tranché, et qui commande le découpage :
+```text
+Utilisateur public
+    |
+    v
+Next.js web (port 3100)
+    |
+    v
+API NestJS/Fastify (port 4000)
+    |
+    +--> PostgreSQL / Prisma
 
-- **Une offre rejetée n'est pas stockable.** `Job` exige `roleCategory`, `contractType`, `city`,
-  `departmentCode` et `publishedAt` non nuls, et une contrainte de contrôle limite le département à
-  l'Île-de-France. Un CDI, un poste DevOps ou une offre lyonnaise ne peut donc pas exister en base,
-  même avec `status = REJECTED`. Le rejet a lieu **avant** qu'une ligne `Job` n'existe.
-- **La trace d'un rejet va dans `ProcessingLog`**, dont le `jobId` est facultatif. C'est le seul
-  endroit où une offre écartée laisse une trace. `JobClassificationDecision` exige un `jobId` : elle
-  ne peut donc expliquer que le sort d'une offre retenue ou mise en quarantaine.
-- La quarantaine, elle, suppose une offre complète : tous les champs obligatoires doivent être connus.
-  Une offre dont le métier est illisible est rejetée, pas mise en quarantaine.
+Worker NestJS
+    |
+    +--> BullMQ / Redis
+    |
+    +--> Decouverte Brave transitoire, si cle presente
+    |
+    +--> Registre Connector / CompanySource
+    |
+    +--> Connecteurs autorises
+          +--> Greenhouse
+          +--> Lever
+          +--> Workable, moteur teste mais non execute par le cycle actuel
+    |
+    +--> Normalisation / classification / ingestion
+    |
+    +--> Telegram, si active
 
-Découpage :
+Espace prive
+    |
+    +--> WorkspaceGuard x-workspace-key
+    +--> Profil candidat unique
+    +--> CV source : import + extraction texte + structure JSON
+    +--> IA locale branchee pour la structuration CV
+```
 
-- [x] Normalisation du texte : HTML des sources → texte fidèle, et titre comparable
-- [x] Extraction des sections : responsabilités, prérequis, avantages
-- [x] Normalisation de la localisation : ville et département, périmètre Île-de-France
-- [x] Classification : contrat et métier, avec confiance et raisons citées
-- [x] Détection d'écoles et d'organismes de formation
-- [x] Déduplication et conservation de toutes les sources
-- [x] Écriture en base : `Job`, décisions, `ProcessingLog`, et compteurs de `ConnectorRun`
+## 6. Etat des modules
 
-La localisation s'appuie sur les 1262 communes d'Île-de-France tirées de `geo.api.gouv.fr`, et non sur
-une liste écrite à la main. La classification écoute deux voix — le contrat et le métier — et cite les
-raisons qui l'ont fait pencher. L'écriture en base passe par `job-pipeline`, qui décide avant d'écrire :
-une offre hors périmètre ne crée jamais de ligne `Job`, elle laisse une trace dans `ProcessingLog`.
+| Module               | Frontend       | Backend/API                   | Base de donnees      | Tests | Statut reel                 | Priorite |
+| -------------------- | -------------- | ----------------------------- | -------------------- | ----- | --------------------------- | -------- |
+| Socle monorepo       | N/A            | N/A                           | N/A                  | Oui   | Fonctionnel                 | P0       |
+| Offres publiques     | Liste + detail | `GET /api/jobs*`              | `Job`, `Company`     | Oui   | Fonctionnel avec donnees DB | P0       |
+| Collecteurs ATS      | N/A            | Worker                        | `Connector*`         | Oui   | Partiel, Workable non cycle | P1       |
+| Normalisation        | N/A            | Pipeline                      | `ProcessingLog`      | Oui   | Fonctionnel                 | P0       |
+| Classification       | N/A            | Pipeline                      | Decisions partielles | Oui   | Fonctionnel                 | P0       |
+| Deduplication        | N/A            | Package pur                   | Tables presentes     | Oui   | Partiel                     | P1       |
+| Worker cron          | N/A            | BullMQ worker                 | Runs/logs            | Oui   | Fonctionnel                 | P0       |
+| Telegram alertes     | N/A            | Worker + package              | Notification table   | Oui   | Partiel, simulation defaut  | P1       |
+| Espace prive         | Absent         | Guard + profil                | `CandidateProfile`   | Oui   | Backend uniquement          | P1       |
+| CV source            | Absent         | Upload/liste/detail/structure | `SourceResume`       | Oui   | Partiel                     | P1       |
+| IA locale            | Absent         | Package + route CV            | Prompt tables        | Oui   | Partiel                     | P1       |
+| Matching CV/offre    | Absent         | Absent                        | `JobMatch` prevu     | Non   | Absent                      | P1       |
+| GitHub               | Absent         | Absent                        | Absent               | Non   | Absent                      | P2       |
+| Generation documents | Absent         | Absent                        | `CoverLetter` prevu  | Non   | Absent                      | P1       |
+| Suivi candidatures   | Absent         | Absent                        | Absent               | Non   | Absent                      | P1       |
+| Admin                | Absent         | Absent                        | Partiel via logs     | Non   | Absent                      | P3       |
+| CI/CD                | Absent         | N/A                           | N/A                  | Non   | Absent                      | P2       |
 
-## Phase 5 — CV et correspondance
+## 7. API presentes
 
-- [ ] Import sécurisé, extraction, score explicable et suppression
+| Methode | Chemin                       | Controleur          | Validation                  | Authentification | Statut reel                |
+| ------- | ---------------------------- | ------------------- | --------------------------- | ---------------- | -------------------------- |
+| GET     | `/health`                    | `HealthController`  | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs`                  | `JobsController`    | `jobQuerySchema`            | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/stats`            | `JobsController`    | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/filters`          | `JobsController`    | `freshnessQuerySchema`      | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/:slug`            | `JobsController`    | `jobSlugSchema` + freshness | Publique         | Fonctionnel et teste       |
+| GET     | `/api/profile`               | `ProfileController` | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| PUT     | `/api/profile`               | `ProfileController` | `profileInputSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| PATCH   | `/api/profile`               | `ProfileController` | `profilePatchSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/upload`        | `ResumeController`  | MIME/extension + taille     | `WorkspaceGuard` | Partiel : extraction texte |
+| GET     | `/api/resumes`               | `ResumeController`  | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| GET     | `/api/resumes/:id`           | `ResumeController`  | UUID                        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/:id/structure` | `ResumeController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| DELETE  | `/api/resumes/:id`           | `ResumeController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
 
-Partiellement fait, sous la phase 11 de l'extension : l'import gardé et l'extraction du texte tiennent
-et sont vérifiés. Restent le **score explicable** et la **suppression** — l'API expose aujourd'hui
-l'envoi, la liste et le détail d'un CV, pas son effacement.
+Endpoints absents : authentification utilisateur complete, matching, generation, GitHub, candidatures, admin, commandes Telegram HTTP/webhook.
 
-## Phase 6 — IA et lettre
+## 8. Etat base de donnees locale auditee
 
-- [ ] Analyse IA encadrée, génération et export de lettre
+Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnpm registry:sync` :
 
-Le fournisseur est tranché et la couche existe (`@findit/ai`, voir plus bas) : un modèle local dont la
-sortie est validée contre un schéma. L'analyse encadrée, la génération et l'export restent à écrire.
+| Table                     | Lignes | Lecture d'audit                                    |
+| ------------------------- | ------ | -------------------------------------------------- |
+| `Connector`               | 13     | Registre synchronise                               |
+| `CompanySource`           | 30     | Sources d'entreprise deja enregistrees             |
+| `ConnectorRun`            | 60     | Historique de collectes                            |
+| `Job`                     | 6      | 4 publiees, 1 expiree, 1 quarantaine ; toutes demo |
+| `ProcessingLog`           | 4620   | Traces de decisions/rejets                         |
+| `CandidateProfile`        | 0      | Aucun profil local                                 |
+| `SourceResume`            | 0      | Aucun CV source local                              |
+| `TelegramJobNotification` | 0      | Aucune notification locale                         |
 
-## Phase 7 — Durcissement
+## 9. Dette technique
 
-- [ ] Tests complets, sécurité, accessibilité, observabilité et documentation finale
+| Element                                          | Impact                                        | Risque                                    | Solution proposee                                       | Priorite |
+| ------------------------------------------------ | --------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- | -------- |
+| Workable actif mais non raccorde au cycle worker | Source active inutilisee en production locale | Collecte incomplete malgre registre actif | Ajouter une voie explicite pour `SearchTarget` Workable | P1       |
+| Deduplication non persistee                      | Doublons non regroupes en base                | Liste publique moins fiable               | Brancher `findBestMatch` dans `persistDecision`         | P1       |
+| `.env` contient `OPENAI_API_KEY`                 | Variable obsolete pour decision IA locale     | Confusion et risque de reutilisation      | Nettoyer `.env` local sans jamais committer la valeur   | P1       |
+| Pas de CI/CD `.github`                           | Validations locales seulement                 | Regressions non detectees avant push      | Ajouter workflow lint/typecheck/test/build              | P2       |
+| Pas d'observabilite exploitable                  | Diagnostic prod limite                        | Incidents difficiles a expliquer          | Logs structures, metriques, health worker               | P2       |
 
-## Extension premium
+## 10. Roadmap detaillee
 
-Demandée le 2026-07-17. Analyse et contradictions :
-[docs/premium-extension-report.md](docs/premium-extension-report.md).
+### Phase 0 - Stabilisation et audit
 
-Findit devient aussi une plateforme personnelle. **Le flux public reste public** ; tout ce qui touche
-au profil, au CV, aux dépôts privés et aux candidatures vit derrière un espace protégé.
+- [~] Audit initial 2026-07-24 et source de verite documentaire
+  - Priorite : P0
+  - Complexite : S
+  - Fichiers concernes : `HANDOFF.md`, `roadmap.md`, `README.md`, `docs/architecture.md`
+  - Criteres d'acceptation :
+    - Le rapport distingue ce qui est fonctionnel, partiel, simule, casse et absent.
+    - Les commandes executees et leurs resultats sont consignes.
+    - Aucune nouvelle case n'est cochee sans validation utilisateur.
+  - Tests : `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm db:migrate`
+  - Resultat : audit realise ; validation utilisateur attendue.
 
-Points structurants, tranchés ou encore ouverts :
+- [x] Restaurer la baseline format
+  - Priorite : P0
+  - Complexite : XS
+  - Fichiers concernes : `packages/ai/src/ollama-client.test.ts`
+  - Criteres d'acceptation :
+    - `pnpm format:check` passe.
+    - Aucune logique de test n'est changee sans necessite.
+  - Tests : `pnpm format:check`, puis `pnpm --filter @findit/ai test`
+  - Resultat : correction Prettier appliquee ; `pnpm format:check` et `pnpm --filter @findit/ai test` passent ; valide par ordre utilisateur du 2026-07-24.
 
-- **Le fournisseur IA.** Tranché le 2026-07-17 : **IA locale via Ollama** (modèle `qwen2.5:7b`). Rien
-  ne quitte le poste → `ai-train`/`ai-input` de Lever sans objet, et zéro token facturé. Les modèles de
-  CV et de lettre sont pré-conçus ; l'IA ne fait que remplir le texte et des analyses courtes, le PDF
-  est déterministe. Consigné dans [docs/legal-compliance.md](docs/legal-compliance.md) → « Fournisseur
-  IA ».
-- **Le télétravail hors département.** `Job.departmentCode` est NOT NULL et contraint à l'Île-de-France :
-  une offre « Remote — France » n'est pas stockable en l'état.
-- **Les moteurs de recherche.** Chaque fournisseur envisagé doit passer par le registre avant d'être
-  écrit. Fait pour **Brave** : découverte seulement, et ses résultats ne sont **jamais** écrits en base,
-  ses conditions l'interdisent. La règle reste entière pour tout autre fournisseur.
+- [x] Realigner la documentation historique
+  - Priorite : P1
+  - Complexite : S
+  - Fichiers concernes : `README.md`, `docs/architecture.md`, eventuellement `docs/premium-extension-report.md`
+  - Criteres d'acceptation :
+    - Les docs ne disent plus que la collecte, le CV ou l'IA sont absents quand le code les contient.
+    - Les limites actuelles restent explicites.
+    - `HANDOFF.md` reste le resume de reprise court.
+  - Tests : `pnpm format:check`, `git diff --check`
+  - Resultat : `README.md` et `docs/architecture.md` realignes avec `HANDOFF.md` et l'audit courant ; valide par ordre utilisateur du 2026-07-24.
 
-La couche IA est posée et vérifiée contre le modèle réel : `@findit/ai` rend une sortie structurée
-**validée contre un schéma**, car contraindre un modèle n'est pas le garantir — une réponse hors schéma
-lève au lieu de passer pour un texte fabriqué. Elle sert les phases 11 à 14.
+### Phase 1 - Fondations techniques
 
-- [x] Phase 8 — Chaîne asynchrone : cron 4 h (Europe/Paris), file BullMQ, verrou de concurrence, découverte Brave, registre d'entreprises, collecte et écriture en base. Vérifié contre Redis et PostgreSQL réels.
-- [x] Phase 9 — Telegram : nouvelles offres uniquement, jamais un message pour dire qu'il n'y a rien. Envoi idempotent par empreinte, token jamais exposé, simulation active par défaut. Les commandes du bot (`/start`, `/status`, `/latest`, `/help`) restent à écrire.
-- [x] Phase 10 — Espace privé et profil candidat : garde sur l'en-tête `x-workspace-key`, comparaison à temps constant, profil en exemplaire unique. Vérifié contre l'API et la base réelles.
-- [ ] Phase 11 — CV source : import, extraction, structure, versions. **Import et extraction faits** (PDF, DOCX, TXT, déduplication par empreinte de contenu) ; la **structure** et les **versions** restent — c'est la brique suivante.
-- [ ] Phase 12 — GitHub : synchronisation, analyse par preuves, résumé nettoyé avant tout envoi IA
-- [ ] Phase 13 — Correspondance et scores : CV original, projets, CV optimisé, décision
-- [ ] Phase 14 — Génération : CV optimisé, lettre, préparation d'entretien, exports DOCX et PDF
-- [ ] Phase 15 — Candidatures : dossier, statuts, historique, rappels, rétention des offres expirées
-- [ ] Phase 16 — Recherche web : la source la plus incertaine juridiquement, donc la dernière
+- [x] Monorepo pnpm/Turborepo, applications, packages, Docker, Prisma, configuration, README et controles qualite
+
+- [x] Schema metier, migrations et index
+
+- [ ] Ajouter une CI minimale
+  - Priorite : P2
+  - Complexite : M
+  - Fichiers concernes : `.github/workflows/ci.yml`
+  - Criteres d'acceptation :
+    - La CI installe Node 24 et pnpm 11.13.1.
+    - Elle lance `pnpm format:check`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`.
+    - Les secrets ne sont pas necessaires pour les tests.
+  - Tests : execution GitHub Actions apres push
+  - Resultat :
+
+### Phase 2 - Offres publiques
+
+- [x] API des offres, recherche, filtres, liste et detail
+
+- [x] Frontend public liste/detail avec etats vides et indisponibilite API
+
+- [ ] Verifier visuellement le frontend sur desktop et mobile
+  - Priorite : P2
+  - Complexite : S
+  - Fichiers concernes : `apps/web/src/app`, `apps/web/src/components`, `apps/web/src/app/globals.css`
+  - Criteres d'acceptation :
+    - La home et le detail s'affichent sur desktop et mobile.
+    - Les textes ne se chevauchent pas.
+    - Les etats vide/API indisponible sont lisibles.
+  - Tests : build Next, verification navigateur ou Playwright
+  - Resultat :
+
+### Phase 3 - Collecte autorisee
+
+- [x] Registre de conformite, Greenhouse, Lever, Workable documentes et testes
+
+- [x] Garde-fou structurel refusant une source non autorisee
+
+- [x] Lecture `robots.txt`, content signals et decouverte Brave transitoire
+
+- [ ] Brancher Workable dans le cycle worker reel
+  - Priorite : P1
+  - Complexite : M
+  - Fichiers concernes : `apps/worker/src/collection/cycle-deps.ts`, `apps/worker/src/collection/run-cycle.ts`, `packages/job-connectors/src/workable.ts`
+  - Dependances : decision claire sur les requetes Workable a executer par cycle
+  - Criteres d'acceptation :
+    - Le cycle sait lancer un connecteur `SearchTarget` sans casser les connecteurs par token.
+    - La cadence reste bornee a une requete par seconde.
+    - Les resultats passent par l'ingestion et les logs comme les autres sources.
+  - Tests : tests worker + test connecteur Workable + smoke avec base/Redis reels
+  - Resultat :
+
+### Phase 4 - Qualite des offres
+
+- [x] Normalisation du texte, titre comparable, sections et localisation Ile-de-France
+
+- [x] Classification contrat/metier, detection d'ecoles et ingestion en base
+
+- [~] Deduplication
+  - Priorite : P1
+  - Complexite : M
+  - Fait : score pur, decision `MERGE` / `REVIEW` / `DISTINCT`, tests.
+  - Manque :
+    - Recherche des candidates existantes avant ecriture.
+    - Creation et rattachement `DuplicateGroup`.
+    - Ecriture `DuplicateDecision`.
+  - Fichiers concernes : `packages/job-deduplication`, `packages/job-pipeline/src/persist.ts`, schema Prisma deja present
+  - Tests : tests unitaires + test d'integration de persistance
+  - Resultat :
+
+### Phase 5 - Authentification et profil
+
+- [x] Espace prive par en-tete `x-workspace-key`, comparaison a temps constant et profil candidat unique
+
+- [ ] Ajouter une UI privee minimale pour le profil
+  - Priorite : P1
+  - Complexite : M
+  - Fichiers concernes : `apps/web/src/app`, `apps/web/src/lib/api.ts`, `apps/api/src/profile`
+  - Criteres d'acceptation :
+    - Le profil se lit, se cree et se modifie depuis une page protegee.
+    - La cle n'est jamais stockee dans le code.
+    - Les erreurs 401/404/validation sont affichees clairement.
+  - Tests : tests API + tests composants ou E2E
+  - Resultat :
+
+### Phase 6 - CV source
+
+- [~] Import prive et extraction texte PDF/DOCX/TXT
+  - Priorite : P1
+  - Complexite : deja fait partiellement
+  - Fait : upload garde, limite de taille, extraction, deduplication par empreinte.
+  - Manque : versions, suppression, retention effective, chiffrement/conservation du binaire si necessaire.
+  - Tests : `apps/api/src/resume/extract-text.test.ts`, tests controller/service a completer
+  - Resultat :
+
+- [x] Structurer le CV en JSON valide
+  - Priorite : P1
+  - Complexite : M
+  - Fichiers concernes : `apps/api/src/resume`, `packages/ai/src`, `packages/database/prisma/schema.prisma`
+  - Dependances : Ollama disponible si `AI_PROVIDER=ollama`
+  - Criteres d'acceptation :
+    - Le texte extrait est transforme en identite, formations, experiences, competences, langues et projets.
+    - La sortie est validee par Zod et stockee.
+    - Les champs absents restent absents ; rien n'est invente.
+    - Les erreurs IA indisponible ou sortie invalide sont explicites.
+  - Tests : tests schema, service, route gardee, test sortie invalide
+  - Resultat : route `POST /api/resumes/:id/structure`, schema Zod strict, appel Ollama local et stockage `structuredFacts` / `structuredWarnings` / `structuredConfidence` / `structuredAt`; valide par ordre utilisateur du 2026-07-25.
+
+- [x] Supprimer un CV source et appliquer une retention
+  - Priorite : P1
+  - Complexite : S
+  - Fichiers concernes : `apps/api/src/resume`, `packages/database/prisma/schema.prisma`
+  - Criteres d'acceptation :
+    - `DELETE /api/resumes/:id` supprime ou marque la suppression selon la decision retenue.
+    - Une retention automatique est documentee et testee.
+    - Les routes liste/detail n'exposent plus un CV supprime.
+  - Tests : tests API/service
+  - Resultat : `DELETE /api/resumes/:id` avec suppression physique et detachement du profil, `expiresAt` a chaque import (`RESUME_RETENTION_HOURS`), purge des CV expires au passage sur les routes CV ; prouve le 2026-07-25 contre API et base reelles (401 sans cle, upload +24 h, 204 puis 404, expiration forcee puis zero ligne en base) ; valide par ordre utilisateur du 2026-07-25.
+
+### Phase 7 - IA et scoring
+
+- [x] Client IA local Ollama avec sortie structuree revalidee
+
+- [ ] Calculer un score explicable offre / profil sans IA
+  - Priorite : P1
+  - Complexite : L
+  - Fichiers concernes : `packages/matching-engine`, `apps/api/src`, `packages/database/prisma/schema.prisma`
+  - Dependances : CV structure, offres publiees, competences normalisees
+  - Criteres d'acceptation :
+    - Le score ne vient pas d'une valeur aleatoire ni d'une reponse brute IA.
+    - Les criteres et pondérations sont explicites.
+    - Les competences presentes, manquantes et recommandations sont stockees.
+    - Un avertissement signale les donnees insuffisantes.
+  - Tests : unitaires sur pondérations + integration `JobMatch`
+  - Resultat :
+
+- [ ] Expliquer le score dans l'interface
+  - Priorite : P1
+  - Complexite : M
+  - Fichiers concernes : `apps/web`, `apps/api`
+  - Criteres d'acceptation :
+    - L'utilisateur voit le score, les raisons, les forces, les manques et les limites.
+    - Aucun score n'est affiche sans base de calcul verifiable.
+  - Tests : rendu + API
+  - Resultat :
+
+### Phase 8 - GitHub et projets
+
+- [ ] Synchroniser les depots GitHub publics
+  - Priorite : P2
+  - Complexite : L
+  - Fichiers concernes : nouveau package ou module API dedie
+  - Criteres d'acceptation :
+    - Pagination GitHub geree.
+    - README, langages et activite recente sont lus.
+    - Les limites API et erreurs sont gerees.
+    - Aucun token prive n'est stocke en clair.
+  - Tests : connecteur avec doubles + contrat de stockage
+  - Resultat :
+
+- [ ] Selectionner les projets pertinents pour une offre
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : GitHub sync + matching
+  - Criteres d'acceptation :
+    - Les projets sont recommandes avec preuves issues du depot.
+    - Les depots prives ne partent jamais vers une IA distante.
+  - Tests : score projet/offre
+  - Resultat :
+
+### Phase 9 - Generation de candidature
+
+- [ ] Concevoir les modeles de CV et lettre
+  - Priorite : P1
+  - Complexite : L
+  - Criteres d'acceptation :
+    - Modeles preconçus, pas regeneres entierement par l'IA.
+    - Rendu deterministe.
+    - Les faits utilises sont traçables.
+  - Tests : snapshots/rendu + validation donnees
+  - Resultat :
+
+- [ ] Generer une lettre de motivation factuelle
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : CV structure, offre, score
+  - Criteres d'acceptation :
+    - La lettre cite uniquement des faits du CV et de l'offre.
+    - Les sorties IA invalides ou trop vagues sont refusees.
+    - L'utilisateur peut relire avant utilisation.
+  - Tests : service + cas donnees insuffisantes
+  - Resultat :
+
+- [ ] Exporter CV et lettre en PDF/DOCX
+  - Priorite : P1
+  - Complexite : L
+  - Criteres d'acceptation :
+    - Export consultable et stable.
+    - Aucun champ manquant n'est invente.
+    - Les documents sont rattaches a l'historique.
+  - Tests : generation fichier + inspection minimale
+  - Resultat :
+
+### Phase 10 - Suivi des candidatures
+
+- [ ] Creer le dossier de candidature
+  - Priorite : P1
+  - Complexite : M
+  - Criteres d'acceptation :
+    - Une candidature lie offre, CV, lettre, statut, notes et date.
+    - Les statuts ont un historique.
+    - Les offres expirees restent consultables dans le dossier.
+  - Tests : API + base
+  - Resultat :
+
+- [ ] Ajouter rappels et statistiques personnelles
+  - Priorite : P2
+  - Complexite : M
+  - Tests : worker + UI
+  - Resultat :
+
+### Phase 11 - Notifications
+
+- [x] Alertes Telegram de nouvelles offres, idempotentes et en simulation par defaut
+
+- [ ] Ajouter les commandes Telegram
+  - Priorite : P2
+  - Complexite : M
+  - Commandes attendues : `/start`, `/status`, `/latest`, `/help`
+  - Criteres d'acceptation :
+    - Les commandes ne revelent aucune donnee privee sans verification.
+    - Les erreurs Telegram ne journalisent pas le token.
+  - Tests : parsing commande + envoi simule
+  - Resultat :
+
+### Phase 12 - Securite et donnees personnelles
+
+- [ ] Nettoyer l'environnement local obsolète
+  - Priorite : P1
+  - Complexite : XS
+  - Fichiers concernes : `.env` local non committe
+  - Criteres d'acceptation :
+    - `OPENAI_API_KEY` est retiree si aucun fournisseur distant n'est retenu.
+    - Les variables necessaires restent documentees dans `.env.example`.
+  - Tests : `pnpm typecheck`, demarrage API/worker si necessaire
+  - Resultat :
+
+- [ ] Formaliser retention, export et suppression des donnees
+  - Priorite : P1
+  - Complexite : M
+  - Criteres d'acceptation :
+    - CV, profil, documents et candidatures ont des regles de conservation.
+    - Les suppressions sont testees.
+    - Les limites juridiques sont signalees comme a valider juridiquement.
+  - Tests : API + base
+  - Resultat :
+
+- [ ] Ajouter rate limiting et durcissement upload
+  - Priorite : P2
+  - Complexite : M
+  - Criteres d'acceptation :
+    - Taille, MIME, timeout et erreurs sont bornes.
+    - Les routes privees et upload sont protegees contre abus.
+  - Tests : API negative cases
+  - Resultat :
+
+### Phase 13 - Tests et qualite
+
+- [ ] Ajouter tests d'integration API pour profil et CV
+  - Priorite : P1
+  - Complexite : M
+  - Criteres d'acceptation :
+    - 401 sans cle, 400 validation, 404 absence, succes nominal.
+    - Upload PDF/DOCX/TXT couvert au niveau route.
+  - Tests : Vitest API
+  - Resultat :
+
+- [ ] Ajouter tests E2E parcours public
+  - Priorite : P2
+  - Complexite : M
+  - Criteres d'acceptation :
+    - Liste, filtres, recherche, pagination et detail couverts.
+    - Port `3100` utilise, jamais `3000`.
+  - Tests : Playwright ou equivalent
+  - Resultat :
+
+### Phase 14 - Performance et observabilite
+
+- [ ] Ajouter logs et metriques exploitables
+  - Priorite : P2
+  - Complexite : M
+  - Criteres d'acceptation :
+    - Chaque cycle expose correlationId, duree, compteurs, erreurs.
+    - Les erreurs ne contiennent ni CV complet inutile, ni token, ni cle.
+  - Tests : tests logs/sanitisation
+  - Resultat :
+
+- [ ] Optimiser requetes et index selon usage reel
+  - Priorite : P3
+  - Complexite : M
+  - Dependances : volume reel d'offres
+  - Tests : plan d'execution ou benchmark local
+  - Resultat :
+
+### Phase 15 - Deploiement
+
+- [ ] Documenter deploiement vierge
+  - Priorite : P2
+  - Complexite : M
+  - Criteres d'acceptation :
+    - Prerequis, installation, variables, migrations, seed, demarrage web/API/worker et rollback sont documentes.
+    - Les secrets sont decrits par nom de variable seulement.
+  - Tests : reprise sur environnement propre
+  - Resultat :
+
+- [ ] Preparer production
+  - Priorite : P2
+  - Complexite : L
+  - Criteres d'acceptation :
+    - HTTPS, domaine, sauvegardes, logs, monitoring, migrations et rollback sont couverts.
+    - Ollama n'est pas expose publiquement.
+  - Tests : smoke production
+  - Resultat :
+
+### Phase 16 - Validation finale
+
+- [ ] Parcours utilisateur complet depuis un environnement vierge
+  - Priorite : P1
+  - Complexite : XL
+  - Criteres d'acceptation :
+    - Installation documentee et reproductible.
+    - Offres reelles collectees depuis sources autorisees.
+    - Profil et CV structures.
+    - Score explicable.
+    - Lettre/document genere sans invention.
+    - Candidature suivie.
+    - Notifications pertinentes.
+    - Donnees isolees et supprimables.
+    - Lint, typecheck, tests, build et format passent.
+  - Tests : suite complete + verification manuelle guidee
+  - Resultat :
+
+## 11. Bugs connus
+
+| ID   | Bug                                                 | Gravite | Reproduction                                    | Cause probable                                       | Correctif propose                        | Statut |
+| ---- | --------------------------------------------------- | ------- | ----------------------------------------------- | ---------------------------------------------------- | ---------------------------------------- | ------ |
+| B001 | `pnpm format:check` echouait                        | P0      | `pnpm format:check`                             | `packages/ai/src/ollama-client.test.ts` non Prettier | Reformater le fichier                    | Ferme  |
+| B002 | Documentation historique obsolete                   | P1      | Lire `README.md` et `docs/architecture.md`      | Docs non realignees apres phases recentes            | Recrire les sections d'etat/architecture | Ferme  |
+| B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ouvert |
+| B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Brancher dans `persistDecision`          | Ouvert |
+| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retirer la variable locale si inutile    | Ouvert |
+| B006 | Pas de CI/CD                                        | P2      | Absence de dossier `.github`                    | Non implemente                                       | Ajouter workflow GitHub Actions          | Ouvert |
+
+## 12. Decisions techniques
+
+| Date       | Decision                                             | Justification                                           | Consequences                                   |
+| ---------- | ---------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------- |
+| 2026-07-16 | Monorepo pnpm/Turborepo, Next.js, NestJS, worker     | Separation web/API/traitements et evolution par briques | Structure `apps/*` et `packages/*`             |
+| 2026-07-17 | Alternance et stage restent stockables               | Ne pas detruire le perimetre valide et les stages reels | L'affichage par defaut favorise l'alternance   |
+| 2026-07-17 | Registre de conformite obligatoire                   | Ne pas collecter sans permission constatee              | `Connector` decide ce qui peut tourner         |
+| 2026-07-17 | Brave sert uniquement a decouvrir                    | Ses conditions interdisent de stocker les resultats     | Resultats transitoires, jamais en base         |
+| 2026-07-24 | IA locale via Ollama `qwen2.5:7b`                    | Cout nul et aucune donnee envoyee a un tiers            | `AI_PROVIDER=ollama`, sortie Zod revalidee     |
+| 2026-07-24 | Le rendu CV/lettre doit etre deterministe            | Eviter de regenerer un document entier par offre        | IA limitee au texte/analyse, pas au design PDF |
+| 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
+
+## 13. Journal d'avancement
+
+### 2026-07-25
+
+- Taches validees : structuration JSON du CV source ; suppression et retention du CV source. Ordre utilisateur du 2026-07-25.
+- Preuve sur le reel, API port 4000 et PostgreSQL Docker, sans mock :
+  - `GET /api/resumes` sans cle : 401.
+  - Upload TXT avec cle : `expiresAt` a +24 h de `createdAt`, conforme a `RESUME_RETENTION_HOURS=24`.
+  - `DELETE /api/resumes/:id` : 204, puis `GET` et `DELETE` rejoues : 404.
+  - Expiration forcee en SQL puis passage sur la liste : 0 CV renvoye, 0 ligne `SourceResume` en base — purge physique constatee.
+  - Nettoyage : API de test arretee, port 4000 libere, base laissee sans CV de test.
+- Prochaine etape ordonnee : score de correspondance offre / profil, sans IA, explicable.
+
+### 2026-07-24
+
+- Taches commencees : audit initial complet, realignement de `roadmap.md`, structuration JSON du CV source.
+- Taches terminees : inventaire, lecture `HANDOFF.md`, verification Git, inspection stack, routes, base, worker, IA, securite, docs et implementation CV JSON locale.
+- Taches validees : restauration de la baseline format ; realignement de `README.md` et `docs/architecture.md`.
+- Taches mises en validation : structuration JSON du CV source.
+- Tests executes :
+  - `git status --short --branch` : propre sur `main` avant modifications.
+  - `git log -n 10 --oneline` : dernier commit `b418bfc docs: realign the roadmap with what the code actually does`.
+  - `pnpm infra:up` : PostgreSQL et Redis demarres.
+  - `docker compose ps` : `postgres` et `redis` healthy.
+  - `pnpm db:migrate` : 8 migrations, aucune en attente.
+  - `pnpm registry:sync` : 13 sources synchronisees.
+  - `pnpm format:check` : echec sur `packages/ai/src/ollama-client.test.ts`.
+  - `pnpm typecheck` : 24/24 taches OK.
+  - `pnpm lint` : 24/24 taches OK.
+  - `pnpm test` : 24/24 taches OK.
+  - `pnpm build` : 15/15 taches OK.
+  - `pnpm exec turbo run build --force` : 15/15 taches OK, sans cache.
+  - `pnpm exec turbo run typecheck --force` : 24/24 taches OK, sans cache, apres build.
+  - `pnpm exec turbo run lint --force` : 24/24 taches OK, sans cache.
+  - `pnpm exec turbo run test --force` : 24/24 taches OK, sans cache.
+  - `pnpm format:check` apres correction : OK.
+  - `pnpm --filter @findit/ai test` apres correction : 1 fichier, 6 tests OK.
+  - `README.md` et `docs/architecture.md` realignes avec l'etat reel audite.
+  - `pnpm exec prettier --write README.md docs/architecture.md roadmap.md` : OK.
+  - `pnpm format:check` apres correction documentaire : OK.
+  - `git diff --check` apres correction documentaire : OK.
+  - `pnpm --filter @findit/api exec vitest run src/resume/structured-resume.test.ts` avant implementation : echec attendu, module absent.
+  - `pnpm --filter @findit/api exec vitest run src/resume/structured-resume.test.ts` apres schema : 1 fichier, 2 tests OK.
+  - `pnpm --filter @findit/api exec vitest run src/resume/resume.service.test.ts` avant implementation : echec attendu, `service.structure` absent.
+  - `pnpm --filter @findit/api exec vitest run src/resume/resume.service.test.ts` apres service : 1 fichier, 3 tests OK.
+  - `pnpm --filter @findit/api exec vitest run src/resume/resume.controller.test.ts` avant implementation : echec attendu, `controller.structure` absent.
+  - `pnpm --filter @findit/api exec vitest run src/resume/resume.controller.test.ts` apres route : 1 fichier, 5 tests OK.
+  - `pnpm db:generate` apres schema `SourceResume` : client Prisma regenere.
+  - `pnpm db:migrate` apres migration `20260724190000_source_resume_structure` : migration appliquee.
+  - `pnpm --filter @findit/database build` : OK.
+  - `pnpm --filter @findit/database typecheck` : OK.
+  - `pnpm --filter @findit/api lint` apres correction : OK.
+  - `pnpm --filter @findit/api typecheck` apres correction : OK.
+  - `pnpm --filter @findit/api test` apres correction : 7 fichiers, 37 tests OK.
+  - `pnpm --filter @findit/database prisma:validate` : schema valide.
+  - `pnpm format:check` apres structuration CV : OK.
+  - `pnpm lint` apres structuration CV : 25/25 taches OK.
+  - `pnpm typecheck` apres structuration CV : 25/25 taches OK.
+  - `pnpm test` apres structuration CV : 25/25 taches OK.
+  - `pnpm build` apres structuration CV : 15/15 taches OK.
+  - Scan GitGuardian sur fichiers suivis sensibles (`.env.example`, hook, schema env) : 0 policy break.
+- Problemes rencontres :
+  - Smoke runtime via `Start-Process` bloque par la politique locale avant demarrage.
+  - `pnpm exec turbo run typecheck lint test build --force` lance build et typecheck web en parallele ; le typecheck peut lire `.next/types` pendant que Next les regenere. En execution separee, build puis typecheck passent.
+- Prochaine etape recommandee : apres validation utilisateur de la structuration CV, ajouter suppression et retention effective du CV source.
+
+## 14. Criteres de fin du projet
+
+- [ ] Installation depuis un environnement vierge documentee et verifiee.
+- [ ] `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` et `pnpm build` passent.
+- [ ] Migrations et seed de demonstration fonctionnent sans detruire de donnees reelles.
+- [ ] Aucun secret n'est present dans les fichiers suivis ni dans l'historique public connu.
+- [ ] Sources d'offres reelles collectees uniquement depuis acces autorises.
+- [ ] Doublons geres et conserves avec preuves.
+- [ ] Interface publique responsive et accessible.
+- [ ] Espace prive protege.
+- [ ] Profil candidat complet.
+- [ ] CV importable, structurable, supprimable et soumis a retention.
+- [ ] Score CV/offre explicable et teste.
+- [ ] Projets GitHub analysables avec preuves.
+- [ ] CV, lettre et messages generes sans invention.
+- [ ] Candidatures suivies avec historique et rappels.
+- [ ] Notifications utiles et non bruyantes.
+- [ ] Donnees personnelles minimises, exportables/supprimables selon decision juridique.
+- [ ] Production deployable avec HTTPS, sauvegardes, monitoring, alertes et rollback.
+- [ ] Documentation finale conforme a l'etat reel du code.

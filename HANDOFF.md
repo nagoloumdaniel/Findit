@@ -4,7 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-24, après le réalignement de [roadmap.md](roadmap.md).
+À jour au 2026-07-25, après validation sur le réel de la structure JSON du CV
+puis de sa suppression et de sa rétention.
 
 ---
 
@@ -149,11 +150,19 @@ le code et les commits tranchent.
   des fichiers illisibles.
 - **Couche IA** (`c14b1b5`) : `@findit/ai`, modèle local, sortie structurée
   validée. Voir §7.
+- **Structure du CV** : `POST /api/resumes/:id/structure`, route gardee par
+  `WorkspaceGuard`, lit le texte `SourceResume`, appelle Ollama via
+  `generateStructured`, valide la sortie par Zod, puis stocke `structuredFacts`,
+  `structuredWarnings`, `structuredConfidence` et `structuredAt`.
+- **Suppression et rétention du CV source** : `DELETE /api/resumes/:id` supprime
+  physiquement le `SourceResume`, remet à `null` le `activeResumeId` du profil si
+  besoin, ajoute `expiresAt` à chaque import et purge les CV expirés quand les
+  routes CV sont utilisées. Prouvé le 2026-07-25 contre API et base réelles :
+  401 sans clé, upload avec `expiresAt` à +24 h, DELETE 204 puis 404, expiration
+  forcée en SQL suivie d'une purge physique constatée à zéro ligne.
 
 ### Pas encore fait
 
-- **Structure du CV** : le texte est extrait, mais pas encore transformé en JSON
-  structuré. **C'est la brique suivante.**
 - Modèles de CV et de lettre, et rendu PDF.
 - Score de correspondance offre / profil.
 - Analyse GitHub.
@@ -161,8 +170,8 @@ le code et les commits tranchent.
 - Commandes du bot Telegram (`/start`, `/status`, `/latest`, `/help`).
 - Écriture en base des groupes de doublons : la logique de décision existe, le
   rattachement `DuplicateGroup` n'est pas branché.
-- Conservation et chiffrement du **binaire** du CV : seul le texte extrait est
-  stocké aujourd'hui.
+- Versions du CV source, conservation et chiffrement du **binaire** du CV : seul
+  le texte extrait est stocké aujourd'hui.
 
 ### Un résultat à connaître avant de crier au bug
 
@@ -231,7 +240,8 @@ Chacun a coûté du temps. Les relire évite de les repayer.
   `emitDecoratorMetadata`, donc un contrôleur recevait un service `undefined` en
   développement. **Écrire `@Inject(MonService)` explicitement** dans chaque
   contrôleur.
-- **Champs JSON Prisma** — caster en `Prisma.InputJsonValue`.
+- **Champs JSON Prisma** — écrire seulement des objets validés par Zod et
+  compatibles JSON ; ne jamais stocker une sortie IA brute.
 - **`unpdf`** — passer `new Uint8Array(buffer)` directement à `extractText` ;
   passer par `getDocumentProxy` donne un type qui ne se résout pas.
 - **Port 4000 occupé** par un processus fantôme — le retrouver avec
@@ -287,21 +297,17 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ## 10. Prochaines briques, dans l'ordre
 
-1. **Structure du CV.** Prendre le texte déjà extrait et le transformer en JSON
-   validé — identité, formations, expériences, compétences — avec
-   `generateStructured`. Stocker le résultat. Route derrière `WorkspaceGuard`.
-   C'est cette donnée qui alimentera tout le reste.
-2. **Modèles de CV et de lettre**, pré-conçus et designés, puis **rendu PDF
+1. **Modèles de CV et de lettre**, pré-conçus et designés, puis **rendu PDF
    déterministe** (HTML/CSS vers PDF, ou React-PDF). Aucune IA ici.
-3. **Score de correspondance** par recoupement compétences / mots-clés, sans IA,
+2. **Score de correspondance** par recoupement compétences / mots-clés, sans IA,
    avec les raisons du score affichées.
-4. **Génération de lettre** avec `generateText`, **uniquement pour les offres
+3. **Génération de lettre** avec `generateText`, **uniquement pour les offres
    auxquelles on postule** — pas pour toutes les offres collectées.
-5. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
+4. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
 
 Deux dettes connues, plus petites : les **commandes du bot Telegram**
-(`/start`, `/status`, `/latest`, `/help`) et l'**effacement d'un CV** — l'API
-sait recevoir, lister et rendre un CV, pas le supprimer.
+(`/start`, `/status`, `/latest`, `/help`) et l'absence de versionnement/binaire
+chiffré pour les CV sources.
 
 ---
 
@@ -314,7 +320,19 @@ pnpm test        # 24 tâches
 pnpm build       # 15 tâches
 ```
 
-Tout était vert au commit `c14b1b5`.
+Validation locale des briques structure CV puis suppression/rétention CV, le
+2026-07-24 :
+
+- `pnpm format:check`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm build`
+- `pnpm db:migrate`
+- `pnpm --filter @findit/database prisma:validate`
+
+Validation sur le réel du 2026-07-25 : API démarrée sur 4000, scénario complet
+suppression/rétention joué contre PostgreSQL Docker, base laissée propre.
 
 Au-delà de ces contrôles : **tester contre le réel**, puis nettoyer ce qu'on a
 écrit en base. Une brique n'est pas finie parce qu'elle compile ; elle est finie
