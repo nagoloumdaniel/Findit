@@ -5,6 +5,7 @@ export {
   ConnectorRunStatus,
   ConnectorStatus,
   ContractType,
+  DecisionSource,
   RoleCategory,
   SourceAccessStatus,
   WorkMode,

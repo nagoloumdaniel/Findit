@@ -183,6 +183,7 @@ model Job {
   duplicateDecisions     DuplicateDecision[]
   processingLogs         ProcessingLog[]
   matches                JobMatch[]
+  sourceResumeMatches    SourceResumeMatch[]
   coverLetters           CoverLetter[]
   telegramNotifications  TelegramJobNotification[]
 
@@ -947,7 +948,51 @@ model SourceResume {
   updatedAt DateTime @updatedAt
   expiresAt DateTime
 
+  matches SourceResumeMatch[]
+
   @@index([createdAt])
   @@index([structuredAt])
   @@index([expiresAt])
+}
+
+/// Score entre le CV source du propriétaire et une offre. Distinct de
+/// `JobMatch`, qui appartient au dépôt public anonyme : les deux mondes ne
+/// partagent pas leurs tables. Calculé par règles, jamais par IA, et recalculé
+/// à la demande : la ligne suit le CV et l'offre (suppression en cascade).
+model SourceResumeMatch {
+  id String @id @default(uuid(7))
+
+  sourceResumeId String
+  sourceResume   SourceResume @relation(fields: [sourceResumeId], references: [id], onDelete: Cascade)
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  /// Score global sur 100.
+  score Int
+  /// Critères pondérés et leurs raisons, pour que le total soit explicable.
+  scoreBreakdown Json
+
+  matchedSkills   String[]
+  missingSkills   String[]
+  missingKeywords String[]
+  strengths       String[]
+  weaknesses      String[]
+  /// Suggestions portant uniquement sur la mise en valeur de l'existant.
+  recommendations String[]
+
+  /// Confiance sur 100 : quantité de matière comparée, pas qualité du candidat.
+  confidence Int
+  /// Renseigné quand le CV ou l'offre ne contient pas assez d'éléments.
+  insufficientDataWarning String?
+
+  computedBy DecisionSource
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Un seul score courant par couple CV/offre : recalculer remplace.
+  @@unique([sourceResumeId, jobId])
+  @@index([jobId])
+  @@index([sourceResumeId, score])
 }
