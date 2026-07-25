@@ -18,6 +18,7 @@
     "@findit/ai": "workspace:*",
     "@findit/config": "workspace:*",
     "@findit/database": "workspace:*",
+    "@findit/documents": "workspace:*",
     "@findit/matching-engine": "workspace:*",
     "@findit/shared": "workspace:*",
     "@nestjs/common": "11.1.28",
