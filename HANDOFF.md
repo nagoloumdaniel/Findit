@@ -4,8 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-25, après validation sur le réel de la structure JSON du CV
-puis de sa suppression et de sa rétention.
+À jour au 2026-07-25, après le score de correspondance offre/profil et le
+correctif du schéma envoyé à Ollama.
 
 ---
 
@@ -66,7 +66,8 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 - `job-pipeline` — décision d'ingestion et écriture en base.
 - `notifications` — Telegram.
 - `ai` — modèle local (voir §7).
-- `matching-engine`, `resume-parser` — **vides**, README seulement.
+- `matching-engine` — score CV/offre pur, sans IA, déterministe et explicable.
+- `resume-parser` — **vide**, README seulement.
 
 ---
 
@@ -160,11 +161,25 @@ le code et les commits tranchent.
   routes CV sont utilisées. Prouvé le 2026-07-25 contre API et base réelles :
   401 sans clé, upload avec `expiresAt` à +24 h, DELETE 204 puis 404, expiration
   forcée en SQL suivie d'une purge physique constatée à zéro ligne.
+- **Score de correspondance offre/profil** : `@findit/matching-engine`, moteur
+  pur sans IA — dictionnaire technique explicite, 4 critères pondérés
+  (exigées 50, souhaitées 20, intitulé 15, langues 15), renormalisation quand
+  un critère n'a pas de signal, avertissement explicite quand la matière
+  manque. Routes gardées `POST /api/resumes/:id/matches/:slug` (recalcule et
+  remplace) et `GET /api/resumes/:id/matches` (meilleur d'abord), stockage
+  `SourceResumeMatch` en cascade avec le CV et l'offre. Prouvé le 2026-07-25
+  contre Ollama et base réels : CV structuré puis scoré 93/100 sur l'offre
+  front-end démo et 36/100 sur la back-end, raisons listées, cascade vérifiée.
+- **Correctif `@findit/ai`** : llama.cpp refusait le schéma JSON dérivé de Zod
+  (400 « failed to parse grammar ») à cause des regex à lookahead (e-mail) et
+  des bornes `minLength`/`maxLength`. Le client retire ces mots-clés du schéma
+  **envoyé** ; la revalidation Zod conserve toutes les contraintes. Sans ce
+  correctif, la structuration n'avait jamais fonctionné contre le serveur réel.
 
 ### Pas encore fait
 
 - Modèles de CV et de lettre, et rendu PDF.
-- Score de correspondance offre / profil.
+- Affichage du score dans une interface (le calcul et les raisons existent).
 - Analyse GitHub.
 - Suivi des candidatures.
 - Commandes du bot Telegram (`/start`, `/status`, `/latest`, `/help`).
@@ -299,11 +314,12 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 1. **Modèles de CV et de lettre**, pré-conçus et designés, puis **rendu PDF
    déterministe** (HTML/CSS vers PDF, ou React-PDF). Aucune IA ici.
-2. **Score de correspondance** par recoupement compétences / mots-clés, sans IA,
-   avec les raisons du score affichées.
-3. **Génération de lettre** avec `generateText`, **uniquement pour les offres
+2. **Génération de lettre** avec `generateText`, **uniquement pour les offres
    auxquelles on postule** — pas pour toutes les offres collectées.
-4. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
+3. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
+
+Le score de correspondance est fait côté moteur et API ; il reste à l'afficher
+dans une interface avec ses raisons.
 
 Deux dettes connues, plus petites : les **commandes du bot Telegram**
 (`/start`, `/status`, `/latest`, `/help`) et l'absence de versionnement/binaire

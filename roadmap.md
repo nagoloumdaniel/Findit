@@ -89,7 +89,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 ### Ce qui manque
 
 - Conservation chiffree et versionnee du binaire original du CV.
-- Score explicable offre / profil.
+- Affichage du score offre / profil dans l'interface (calcul et raisons faits).
 - Generation de CV, lettre, messages recruteurs et exports PDF/DOCX.
 - Analyse GitHub et selection de projets.
 - Suivi des candidatures, historique, rappels et statuts.
@@ -176,7 +176,7 @@ Espace prive
 | Espace prive         | Absent         | Guard + profil                | `CandidateProfile`   | Oui   | Backend uniquement          | P1       |
 | CV source            | Absent         | Upload/liste/detail/structure | `SourceResume`       | Oui   | Partiel                     | P1       |
 | IA locale            | Absent         | Package + route CV            | Prompt tables        | Oui   | Partiel                     | P1       |
-| Matching CV/offre    | Absent         | Absent                        | `JobMatch` prevu     | Non   | Absent                      | P1       |
+| Matching CV/offre    | Absent         | Moteur + routes gardees       | `SourceResumeMatch`  | Oui   | Backend fonctionnel         | P1       |
 | GitHub               | Absent         | Absent                        | Absent               | Non   | Absent                      | P2       |
 | Generation documents | Absent         | Absent                        | `CoverLetter` prevu  | Non   | Absent                      | P1       |
 | Suivi candidatures   | Absent         | Absent                        | Absent               | Non   | Absent                      | P1       |
@@ -185,21 +185,23 @@ Espace prive
 
 ## 7. API presentes
 
-| Methode | Chemin                       | Controleur          | Validation                  | Authentification | Statut reel                |
-| ------- | ---------------------------- | ------------------- | --------------------------- | ---------------- | -------------------------- |
-| GET     | `/health`                    | `HealthController`  | Aucune entree               | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs`                  | `JobsController`    | `jobQuerySchema`            | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/stats`            | `JobsController`    | Aucune entree               | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/filters`          | `JobsController`    | `freshnessQuerySchema`      | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/:slug`            | `JobsController`    | `jobSlugSchema` + freshness | Publique         | Fonctionnel et teste       |
-| GET     | `/api/profile`               | `ProfileController` | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
-| PUT     | `/api/profile`               | `ProfileController` | `profileInputSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
-| PATCH   | `/api/profile`               | `ProfileController` | `profilePatchSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
-| POST    | `/api/resumes/upload`        | `ResumeController`  | MIME/extension + taille     | `WorkspaceGuard` | Partiel : extraction texte |
-| GET     | `/api/resumes`               | `ResumeController`  | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
-| GET     | `/api/resumes/:id`           | `ResumeController`  | UUID                        | `WorkspaceGuard` | Backend fonctionnel        |
-| POST    | `/api/resumes/:id/structure` | `ResumeController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
-| DELETE  | `/api/resumes/:id`           | `ResumeController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| Methode | Chemin                           | Controleur           | Validation                  | Authentification | Statut reel                |
+| ------- | -------------------------------- | -------------------- | --------------------------- | ---------------- | -------------------------- |
+| GET     | `/health`                        | `HealthController`   | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs`                      | `JobsController`     | `jobQuerySchema`            | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/stats`                | `JobsController`     | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/filters`              | `JobsController`     | `freshnessQuerySchema`      | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/:slug`                | `JobsController`     | `jobSlugSchema` + freshness | Publique         | Fonctionnel et teste       |
+| GET     | `/api/profile`                   | `ProfileController`  | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| PUT     | `/api/profile`                   | `ProfileController`  | `profileInputSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| PATCH   | `/api/profile`                   | `ProfileController`  | `profilePatchSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/upload`            | `ResumeController`   | MIME/extension + taille     | `WorkspaceGuard` | Partiel : extraction texte |
+| GET     | `/api/resumes`                   | `ResumeController`   | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| GET     | `/api/resumes/:id`               | `ResumeController`   | UUID                        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/:id/structure`     | `ResumeController`   | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| DELETE  | `/api/resumes/:id`               | `ResumeController`   | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| POST    | `/api/resumes/:id/matches/:slug` | `MatchingController` | UUID + slug strict          | `WorkspaceGuard` | Fonctionnel, valide        |
+| GET     | `/api/resumes/:id/matches`       | `MatchingController` | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
 
 Endpoints absents : authentification utilisateur complete, matching, generation, GitHub, candidatures, admin, commandes Telegram HTTP/webhook.
 
@@ -389,7 +391,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 - [x] Client IA local Ollama avec sortie structuree revalidee
 
-- [ ] Calculer un score explicable offre / profil sans IA
+- [x] Calculer un score explicable offre / profil sans IA
   - Priorite : P1
   - Complexite : L
   - Fichiers concernes : `packages/matching-engine`, `apps/api/src`, `packages/database/prisma/schema.prisma`
@@ -400,7 +402,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Les competences presentes, manquantes et recommandations sont stockees.
     - Un avertissement signale les donnees insuffisantes.
   - Tests : unitaires sur pondérations + integration `JobMatch`
-  - Resultat :
+  - Resultat : `@findit/matching-engine` (dictionnaire technique, 4 criteres ponderes 50/20/15/15, renormalisation, avertissement donnees insuffisantes), table `SourceResumeMatch` en cascade, routes gardees POST/GET `/api/resumes/:id/matches`; prouve le 2026-07-25 contre Ollama et base reels : 93/100 offre front-end demo, 36/100 back-end avec manques listes (SQL, PostgreSQL, API REST) ; correctif `@findit/ai` au passage (retrait des mots-cles `pattern`/`format`/`minLength`/`maxLength` du schema envoye, revalidation Zod conservee) ; valide par ordre utilisateur du 2026-07-25.
 
 - [ ] Expliquer le score dans l'interface
   - Priorite : P1
@@ -643,6 +645,17 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
   - Expiration forcee en SQL puis passage sur la liste : 0 CV renvoye, 0 ligne `SourceResume` en base — purge physique constatee.
   - Nettoyage : API de test arretee, port 4000 libere, base laissee sans CV de test.
 - Prochaine etape ordonnee : score de correspondance offre / profil, sans IA, explicable.
+
+### 2026-07-25 (suite) — score de correspondance
+
+- Taches terminees et validees : moteur `@findit/matching-engine`, modele `SourceResumeMatch` (migration `20260725050000_source_resume_match`, zero derive constatee par `prisma migrate diff`), routes gardees de matching, correctif `@findit/ai` sur le schema envoye a Ollama. Ordre utilisateur du 2026-07-25.
+- Preuve sur le reel, Ollama `qwen2.5:7b` et PostgreSQL Docker, sans mock :
+  - CV realiste televerse puis structure par le vrai modele en 37 s, 9 competences extraites, rien d'invente.
+  - `POST /api/resumes/:id/matches/:slug` : 93/100 contre l'offre front-end demo (exigees 100 %), 36/100 contre la back-end avec manques listes (SQL exigee ; PostgreSQL, API REST souhaitees).
+  - Liste triee meilleur d'abord ; 401 sans cle ; 409 CV non structure ; 404 offre inconnue.
+  - Suppression du CV : cascade constatee, 0 CV et 0 score en base.
+- Bug reel corrige : llama.cpp repondait 400 « failed to parse grammar » aux regex a lookahead (e-mail Zod) et aux bornes `minLength`/`maxLength` ; sans ce correctif la structuration n'avait jamais fonctionne contre le serveur reel. Les mots-cles sont retires du schema envoye, la revalidation Zod garde tout.
+- Controles : format, lint 27/27, typecheck 27/27, test 27/27, build 16/16.
 
 ### 2026-07-24
 
