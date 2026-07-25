@@ -93,7 +93,12 @@ const linkSchema = z
 
 export const resumeFactsSchema = z
   .object({
-    identity: identitySchema.optional(),
+    // Requis, champs internes optionnels : constaté sur le modèle réel, un
+    // objet optionnel est simplement sauté par la grammaire de décodage et
+    // l'identité pourtant lisible n'était jamais extraite. Le rendre requis
+    // force le modèle à au moins ouvrir l'objet ; ce qu'il ne voit pas dans le
+    // CV reste omis champ par champ.
+    identity: identitySchema,
     summary: longText.optional(),
     education: z.array(educationSchema).max(20).default([]),
     experiences: z.array(experienceSchema).max(30).default([]),

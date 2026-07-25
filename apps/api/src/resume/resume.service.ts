@@ -52,6 +52,10 @@ const RESUME_STRUCTURE_SYSTEM = [
   "N'invente aucune competence, experience, date, ecole, entreprise, niveau ou lien.",
   "Si une information est absente ou ambigue, omets le champ et ajoute un avertissement.",
   "Les champs de texte doivent citer uniquement des elements visibles dans le CV.",
+  // Constaté sur le modèle réel : sans ces deux consignes, il transforme
+  // l'e-mail en « lien » invalide et omet parfois l'identité pourtant lisible.
+  "Recopie tels quels le nom complet, le titre, l'e-mail et le telephone quand ils sont visibles.",
+  "N'inclus un element dans links que si le CV contient une URL complete commencant par http:// ou https:// ; un e-mail ou un telephone n'est jamais un lien.",
 ].join(" ");
 
 const buildResumeStructurePrompt = (text: string): string =>

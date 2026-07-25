@@ -44,7 +44,23 @@ describe("structuredResumeSchema", () => {
       confidence: 82,
     });
 
-    expect(parsed.facts.identity?.email).toBeUndefined();
+    expect(parsed.facts.identity.email).toBeUndefined();
+    // L'identite est requise : la grammaire du modele doit au moins l'ouvrir.
+    expect(() =>
+      structuredResumeSchema.parse({
+        facts: {
+          education: [],
+          experiences: [],
+          projects: [],
+          skills: [],
+          languages: [],
+          certifications: [],
+          links: [],
+        },
+        warnings: [],
+        confidence: 50,
+      }),
+    ).toThrow();
     expect(parsed.facts.skills).toHaveLength(2);
     expect(parsed.confidence).toBe(82);
   });

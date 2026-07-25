@@ -54,7 +54,7 @@ const toResumeInput = (facts: ResumeFacts): ResumeMatchInput => ({
     ...facts.projects.flatMap((project) => project.skills),
   ],
   titles: [
-    ...(facts.identity?.title === undefined ? [] : [facts.identity.title]),
+    ...(facts.identity.title === undefined ? [] : [facts.identity.title]),
     ...facts.experiences.flatMap((experience) =>
       experience.title === undefined ? [] : [experience.title],
     ),
