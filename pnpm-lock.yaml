@@ -50,6 +50,9 @@ importers:
       '@fastify/multipart':
         specifier: 10.1.0
         version: 10.1.0
+      '@findit/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@findit/config':
         specifier: workspace:*
         version: link:../../packages/config

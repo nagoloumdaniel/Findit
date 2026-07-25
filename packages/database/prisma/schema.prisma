@@ -938,8 +938,16 @@ model SourceResume {
 
   extractedText String
 
+  structuredFacts      Json?
+  structuredWarnings   String[] @default([])
+  structuredConfidence Int?
+  structuredAt         DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  expiresAt DateTime
 
   @@index([createdAt])
+  @@index([structuredAt])
+  @@index([expiresAt])
 }

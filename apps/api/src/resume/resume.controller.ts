@@ -1,12 +1,18 @@
+import { AiDisabledError, AiOutputError, AiUnavailableError } from "@findit/ai";
 import {
+  BadGatewayException,
   BadRequestException,
+  ConflictException,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Inject,
   NotFoundException,
   Param,
   Post,
   Req,
+  ServiceUnavailableException,
   UseGuards,
   UsePipes,
 } from "@nestjs/common";
@@ -71,5 +77,41 @@ export class ResumeController {
       throw new NotFoundException("CV introuvable.");
     }
     return resume;
+  }
+
+  @Delete(":id")
+  @HttpCode(204)
+  @UsePipes(new ZodValidationPipe(resumeIdSchema))
+  async remove(@Param() params: ResumeIdParam): Promise<void> {
+    const removed = await this.resumes.remove(params.id);
+    if (!removed) {
+      throw new NotFoundException("CV introuvable.");
+    }
+  }
+
+  @Post(":id/structure")
+  @UsePipes(new ZodValidationPipe(resumeIdSchema))
+  async structure(@Param() params: ResumeIdParam): Promise<ResumeDetail> {
+    try {
+      const resume = await this.resumes.structure(params.id);
+      if (resume === null) {
+        throw new NotFoundException("CV introuvable.");
+      }
+      return resume;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      if (error instanceof AiDisabledError) {
+        throw new ConflictException(error.message);
+      }
+      if (error instanceof AiUnavailableError) {
+        throw new ServiceUnavailableException(error.message);
+      }
+      if (error instanceof AiOutputError) {
+        throw new BadGatewayException(error.message);
+      }
+      throw error;
+    }
   }
 }
