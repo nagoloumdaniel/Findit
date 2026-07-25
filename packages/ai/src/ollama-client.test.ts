@@ -8,14 +8,13 @@ const Cv = z.object({ nom: z.string(), competences: z.array(z.string()) });
 
 /** Faux transport : rend une réponse fixée, sans réseau. Doublure de test. */
 const respondWith = (payload: unknown, status = 200): FetchLike =>
-  vi.fn(
-    (): Promise<Response> =>
-      Promise.resolve(
-        new Response(JSON.stringify(payload), {
-          status,
-          headers: { "content-type": "application/json" },
-        }),
-      ),
+  vi.fn((): Promise<Response> =>
+    Promise.resolve(
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
   );
 
 const modelWith = (fetchLike: FetchLike) =>
@@ -28,7 +27,10 @@ describe("createOllamaModel.generateStructured", () => {
     });
     const model = modelWith(transport);
 
-    const out = await model.generateStructured({ schema: Cv, prompt: "CV : Jean Dupont, TypeScript." });
+    const out = await model.generateStructured({
+      schema: Cv,
+      prompt: "CV : Jean Dupont, TypeScript.",
+    });
 
     expect(out).toEqual({ nom: "Jean Dupont", competences: ["TypeScript"] });
     expect(transport).toHaveBeenCalledWith(
