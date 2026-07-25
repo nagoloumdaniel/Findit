@@ -39,6 +39,36 @@ describe("createOllamaModel.generateStructured", () => {
     );
   });
 
+  it("retire du schéma envoyé les regex que llama.cpp ne compile pas", async () => {
+    // L'e-mail Zod produit un `pattern` à lookahead : envoyé tel quel, Ollama
+    // répond 400 « failed to parse grammar ». La revalidation Zod garde tout.
+    const WithEmail = z.object({
+      email: z.string().email(),
+      libelle: z.string().min(1).max(4000),
+      format: z.string().optional(),
+    });
+    const transport = respondWith({
+      message: { content: JSON.stringify({ email: "jean@exemple.fr", libelle: "ok" }) },
+    });
+    const model = modelWith(transport);
+
+    await model.generateStructured({ schema: WithEmail, prompt: "x" });
+
+    const init = vi.mocked(transport).mock.calls[0]?.[1];
+    if (init === undefined || typeof init.body !== "string") {
+      throw new Error("Le transport n'a pas reçu de corps de requête.");
+    }
+    const sent = JSON.parse(init.body) as {
+      format: { properties: Record<string, Record<string, unknown>> };
+    };
+    expect(sent.format.properties["email"]).not.toHaveProperty("pattern");
+    expect(sent.format.properties["email"]).not.toHaveProperty("format");
+    expect(sent.format.properties["libelle"]).not.toHaveProperty("minLength");
+    expect(sent.format.properties["libelle"]).not.toHaveProperty("maxLength");
+    // Un champ *nommé* « format » reste un champ : seul le mot-clé est retiré.
+    expect(sent.format.properties).toHaveProperty("format");
+  });
+
   it("lève AiOutputError quand la sortie n'est pas du JSON", async () => {
     const model = modelWith(respondWith({ message: { content: "pas du json {" } }));
     await expect(model.generateStructured({ schema: Cv, prompt: "x" })).rejects.toBeInstanceOf(

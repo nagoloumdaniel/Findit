@@ -55,6 +55,36 @@ const buildMessages = (system: string | undefined, prompt: string): ChatMessage[
   return messages;
 };
 
+/*
+ * llama.cpp compile le schéma JSON en grammaire de décodage et ne sait pas
+ * compiler certaines regex — notamment les lookaheads des contraintes e-mail
+ * et URL de Zod — ce qui fait échouer toute la requête (400 « failed to parse
+ * grammar »). Les bornes `minLength`/`maxLength` cassent de la même façon,
+ * vérifié contre le serveur réel : une grande borne fait exploser la grammaire
+ * déroulée. Ces mots-clés sont donc retirés du schéma *envoyé* ; la
+ * revalidation Zod côté application, elle, garde toutes les contraintes.
+ * Les clés d'un objet `properties` sont des noms de champs, pas des mots-clés :
+ * elles ne sont jamais retirées.
+ */
+const UNSUPPORTED_KEYWORDS = new Set(["pattern", "format", "minLength", "maxLength"]);
+
+const stripUnsupportedKeywords = (node: unknown, parentKey?: string): unknown => {
+  if (Array.isArray(node)) {
+    return node.map((item) => stripUnsupportedKeywords(item));
+  }
+  if (typeof node !== "object" || node === null) {
+    return node;
+  }
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (parentKey !== "properties" && UNSUPPORTED_KEYWORDS.has(key)) {
+      continue;
+    }
+    cleaned[key] = stripUnsupportedKeywords(value, key);
+  }
+  return cleaned;
+};
+
 /** Lit `payload.message.content` sans faire confiance à la forme reçue. */
 const readContent = (payload: unknown): string | null => {
   if (typeof payload !== "object" || payload === null || !("message" in payload)) {
@@ -105,7 +135,7 @@ export const createOllamaModel = (config: OllamaModelConfig): OllamaModel => {
     async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
       // Le schéma JSON contraint le décodage du modèle côté Ollama ; on revalide
       // ensuite côté nous, car une contrainte n'est pas une garantie.
-      const format = z.toJSONSchema(request.schema);
+      const format = stripUnsupportedKeywords(z.toJSONSchema(request.schema));
       const content = await chat({
         format,
         options: { temperature: request.temperature ?? 0 },
