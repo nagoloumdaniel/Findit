@@ -4,8 +4,7 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-25, après le score de correspondance offre/profil et le
-correctif du schéma envoyé à Ollama.
+À jour au 2026-07-26, après le modèle de CV et son rendu PDF déterministe.
 
 ---
 
@@ -67,6 +66,8 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 - `notifications` — Telegram.
 - `ai` — modèle local (voir §7).
 - `matching-engine` — score CV/offre pur, sans IA, déterministe et explicable.
+- `documents` — modèle de CV pré-conçu et rendu PDF déterministe (React-PDF,
+  pur Node, aucun navigateur). Le design vit dans le code, pas dans l'IA.
 - `resume-parser` — **vide**, README seulement.
 
 ---
@@ -175,11 +176,21 @@ le code et les commits tranchent.
   des bornes `minLength`/`maxLength`. Le client retire ces mots-clés du schéma
   **envoyé** ; la revalidation Zod conserve toutes les contraintes. Sans ce
   correctif, la structuration n'avait jamais fonctionné contre le serveur réel.
+- **Modèle de CV + rendu PDF** (2026-07-26) : `@findit/documents` rend un A4
+  sobre depuis les faits structurés — champ absent, absent du PDF ; les tests
+  relisent le texte du PDF rendu. Route gardée
+  `GET /api/resumes/:id/documents/cv.pdf`, régénérée à chaque appel, 409 tant
+  que le CV n'est pas structuré. Prouvé contre Ollama et base réels.
+- **Extraction durcie au passage** : `identity` est devenue **requise** dans le
+  schéma (la grammaire de décodage saute un objet optionnel, le nom n'était
+  jamais extrait) et le prompt interdit de fabriquer des « links » depuis un
+  e-mail. Constaté sur le modèle réel, testé.
 
 ### Pas encore fait
 
-- Modèles de CV et de lettre, et rendu PDF.
-- Affichage du score dans une interface (le calcul et les raisons existent).
+- Modèle de lettre et génération de lettre factuelle (le modèle de CV et son
+  PDF existent).
+- Affichage du score et téléchargement du CV dans une interface.
 - Analyse GitHub.
 - Suivi des candidatures.
 - Commandes du bot Telegram (`/start`, `/status`, `/latest`, `/help`).
@@ -312,14 +323,19 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ## 10. Prochaines briques, dans l'ordre
 
-1. **Modèles de CV et de lettre**, pré-conçus et designés, puis **rendu PDF
-   déterministe** (HTML/CSS vers PDF, ou React-PDF). Aucune IA ici.
-2. **Génération de lettre** avec `generateText`, **uniquement pour les offres
-   auxquelles on postule** — pas pour toutes les offres collectées.
-3. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
+1. **Génération de lettre** avec `generateText`, **uniquement pour les offres
+   auxquelles on postule** — pas pour toutes les offres collectées. Le modèle
+   de lettre est pré-conçu dans `@findit/documents`, l'IA ne remplit que le
+   texte.
+2. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
 
-Le score de correspondance est fait côté moteur et API ; il reste à l'afficher
-dans une interface avec ses raisons.
+Le score de correspondance et l'export PDF du CV sont faits côté moteur et
+API ; il reste à les exposer dans une interface.
+
+Dette d'extraction connue : le modèle local invente parfois des jours précis
+(« 2025-01-01 » quand le CV dit « 2025 »). Rien de faux ne franchit Zod, mais
+la précision affichée peut dépasser la source — à durcir dans une brique
+extraction dédiée.
 
 Deux dettes connues, plus petites : les **commandes du bot Telegram**
 (`/start`, `/status`, `/latest`, `/help`) et l'absence de versionnement/binaire
