@@ -184,6 +184,7 @@ model Job {
   processingLogs         ProcessingLog[]
   matches                JobMatch[]
   sourceResumeMatches    SourceResumeMatch[]
+  sourceCoverLetters     SourceCoverLetter[]
   coverLetters           CoverLetter[]
   telegramNotifications  TelegramJobNotification[]
 
@@ -949,10 +950,44 @@ model SourceResume {
   expiresAt DateTime
 
   matches SourceResumeMatch[]
+  coverLetters SourceCoverLetter[]
 
   @@index([createdAt])
   @@index([structuredAt])
   @@index([expiresAt])
+}
+
+/// Lettre de motivation du propriétaire pour une offre précise. Distincte de
+/// `CoverLetter` (dépôt public anonyme). Le texte vient du modèle local mais
+/// n'est stocké qu'après vérification : toute compétence technique citée doit
+/// exister dans le CV structuré. La lettre se relit et se régénère à volonté ;
+/// une seule lettre courante par couple CV/offre, en cascade des deux côtés.
+model SourceCoverLetter {
+  id String @id @default(uuid(7))
+
+  sourceResumeId String
+  sourceResume   SourceResume @relation(fields: [sourceResumeId], references: [id], onDelete: Cascade)
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  subject String
+  /// Paragraphes de la lettre, sans formule d'adresse ni signature : le
+  /// modèle de document les ajoute au rendu.
+  paragraphs String[]
+
+  /// Faits du CV que le modèle déclare avoir utilisés, pour la relecture.
+  usedFacts String[]
+  /// Ce que la génération signale elle-même comme fragile.
+  warnings String[]
+
+  computedBy DecisionSource
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sourceResumeId, jobId])
+  @@index([jobId])
 }
 
 /// Score entre le CV source du propriétaire et une offre. Distinct de
