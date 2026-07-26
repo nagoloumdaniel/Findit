@@ -175,6 +175,13 @@ export const computeMatch = (
 ): Promise<WorkspaceResult<MatchView>> =>
   request<MatchView>(key, `/api/resumes/${resumeId}/matches/${slug}`, { method: "POST" });
 
+/** « Faire matcher mon CV » : score contre toutes les offres publiées. */
+export const computeAllMatches = (
+  key: string,
+  resumeId: string,
+): Promise<WorkspaceResult<MatchView[]>> =>
+  request<MatchView[]>(key, `/api/resumes/${resumeId}/matches`, { method: "POST" });
+
 export const listMatches = (key: string, resumeId: string): Promise<WorkspaceResult<MatchView[]>> =>
   request<MatchView[]>(key, `/api/resumes/${resumeId}/matches`);
 

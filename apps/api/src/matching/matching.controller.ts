@@ -49,6 +49,25 @@ export class MatchingController {
     }
   }
 
+  /** « Faire matcher mon CV » : score contre toutes les offres publiées. */
+  @Post()
+  @HttpCode(200)
+  @UsePipes(new ZodValidationPipe(matchListParamsSchema))
+  async computeAll(@Param() params: MatchListParams): Promise<MatchView[]> {
+    try {
+      const result = await this.matching.computeAll(params.id);
+      if (result === "resume_not_found") {
+        throw new NotFoundException("CV introuvable.");
+      }
+      return result;
+    } catch (error) {
+      if (error instanceof ResumeNotStructuredError) {
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
+  }
+
   @Get()
   @UsePipes(new ZodValidationPipe(matchListParamsSchema))
   async list(@Param() params: MatchListParams): Promise<MatchView[]> {

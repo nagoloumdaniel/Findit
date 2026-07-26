@@ -150,6 +150,72 @@ export class MatchingService {
     };
   }
 
+  /*
+   * « Faire matcher mon CV » : calcule et stocke le score contre TOUTES les
+   * offres publiées, puis rend la liste triée du meilleur au moins bon. Même
+   * moteur, mêmes règles qu'à l'offre unique - recalculer remplace.
+   */
+  async computeAll(resumeId: string): Promise<MatchView[] | "resume_not_found"> {
+    await this.purgeExpired();
+
+    const resume = await this.prisma.sourceResume.findFirst({
+      where: { id: resumeId, expiresAt: { gt: this.now() } },
+    });
+    if (resume === null) {
+      return "resume_not_found";
+    }
+    if (resume.structuredFacts === null) {
+      throw new ResumeNotStructuredError();
+    }
+
+    const jobs = await this.prisma.job.findMany({
+      where: { status: JobStatus.PUBLISHED },
+      include: { company: { select: { name: true } } },
+    });
+
+    const facts = resumeFactsSchema.parse(resume.structuredFacts);
+    const resumeInput = toResumeInput(facts);
+    const views: MatchView[] = [];
+
+    for (const job of jobs) {
+      const result = computeMatch(resumeInput, toJobInput(job));
+      const data = {
+        score: result.score,
+        scoreBreakdown: result.breakdown,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        missingKeywords: result.missingKeywords,
+        strengths: result.strengths,
+        weaknesses: result.weaknesses,
+        recommendations: result.recommendations,
+        confidence: result.confidence,
+        insufficientDataWarning: result.insufficientDataWarning,
+        computedBy: DecisionSource.RULE,
+      };
+      const stored = await this.prisma.sourceResumeMatch.upsert({
+        where: { sourceResumeId_jobId: { sourceResumeId: resume.id, jobId: job.id } },
+        update: data,
+        create: { sourceResumeId: resume.id, jobId: job.id, ...data },
+      });
+      views.push({
+        job: { slug: job.slug, title: job.title, companyName: job.company.name },
+        score: stored.score,
+        scoreBreakdown: stored.scoreBreakdown,
+        matchedSkills: stored.matchedSkills,
+        missingSkills: stored.missingSkills,
+        missingKeywords: stored.missingKeywords,
+        strengths: stored.strengths,
+        weaknesses: stored.weaknesses,
+        recommendations: stored.recommendations,
+        confidence: stored.confidence,
+        insufficientDataWarning: stored.insufficientDataWarning,
+        computedAt: stored.updatedAt,
+      });
+    }
+
+    return views.sort((a, b) => b.score - a.score);
+  }
+
   /** Les scores du CV, du meilleur au moins bon, avec l'offre identifiable. */
   async list(resumeId: string): Promise<MatchView[] | "resume_not_found"> {
     await this.purgeExpired();
