@@ -1,6 +1,7 @@
 import { PageShell } from "@findit/ui";
 
 import { JobCard } from "../components/job-card";
+import { WorkspacePanel } from "../components/workspace/workspace-panel";
 import { JobFilters } from "../components/job-filters";
 import { JobPagination } from "../components/job-pagination";
 import { JobSearch } from "../components/job-search";
@@ -146,9 +147,14 @@ export default async function HomePage({ searchParams }: PageProps) {
         )}
       </section>
 
-      <footer className="footer-private-link">
-        <a href="/espace">Espace privé</a>
-      </footer>
+      {/* L'espace candidat vit sur la même page, replié par défaut : CV,
+          structuration, scores, lettres, suivi - derrière la clé privée. */}
+      <section id="espace" className="workspace-home" aria-label="Espace candidat">
+        <details className="workspace-details">
+          <summary className="filters-toggle-button">Mon espace candidat</summary>
+          <WorkspacePanel />
+        </details>
+      </section>
     </PageShell>
   );
 }
