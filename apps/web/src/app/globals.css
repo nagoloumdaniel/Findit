@@ -1378,3 +1378,27 @@ h1 {
   border-color: var(--accent-ui);
   color: var(--fg);
 }
+
+/* Nav a droite du hero ; boutons Filtres et Recherche CV homogenes. */
+.hero {
+  position: relative;
+}
+
+.top-nav {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-top: 0;
+}
+
+button.filters-toggle-button {
+  font-family: inherit;
+  line-height: var(--leading-body);
+  cursor: pointer;
+}
+
+.search-filter-row .filters-toggle-button {
+  height: 2.6rem;
+  display: inline-flex;
+  align-items: center;
+}
