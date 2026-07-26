@@ -4,7 +4,7 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après le modèle de CV et son rendu PDF déterministe.
+À jour au 2026-07-26, après la lettre de motivation factuelle et son PDF.
 
 ---
 
@@ -66,8 +66,9 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 - `notifications` — Telegram.
 - `ai` — modèle local (voir §7).
 - `matching-engine` — score CV/offre pur, sans IA, déterministe et explicable.
-- `documents` — modèle de CV pré-conçu et rendu PDF déterministe (React-PDF,
-  pur Node, aucun navigateur). Le design vit dans le code, pas dans l'IA.
+- `documents` — modèles de CV et de lettre pré-conçus, rendu PDF déterministe
+  (React-PDF, pur Node, aucun navigateur). Le design et les formules d'usage
+  vivent dans le code, pas dans l'IA.
 - `resume-parser` — **vide**, README seulement.
 
 ---
@@ -185,12 +186,20 @@ le code et les commits tranchent.
   schéma (la grammaire de décodage saute un objet optionnel, le nom n'était
   jamais extrait) et le prompt interdit de fabriquer des « links » depuis un
   e-mail. Constaté sur le modèle réel, testé.
+- **Lettre de motivation factuelle** (2026-07-26) : `SourceCoverLetter` (une
+  lettre courante par couple CV/offre, cascade), génération via le modèle
+  local (`AI_MODEL_REASONING`, température 0,3) contrainte par schéma **puis**
+  garde-fou anti-invention — toute technologie citée doit exister dans le CV
+  structuré, même dictionnaire que le score ; violation → 502, rien stocké.
+  Relecture par `GET /api/resumes/:id/letters` avant le PDF
+  (`GET .../letters/:slug/pdf`). Les formules d'adresse et de politesse sont
+  du modèle de document, pas de l'IA. Prouvé sur le réel : lettre 100 %
+  factuelle en 33 s, PDF relu fidèle, cascade vérifiée à zéro ligne.
 
 ### Pas encore fait
 
-- Modèle de lettre et génération de lettre factuelle (le modèle de CV et son
-  PDF existent).
-- Affichage du score et téléchargement du CV dans une interface.
+- Export DOCX et rattachement des documents à un historique de candidatures.
+- Interface privée : profil, score, CV et lettre ne se voient qu'en API.
 - Analyse GitHub.
 - Suivi des candidatures.
 - Commandes du bot Telegram (`/start`, `/status`, `/latest`, `/help`).
@@ -323,14 +332,14 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ## 10. Prochaines briques, dans l'ordre
 
-1. **Génération de lettre** avec `generateText`, **uniquement pour les offres
-   auxquelles on postule** — pas pour toutes les offres collectées. Le modèle
-   de lettre est pré-conçu dans `@findit/documents`, l'IA ne remplit que le
-   texte.
-2. Analyse GitHub, suivi des candidatures, commandes du bot Telegram.
+1. **Suivi des candidatures** : dossier liant offre, CV, lettre, statut et
+   historique.
+2. **Interface privée** minimale : profil, import CV, score, lettre, PDF.
+3. Analyse GitHub, commandes du bot Telegram, dettes courtes (Workable dans le
+   cycle, dédup persistée).
 
-Le score de correspondance et l'export PDF du CV sont faits côté moteur et
-API ; il reste à les exposer dans une interface.
+Le score, l'export PDF du CV et la lettre sont faits côté moteur et API ; il
+reste à les exposer dans une interface.
 
 Dette d'extraction connue : le modèle local invente parfois des jours précis
 (« 2025-01-01 » quand le CV dit « 2025 »). Rien de faux ne franchit Zod, mais

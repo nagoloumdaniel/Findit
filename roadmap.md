@@ -90,7 +90,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 
 - Conservation chiffree et versionnee du binaire original du CV.
 - Affichage du score offre / profil dans l'interface (calcul et raisons faits).
-- Modele et generation de lettre, messages recruteurs, export DOCX (le CV s'exporte deja en PDF).
+- Messages recruteurs et export DOCX (CV et lettre s'exportent deja en PDF).
 - Analyse GitHub et selection de projets.
 - Suivi des candidatures, historique, rappels et statuts.
 - Commandes Telegram.
@@ -178,31 +178,34 @@ Espace prive
 | IA locale            | Absent         | Package + route CV            | Prompt tables        | Oui   | Partiel                     | P1       |
 | Matching CV/offre    | Absent         | Moteur + routes gardees       | `SourceResumeMatch`  | Oui   | Backend fonctionnel         | P1       |
 | GitHub               | Absent         | Absent                        | Absent               | Non   | Absent                      | P2       |
-| Generation documents | Absent         | Export PDF du CV              | Aucun stockage       | Oui   | Partiel, lettre absente     | P1       |
+| Generation documents | Absent         | PDF CV + lettre generee       | `SourceCoverLetter`  | Oui   | Partiel, DOCX absent        | P1       |
 | Suivi candidatures   | Absent         | Absent                        | Absent               | Non   | Absent                      | P1       |
 | Admin                | Absent         | Absent                        | Partiel via logs     | Non   | Absent                      | P3       |
 | CI/CD                | Absent         | N/A                           | N/A                  | Non   | Absent                      | P2       |
 
 ## 7. API presentes
 
-| Methode | Chemin                              | Controleur            | Validation                  | Authentification | Statut reel                |
-| ------- | ----------------------------------- | --------------------- | --------------------------- | ---------------- | -------------------------- |
-| GET     | `/health`                           | `HealthController`    | Aucune entree               | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs`                         | `JobsController`      | `jobQuerySchema`            | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/stats`                   | `JobsController`      | Aucune entree               | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/filters`                 | `JobsController`      | `freshnessQuerySchema`      | Publique         | Fonctionnel et teste       |
-| GET     | `/api/jobs/:slug`                   | `JobsController`      | `jobSlugSchema` + freshness | Publique         | Fonctionnel et teste       |
-| GET     | `/api/profile`                      | `ProfileController`   | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
-| PUT     | `/api/profile`                      | `ProfileController`   | `profileInputSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
-| PATCH   | `/api/profile`                      | `ProfileController`   | `profilePatchSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
-| POST    | `/api/resumes/upload`               | `ResumeController`    | MIME/extension + taille     | `WorkspaceGuard` | Partiel : extraction texte |
-| GET     | `/api/resumes`                      | `ResumeController`    | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
-| GET     | `/api/resumes/:id`                  | `ResumeController`    | UUID                        | `WorkspaceGuard` | Backend fonctionnel        |
-| POST    | `/api/resumes/:id/structure`        | `ResumeController`    | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
-| DELETE  | `/api/resumes/:id`                  | `ResumeController`    | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
-| POST    | `/api/resumes/:id/matches/:slug`    | `MatchingController`  | UUID + slug strict          | `WorkspaceGuard` | Fonctionnel, valide        |
-| GET     | `/api/resumes/:id/matches`          | `MatchingController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
-| GET     | `/api/resumes/:id/documents/cv.pdf` | `DocumentsController` | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| Methode | Chemin                               | Controleur            | Validation                  | Authentification | Statut reel                |
+| ------- | ------------------------------------ | --------------------- | --------------------------- | ---------------- | -------------------------- |
+| GET     | `/health`                            | `HealthController`    | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs`                          | `JobsController`      | `jobQuerySchema`            | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/stats`                    | `JobsController`      | Aucune entree               | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/filters`                  | `JobsController`      | `freshnessQuerySchema`      | Publique         | Fonctionnel et teste       |
+| GET     | `/api/jobs/:slug`                    | `JobsController`      | `jobSlugSchema` + freshness | Publique         | Fonctionnel et teste       |
+| GET     | `/api/profile`                       | `ProfileController`   | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| PUT     | `/api/profile`                       | `ProfileController`   | `profileInputSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| PATCH   | `/api/profile`                       | `ProfileController`   | `profilePatchSchema`        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/upload`                | `ResumeController`    | MIME/extension + taille     | `WorkspaceGuard` | Partiel : extraction texte |
+| GET     | `/api/resumes`                       | `ResumeController`    | Aucune entree               | `WorkspaceGuard` | Backend fonctionnel        |
+| GET     | `/api/resumes/:id`                   | `ResumeController`    | UUID                        | `WorkspaceGuard` | Backend fonctionnel        |
+| POST    | `/api/resumes/:id/structure`         | `ResumeController`    | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| DELETE  | `/api/resumes/:id`                   | `ResumeController`    | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| POST    | `/api/resumes/:id/matches/:slug`     | `MatchingController`  | UUID + slug strict          | `WorkspaceGuard` | Fonctionnel, valide        |
+| GET     | `/api/resumes/:id/matches`           | `MatchingController`  | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| GET     | `/api/resumes/:id/documents/cv.pdf`  | `DocumentsController` | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| POST    | `/api/resumes/:id/letters/:slug`     | `LettersController`   | UUID + slug strict          | `WorkspaceGuard` | Fonctionnel, valide        |
+| GET     | `/api/resumes/:id/letters`           | `LettersController`   | UUID                        | `WorkspaceGuard` | Fonctionnel, valide        |
+| GET     | `/api/resumes/:id/letters/:slug/pdf` | `LettersController`   | UUID + slug strict          | `WorkspaceGuard` | Fonctionnel, valide        |
 
 Endpoints absents : authentification utilisateur complete, matching, generation, GitHub, candidatures, admin, commandes Telegram HTTP/webhook.
 
@@ -441,7 +444,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ### Phase 9 - Generation de candidature
 
-- [~] Concevoir les modeles de CV et lettre
+- [x] Concevoir les modeles de CV et lettre
   - Priorite : P1
   - Complexite : L
   - Criteres d'acceptation :
@@ -449,9 +452,9 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Rendu deterministe.
     - Les faits utilises sont traçables.
   - Tests : snapshots/rendu + validation donnees
-  - Resultat : modele de CV fait et valide le 2026-07-26 — `@findit/documents`, A4 sobre en Helvetica integree, rendu React-PDF pur Node, champ absent = absent du PDF, tests qui relisent le texte du PDF rendu ; route gardee `GET /api/resumes/:id/documents/cv.pdf` (409 tant que le CV n'est pas structure, 401 sans cle), prouvee contre Ollama et base reels. Reste le modele de lettre.
+  - Resultat : modele de CV fait et valide le 2026-07-26 — `@findit/documents`, A4 sobre en Helvetica integree, rendu React-PDF pur Node, champ absent = absent du PDF, tests qui relisent le texte du PDF rendu ; route gardee `GET /api/resumes/:id/documents/cv.pdf` (409 tant que le CV n'est pas structure, 401 sans cle), prouvee contre Ollama et base reels. Modele de lettre fait et valide le 2026-07-26 : formules d'adresse et de politesse dans le modele de document, jamais dans l'IA.
 
-- [ ] Generer une lettre de motivation factuelle
+- [x] Generer une lettre de motivation factuelle
   - Priorite : P1
   - Complexite : M
   - Dependances : CV structure, offre, score
@@ -460,9 +463,9 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Les sorties IA invalides ou trop vagues sont refusees.
     - L'utilisateur peut relire avant utilisation.
   - Tests : service + cas donnees insuffisantes
-  - Resultat :
+  - Resultat : `POST /api/resumes/:id/letters/:slug` genere via le modele local (schema Zod avec bornes anti-vague), puis garde-fou anti-invention : toute technologie citee doit exister dans le CV structure (meme dictionnaire que le score), violation refusee en 502 sans stockage ; `SourceCoverLetter` en cascade, relecture par GET, PDF par `GET .../letters/:slug/pdf`. Prouve sur le reel le 2026-07-26 : lettre factuelle en 33 s, PDF relu fidele, cascade a zero ligne ; valide par ordre utilisateur du 2026-07-26.
 
-- [ ] Exporter CV et lettre en PDF/DOCX
+- [~] Exporter CV et lettre en PDF/DOCX
   - Priorite : P1
   - Complexite : L
   - Criteres d'acceptation :
@@ -470,7 +473,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Aucun champ manquant n'est invente.
     - Les documents sont rattaches a l'historique.
   - Tests : generation fichier + inspection minimale
-  - Resultat :
+  - Resultat : exports PDF du CV et de la lettre faits et valides ; restent l'export DOCX et le rattachement a l'historique de candidatures (qui n'existe pas encore).
 
 ### Phase 10 - Suivi des candidatures
 
@@ -635,6 +638,16 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-26 (suite) — lettre de motivation factuelle
+
+- Taches terminees et validees : `SourceCoverLetter` (migration `20260726100000_source_cover_letter`, zero derive), modele de lettre dans `@findit/documents`, module `letters` (generation, relecture, PDF), garde-fou anti-invention partage avec le dictionnaire du score. Ordre utilisateur du 2026-07-26.
+- Preuve sur le reel, Ollama `qwen2.5:7b` et PostgreSQL Docker, sans mock :
+  - 409 avant structuration ; 401 sans cle ; 404 PDF sans lettre.
+  - Lettre generee en 33 s : trois paragraphes, uniquement des faits du CV (BTS SIO, stage WebAgence, React/TypeScript/CSS/Git), `usedFacts` listes, un point fragile mis en warning au lieu d'etre brode.
+  - PDF `lettre-<slug>.pdf` relu : expediteur, destinataire, date, objet, corps fideles.
+  - Suppression du CV : 204, cascade constatee — 0 CV, 0 lettre, 0 score.
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29, build 17/17 ; timeout des tests de rendu PDF releve a 20 s (`vitest.config.ts` du paquet documents) apres un timeout sous charge parallele turbo.
 
 ### 2026-07-26 — modele de CV et rendu PDF
 
