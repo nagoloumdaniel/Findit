@@ -14,6 +14,7 @@
     "lint": "eslint src prisma.config.ts --max-warnings=0",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
+    "db:import-companies": "node import-companies.mjs",
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
