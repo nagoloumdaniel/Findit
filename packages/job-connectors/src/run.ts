@@ -63,7 +63,8 @@ export const runConnector = async <TTarget>(
   });
 
   const jobs = await connector.collect(permit, target, {
-    fetchJson: (url) => client.fetchJson(url),
+    fetchJson: (url, init) => client.fetchJson(url, init),
+    fetchText: (url) => client.fetchText(url),
     now: deps.now,
     correlationId: deps.correlationId,
   });

@@ -25,6 +25,19 @@ export interface ThrottledJsonClientOptions {
 }
 
 /**
+ * Ce qu'un connecteur peut préciser sur sa requête : la méthode, des en-têtes,
+ * un corps. Certaines sources l'exigent - le flux Workday se lit en POST, le
+ * jeton France Travail s'obtient en POST avec un formulaire. Ce que le
+ * connecteur ne peut PAS préciser : l'identité. Le user-agent de Findit est
+ * posé après ces en-têtes et l'emporte toujours.
+ */
+export interface JsonRequestInit {
+  readonly method?: "GET" | "POST";
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly body?: string;
+}
+
+/**
  * Le seul accès réseau offert aux connecteurs. Il porte l'identité de Findit et
  * tient la cadence annoncée par la source, y compris quand plusieurs appels
  * sont lancés en même temps : les requêtes sont mises à la file, jamais
@@ -52,8 +65,33 @@ export class ThrottledJsonClient {
     return this.#requestCount;
   }
 
-  fetchJson(url: string): Promise<unknown> {
-    const result = this.#queue.then(() => this.#request(url));
+  fetchJson(url: string, init?: JsonRequestInit): Promise<unknown> {
+    return this.#enqueue(async () => {
+      const response = await this.#send(url, "application/json", init);
+
+      // 204 est un succès sans corps - France Travail répond ainsi quand une
+      // recherche ne trouve rien. L'interpréter en JSON serait une erreur.
+      if (response.status === 204) {
+        return null;
+      }
+
+      return (await response.json()) as unknown;
+    });
+  }
+
+  /**
+   * Le même accès, en texte brut. Il existe pour `robots.txt` : la permission
+   * d'un domaine se lit avant de le collecter, et elle n'est pas du JSON.
+   */
+  fetchText(url: string): Promise<string> {
+    return this.#enqueue(async () => {
+      const response = await this.#send(url, "text/plain");
+      return response.text();
+    });
+  }
+
+  #enqueue<T>(request: () => Promise<T>): Promise<T> {
+    const result = this.#queue.then(request);
     // La file avance même si une requête échoue : l'erreur revient à l'appelant,
     // elle ne bloque pas la cadence des suivantes.
     this.#queue = result.then(
@@ -63,13 +101,17 @@ export class ThrottledJsonClient {
     return result;
   }
 
-  async #request(url: string): Promise<unknown> {
+  async #send(url: string, accept: string, init?: JsonRequestInit): Promise<Response> {
     await this.#waitForSlot();
     this.#requestCount += 1;
 
     try {
       const response = await this.#fetch(url, {
-        headers: { "user-agent": FINDIT_USER_AGENT, accept: "application/json" },
+        method: init?.method ?? "GET",
+        // L'identité de Findit est posée en dernier : un connecteur ne peut
+        // ni la masquer ni la remplacer par ses propres en-têtes.
+        headers: { accept, ...init?.headers, "user-agent": FINDIT_USER_AGENT },
+        ...(init?.body === undefined ? {} : { body: init.body }),
         redirect: "follow",
       });
 
@@ -77,7 +119,7 @@ export class ThrottledJsonClient {
         throw new HttpRequestError(url, response.status);
       }
 
-      return (await response.json()) as unknown;
+      return response;
     } finally {
       this.#lastRequestEndedAt = this.#monotonicNow();
     }

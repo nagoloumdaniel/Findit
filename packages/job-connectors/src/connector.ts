@@ -1,5 +1,6 @@
 import type { AtsKind } from "@findit/database";
 
+import type { JsonRequestInit } from "./http.js";
 import type { CollectionPermit } from "./permit.js";
 
 /**
@@ -51,12 +52,15 @@ export interface SearchTarget {
 }
 
 /**
- * Ce qu'un connecteur reçoit pour travailler. `fetchJson` est son seul accès
- * réseau : il annonce l'identité de Findit et respecte la cadence de la source.
- * Un connecteur ne fabrique donc jamais sa propre requête.
+ * Ce qu'un connecteur reçoit pour travailler. `fetchJson` et `fetchText` sont
+ * son seul accès réseau : ils annoncent l'identité de Findit et respectent la
+ * cadence de la source. Un connecteur ne fabrique donc jamais sa propre
+ * requête. `fetchText` existe pour `robots.txt` : la permission d'un domaine
+ * se lit avant de le collecter.
  */
 export interface CollectionContext {
-  readonly fetchJson: (url: string) => Promise<unknown>;
+  readonly fetchJson: (url: string, init?: JsonRequestInit) => Promise<unknown>;
+  readonly fetchText: (url: string) => Promise<string>;
   readonly now: () => Date;
   /** Relie les journaux d'une même exécution entre les processus. */
   readonly correlationId: string;
