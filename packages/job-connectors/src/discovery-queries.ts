@@ -14,6 +14,7 @@ const AUTHORIZED_ATS_SITES = [
   "boards.greenhouse.io",
   "job-boards.greenhouse.io",
   "jobs.lever.co",
+  "myworkdayjobs.com",
 ] as const;
 
 /** Intitulés de métier, en français et en anglais, tels que les titres réels les écrivent. */
@@ -30,17 +31,21 @@ const ROLE_TERMS = [
 const CONTRACT_TERMS = ["alternance", "apprentissage", "apprentice"] as const;
 
 /**
- * Croise ATS × métier × contrat en requêtes `site:`. Le pays et la langue sont
+ * Croise métier × contrat × ATS en requêtes `site:`. Le pays et la langue sont
  * ceux du périmètre. Le résultat est déterministe : mêmes entrées, mêmes
  * requêtes, dans le même ordre - ce qui rend une rotation ou un plafond
  * reproductibles.
+ *
+ * Les sites sont la boucle INTÉRIEURE à dessein : le cycle ne joue que les
+ * premières requêtes (plafond par cycle), et cet ordre fait que chaque cycle
+ * interroge TOUS les ATS autorisés au lieu d'épuiser le premier de la liste.
  */
 export const buildDiscoveryQueries = (resultsPerQuery = 15): readonly WebSearchQuery[] => {
   const queries: WebSearchQuery[] = [];
 
-  for (const site of AUTHORIZED_ATS_SITES) {
-    for (const role of ROLE_TERMS) {
-      for (const contract of CONTRACT_TERMS) {
+  for (const role of ROLE_TERMS) {
+    for (const contract of CONTRACT_TERMS) {
+      for (const site of AUTHORIZED_ATS_SITES) {
         queries.push({
           query: `site:${site} ${contract} ${role} Paris`,
           country: "fr",

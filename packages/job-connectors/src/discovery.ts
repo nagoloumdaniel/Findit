@@ -2,6 +2,7 @@ import type { CollectionTarget } from "./connector.js";
 import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
 import type { WebSearchResult } from "./web-search.js";
+import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
 
 /**
  * Ce qu'une URL découverte désigne.
@@ -49,6 +50,39 @@ const ATS_HOSTS: ReadonlyMap<string, string> = new Map([
  */
 const NON_COMPANY_SEGMENTS = new Set(["embed", "jobs", "job", "search", "api", "v1", "v0"]);
 
+/**
+ * Workday ne vit pas sur un hôte unique : chaque entreprise a son sous-domaine
+ * `*.myworkdayjobs.com`, et l'URL d'une offre commence souvent par un segment
+ * de langue (« fr-FR »). La cible est « hôte/site » - c'est ce couple que le
+ * connecteur Workday sait collecter, après avoir relu le robots.txt du
+ * locataire.
+ */
+const WORKDAY_HOST_SUFFIX = ".myworkdayjobs.com";
+const LOCALE_SEGMENT = /^[a-z]{2}-[a-z]{2}$/iu;
+
+const recognizeWorkday = (parsed: URL, sourceUrl: string): DiscoveredTarget | null => {
+  const segments = parsed.pathname.split("/").filter((segment) => segment !== "");
+  const site = segments.find((segment) => !LOCALE_SEGMENT.test(segment));
+
+  if (
+    site === undefined ||
+    NON_COMPANY_SEGMENTS.has(site.toLowerCase()) ||
+    site.toLowerCase() === "wday"
+  ) {
+    // L'URL pointe la racine ou un chemin technique, pas un site carrière.
+    return null;
+  }
+
+  const atsIdentifier = `${parsed.host.toLowerCase()}/${decodeURIComponent(site)}`;
+
+  return {
+    kind: "known",
+    connectorName: WORKDAY_CONNECTOR_NAME,
+    target: { atsIdentifier, companyName: atsIdentifier },
+    sourceUrl,
+  };
+};
+
 export const recognizeTarget = (result: WebSearchResult): DiscoveredTarget | null => {
   let parsed: URL;
   try {
@@ -58,6 +92,11 @@ export const recognizeTarget = (result: WebSearchResult): DiscoveredTarget | nul
   }
 
   const host = parsed.host.toLowerCase();
+
+  if (host.endsWith(WORKDAY_HOST_SUFFIX)) {
+    return recognizeWorkday(parsed, result.url);
+  }
+
   const connectorName = ATS_HOSTS.get(host);
 
   if (connectorName === undefined) {

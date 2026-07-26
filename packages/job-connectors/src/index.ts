@@ -19,7 +19,16 @@ export {
   greenhouseConnector,
 } from "./greenhouse.js";
 
+export {
+  FRANCE_TRAVAIL_CONNECTOR_NAME,
+  FRANCE_TRAVAIL_REQUEST_INTERVAL_MS,
+  FranceTravailShapeError,
+  createFranceTravailConnector,
+} from "./france-travail.js";
+export type { FranceTravailCredentials } from "./france-travail.js";
+
 export { FINDIT_USER_AGENT, HttpRequestError } from "./http.js";
+export type { JsonRequestInit } from "./http.js";
 
 export {
   LEVER_CONNECTOR_NAME,
@@ -60,6 +69,14 @@ export {
   WorkableShapeError,
   workableConnector,
 } from "./workable.js";
+
+export {
+  WORKDAY_CONNECTOR_NAME,
+  WORKDAY_REQUEST_INTERVAL_MS,
+  WorkdayRobotsError,
+  WorkdayShapeError,
+  workdayConnector,
+} from "./workday.js";
 
 export { decideRobots, groupFor, parseContentSignal, parseRobots } from "./robots.js";
 export type { RobotsDecision, RobotsFile, RobotsGroup, RobotsVerdict } from "./robots.js";

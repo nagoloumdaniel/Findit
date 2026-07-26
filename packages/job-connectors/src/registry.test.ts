@@ -2,9 +2,11 @@ import { ConnectorStatus, SourceAccessStatus } from "@findit/database";
 import { describe, expect, it } from "vitest";
 
 import { COLLECTION_ALLOWED_STATUSES } from "./access-policy.js";
+import { createFranceTravailConnector } from "./france-travail.js";
 import { greenhouseConnector } from "./greenhouse.js";
 import { leverConnector } from "./lever.js";
 import { workableConnector } from "./workable.js";
+import { workdayConnector } from "./workday.js";
 import { CONNECTOR_REGISTRY_ENTRIES } from "./registry.js";
 
 const entryFor = (name: string) =>
@@ -36,17 +38,34 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   });
 
   it("holds a line for every connector that exists, under the name it answers to", () => {
-    for (const connector of [greenhouseConnector, leverConnector, workableConnector]) {
+    const franceTravailConnector = createFranceTravailConnector({
+      clientId: "test",
+      clientSecret: "test",
+    });
+
+    // Chaque connecteur sous le régime que sa vérification a établi : flux
+    // public, API officielle de l'État, ou crawl permis par robots.txt.
+    const regimes = [
+      [greenhouseConnector, SourceAccessStatus.PUBLIC_FEED],
+      [leverConnector, SourceAccessStatus.PUBLIC_FEED],
+      [workableConnector, SourceAccessStatus.PUBLIC_FEED],
+      [franceTravailConnector, SourceAccessStatus.OFFICIAL_API],
+      [workdayConnector, SourceAccessStatus.AUTHORIZED_CRAWL],
+    ] as const;
+
+    for (const [connector, accessStatus] of regimes) {
       const entry = entryFor(connector.name);
 
       expect(entry).toBeDefined();
       expect(entry?.atsKind).toBe(connector.atsKind);
       expect(entry?.status).toBe(ConnectorStatus.ACTIVE);
-      expect(entry?.accessStatus).toBe(SourceAccessStatus.PUBLIC_FEED);
+      expect(entry?.accessStatus).toBe(accessStatus);
     }
   });
 
   it("keeps the sources the register found closed, closed", () => {
+    // Workday a quitté cette liste le 2026-07-26 : robots.txt des locataires
+    // relevé, User-agent * avec Allow sur les sites carrière.
     for (const name of [
       "ashby",
       "linkedin",
@@ -56,7 +75,7 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
       "smartrecruiters",
       "teamtailor",
       "recruitee",
-      "workday",
+      "successfactors",
     ]) {
       expect(entryFor(name)).toMatchObject({
         accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
@@ -66,11 +85,19 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   });
 
   it("leaves unverified sources without a check date rather than inventing one", () => {
-    // SmartRecruiters a quitté cette liste le 2026-07-17 : il est vérifié, et
-    // fermé. Son robots.txt n'ouvre l'API qu'à LinkedInBot.
-    for (const name of ["teamtailor", "recruitee", "workday"]) {
+    // SmartRecruiters a quitté cette liste le 2026-07-17, Workday le
+    // 2026-07-26 : vérifiés, l'un fermé, l'autre ouvert.
+    for (const name of ["teamtailor", "recruitee"]) {
       expect(entryFor(name)?.termsCheckedAt).toBeNull();
     }
+  });
+
+  it("records that SuccessFactors was checked and stays closed for lack of a stable feed", () => {
+    expect(entryFor("successfactors")).toMatchObject({
+      status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
+    });
+    expect(entryFor("successfactors")?.termsCheckedAt).not.toBeNull();
+    expect(entryFor("successfactors")?.notes).toContain("locataire");
   });
 
   it("records that a verified source can be verified as closed", () => {

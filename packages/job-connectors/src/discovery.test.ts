@@ -66,6 +66,29 @@ describe("recognizeTarget", () => {
     expect(recognizeTarget(result("https://jobs.lever.co/"))).toBeNull();
   });
 
+  it("pulls the tenant career site from a real Workday result", () => {
+    // Forme d'URL relevée sur workday.wd5.myworkdayjobs.com le 2026-07-26 :
+    // un segment de langue, puis le site, puis l'offre.
+    const target = recognizeTarget(
+      result("https://workday.wd5.myworkdayjobs.com/fr-FR/Workday/job/France-Paris/Alternant_JR-1"),
+    );
+
+    expect(target).toMatchObject({
+      kind: "known",
+      connectorName: "workday",
+      // La cible est « hôte/site » : c'est le couple que le connecteur sait
+      // collecter, après relecture du robots.txt du locataire.
+      target: { atsIdentifier: "workday.wd5.myworkdayjobs.com/Workday" },
+    });
+  });
+
+  it("returns nothing for a Workday root or technical path", () => {
+    expect(recognizeTarget(result("https://acme.wd3.myworkdayjobs.com/"))).toBeNull();
+    expect(
+      recognizeTarget(result("https://acme.wd3.myworkdayjobs.com/wday/cxs/acme/Site/jobs")),
+    ).toBeNull();
+  });
+
   it("marks an unknown domain as unknown rather than collectable", () => {
     // Un site carrière découvert n'est pas une source prête : il relève du
     // registre dynamique, pas d'un connecteur existant.

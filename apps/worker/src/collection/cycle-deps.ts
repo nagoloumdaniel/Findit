@@ -15,6 +15,7 @@ import type {
 import type { SearchTarget } from "@findit/job-connectors";
 import {
   BraveSearchProvider,
+  createFranceTravailConnector,
   createPrismaConnectorRunStore,
   greenhouseConnector,
   GREENHOUSE_CONNECTOR_NAME,
@@ -23,6 +24,8 @@ import {
   listCollectableSources,
   registerDiscoveredSource,
   workableConnector,
+  workdayConnector,
+  WORKDAY_CONNECTOR_NAME,
 } from "@findit/job-connectors";
 import type { CollectionJob } from "./run-collection.js";
 import { createIngestionPersistence, runCollection } from "./run-collection.js";
@@ -32,6 +35,7 @@ import type { CycleDeps } from "./run-cycle.js";
 const TOKEN_CONNECTORS: ReadonlyMap<string, JobSourceConnector<CollectionTarget>> = new Map([
   [GREENHOUSE_CONNECTOR_NAME, greenhouseConnector],
   [LEVER_CONNECTOR_NAME, leverConnector],
+  [WORKDAY_CONNECTOR_NAME, workdayConnector],
 ]);
 
 const sleep = (ms: number): Promise<void> =>
@@ -65,6 +69,39 @@ const workableSearchJobs = (sourcePriority: number): CollectionJob<unknown>[] =>
     companyName: "",
     sourcePriority,
   }));
+
+/*
+ * Requêtes France Travail exécutées à chaque cycle, quand les identifiants
+ * partenaires existent. Une seule suffit : l'API filtre déjà l'alternance
+ * (natureContrat) et l'Île-de-France (region) côté serveur - « développeur »
+ * ratisse le métier, le tri fin appartient à l'ingestion.
+ */
+const FRANCE_TRAVAIL_SEARCHES: readonly SearchTarget[] = [
+  { query: "développeur", location: "Île-de-France, France" },
+];
+
+const franceTravailSearchJobs = (
+  env: WorkerEnv,
+  sourcePriority: number,
+): CollectionJob<unknown>[] => {
+  // Sans identifiants, pas de connecteur : la collecte continue sans France
+  // Travail, comme la découverte continue sans clé Brave.
+  if (env.FRANCETRAVAIL_CLIENT_ID === undefined || env.FRANCETRAVAIL_CLIENT_SECRET === undefined) {
+    return [];
+  }
+
+  const connector = createFranceTravailConnector({
+    clientId: env.FRANCETRAVAIL_CLIENT_ID,
+    clientSecret: env.FRANCETRAVAIL_CLIENT_SECRET,
+  });
+
+  return FRANCE_TRAVAIL_SEARCHES.map((target) => ({
+    connector,
+    target,
+    companyName: "",
+    sourcePriority,
+  }));
+};
 
 /**
  * Assemble les dépendances réelles d'un cycle depuis l'environnement.
@@ -106,6 +143,6 @@ export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps
     maxQueries: provider === null ? 0 : env.WEB_SEARCH_MAX_QUERIES_PER_RUN,
     searchIntervalMs: 1000,
     sourcePriority: 100,
-    searchJobs: workableSearchJobs(100),
+    searchJobs: [...workableSearchJobs(100), ...franceTravailSearchJobs(env, 100)],
   };
 };

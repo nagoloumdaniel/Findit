@@ -58,6 +58,15 @@ export const workerEnvSchema = z.object({
   WEB_SEARCH_MAX_QUERIES_PER_RUN: z.coerce.number().int().min(0).default(6),
 
   /*
+   * France Travail (API officielle, francetravail.io). Facultatif : sans les
+   * deux identifiants du compte partenaire, le cycle collecte simplement sans
+   * cette source. Les identifiants restent côté serveur - jamais dans le
+   * navigateur ni un log.
+   */
+  FRANCETRAVAIL_CLIENT_ID: z.string().min(1).optional(),
+  FRANCETRAVAIL_CLIENT_SECRET: z.string().min(1).optional(),
+
+  /*
    * Telegram. Éteint par défaut, et en simulation par défaut : sans les deux
    * interrupteurs à « true » et un token, rien n'est envoyé. Le token reste
    * côté serveur - jamais dans le navigateur, un log ou la base.

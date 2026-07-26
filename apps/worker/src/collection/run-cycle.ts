@@ -13,6 +13,7 @@ import {
   collectDiscoveries,
   GREENHOUSE_CONNECTOR_NAME,
   LEVER_CONNECTOR_NAME,
+  WORKDAY_CONNECTOR_NAME,
 } from "@findit/job-connectors";
 
 import type { CollectionJob, CollectionSummary } from "./run-collection.js";
@@ -21,6 +22,7 @@ import type { CollectionJob, CollectionSummary } from "./run-collection.js";
 const TOKEN_CONNECTOR_ATS: ReadonlyMap<string, AtsKind> = new Map([
   [GREENHOUSE_CONNECTOR_NAME, AtsKind.GREENHOUSE],
   [LEVER_CONNECTOR_NAME, AtsKind.LEVER],
+  [WORKDAY_CONNECTOR_NAME, AtsKind.WORKDAY],
 ]);
 
 const hostOf = (url: string): string | null => {

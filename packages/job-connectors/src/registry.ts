@@ -1,9 +1,11 @@
 import { AtsKind, ConnectorStatus, SourceAccessStatus, type PrismaClient } from "@findit/database";
 
 import type { ConnectorRegistration } from "./access-policy.js";
+import { FRANCE_TRAVAIL_CONNECTOR_NAME } from "./france-travail.js";
 import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
 import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
+import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
 
 /**
  * Une ligne du registre, telle que docs/legal-compliance.md l'a établie.
@@ -22,8 +24,9 @@ export interface ConnectorRegistryEntry {
   readonly notes: string;
 }
 
-/** Date de la vérification consignée dans le registre. */
+/** Dates des vérifications consignées dans le registre. */
 const VERIFIED_2026_07_17 = new Date("2026-07-17T00:00:00.000Z");
+const VERIFIED_2026_07_26 = new Date("2026-07-26T00:00:00.000Z");
 
 export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
   {
@@ -93,12 +96,31 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     notes: "Aucun accès contrôlé à ce jour.",
   },
   {
-    name: "workday",
+    name: FRANCE_TRAVAIL_CONNECTOR_NAME,
+    atsKind: AtsKind.FRANCE_TRAVAIL,
+    accessStatus: SourceAccessStatus.OFFICIAL_API,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_07_26,
+    notes:
+      "API officielle de l'Etat (francetravail.io), inscription gratuite, jeton OAuth. Ne tourne que si les identifiants partenaires sont configurés.",
+  },
+  {
+    name: WORKDAY_CONNECTOR_NAME,
     atsKind: AtsKind.WORKDAY,
+    accessStatus: SourceAccessStatus.AUTHORIZED_CRAWL,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_07_26,
+    notes:
+      "robots.txt des locataires releve le 2026-07-26 : User-agent * avec Allow sur les sites carriere. Le connecteur relit le robots.txt de CHAQUE locataire avant CHAQUE collecte et refuse sans Allow explicite.",
+  },
+  {
+    name: "successfactors",
+    atsKind: AtsKind.SAP_SUCCESSFACTORS,
     accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
     status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: null,
-    notes: "Aucun accès contrôlé à ce jour.",
+    termsCheckedAt: VERIFIED_2026_07_26,
+    notes:
+      "Verifie le 2026-07-26 : aucun flux JSON public stable, chaque locataire differe (jobs.sap.com n'interdit que candidature et services). Un connecteur exigerait une verification par locataire, non faite.",
   },
   {
     name: "linkedin",
