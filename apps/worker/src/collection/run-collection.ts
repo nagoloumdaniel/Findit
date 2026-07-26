@@ -116,19 +116,31 @@ export const runCollection = async (
         deps.connectorDeps,
       );
 
-      const offers: CollectedOffer[] = outcome.jobs.map((raw) => ({
+      /*
+       * L'employeur vient de l'offre quand la source le porte (recherche
+       * réseau), du registre sinon (collecte par jeton). Une offre de
+       * recherche sans employeur est rejetée : l'attribuer à un libellé de
+       * requête serait inventer une entreprise.
+       */
+      const named = outcome.jobs.filter(
+        (raw) => (raw.companyName ?? job.companyName).trim() !== "",
+      );
+      const droppedNoCompany = outcome.jobs.length - named.length;
+
+      const offers: CollectedOffer[] = named.map((raw) => ({
         sourceJobId: raw.sourceJobId,
         url: raw.url,
         title: raw.title,
         locationLabel: raw.locationLabel,
         descriptionHtml: raw.descriptionHtml,
         publishedAt: raw.publishedAt,
-        companyName: job.companyName,
+        companyName: (raw.companyName ?? job.companyName).trim(),
         commitmentLabel: null,
         sourceName: job.connector.name,
       }));
 
-      const counts = await decideAndPersist(offers, job.sourcePriority, deps, correlationId);
+      const persisted = await decideAndPersist(offers, job.sourcePriority, deps, correlationId);
+      const counts = { ...persisted, rejected: persisted.rejected + droppedNoCompany };
 
       await deps.store.recordDecisionCounts(outcome.runId, {
         jobsAccepted: counts.accepted,
@@ -139,7 +151,7 @@ export const runCollection = async (
       summaries.push({
         connectorName: job.connector.name,
         companyName: job.companyName,
-        discovered: offers.length,
+        discovered: outcome.jobs.length,
         accepted: counts.accepted,
         quarantined: counts.quarantined,
         rejected: counts.rejected,

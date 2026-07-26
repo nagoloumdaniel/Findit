@@ -44,6 +44,7 @@ const baseDeps = (over: Partial<CycleDeps> = {}): CycleDeps => ({
   maxQueries: 2,
   searchIntervalMs: 1000,
   sourcePriority: 100,
+  searchJobs: [],
   ...over,
 });
 
@@ -148,6 +149,32 @@ describe("runCycle", () => {
 
     expect(collected).toHaveLength(1);
     expect(collected[0]?.target).toMatchObject({ atsIdentifier: "a" });
+  });
+
+  it("appends the standing search jobs to the registry collection", async () => {
+    const collected: CollectionJob<unknown>[] = [];
+    const searchJob: CollectionJob<unknown> = {
+      connector: { ...greenhouseConnector, name: "workable" },
+      target: { query: "alternance développeur", location: "Île-de-France, France" },
+      companyName: "",
+      sourcePriority: 100,
+    };
+
+    await runCycle(
+      baseDeps({
+        listSources: () =>
+          Promise.resolve([{ connectorName: "greenhouse", atsIdentifier: "a", companyName: "a" }]),
+        searchJobs: [searchJob],
+        collect: (jobs) => {
+          collected.push(...jobs);
+          return Promise.resolve(emptyCollection);
+        },
+      }),
+    );
+
+    // Le registre d'abord, puis les recherches réseau : même collecte.
+    expect(collected).toHaveLength(2);
+    expect(collected[1]).toBe(searchJob);
   });
 
   it("does not register a discovery from a network-search connector", async () => {

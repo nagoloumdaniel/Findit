@@ -80,6 +80,13 @@ export interface CycleDeps {
   searchIntervalMs: number;
   /** Rang de source pour une entreprise découverte. */
   sourcePriority: number;
+  /**
+   * Collectes permanentes qui ne passent pas par le registre d'entreprises :
+   * les recherches réseau (Workable) visent une requête, pas une entreprise.
+   * Le garde-fou de conformité s'applique quand même : chaque exécution
+   * repasse par le permis du connecteur.
+   */
+  searchJobs: readonly CollectionJob<unknown>[];
 }
 
 /**
@@ -141,6 +148,10 @@ export const runCycle = async (deps: CycleDeps): Promise<CycleSummary> => {
       sourcePriority: deps.sourcePriority,
     });
   }
+
+  // Les recherches réseau s'ajoutent aux entreprises du registre : mêmes
+  // permis, même ingestion, mêmes journaux.
+  jobs.push(...deps.searchJobs);
 
   const collection = await deps.collect(jobs);
 

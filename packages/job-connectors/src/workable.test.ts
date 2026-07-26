@@ -96,6 +96,9 @@ describe("workableConnector", () => {
       sourceJobId: "9Ww3gDT17DdtBy2rbn3Rka",
       url: "https://jobs.workable.com/view/9Ww3gDT17DdtBy2rbn3Rka/assistant-marketing",
       title: "Assistant.e Chargé.e Marketing France - Alternance",
+      // L'employeur vient de l'offre : c'est ce qui rend la recherche réseau
+      // rattachable à de vraies entreprises.
+      companyName: "Treatwell",
       locationLabel: "Paris, Île-de-France, France",
       descriptionHtml:
         "<p>Nous cherchons un profil.</p>\n<ul><li>Bac +4</li></ul>\n<ul><li>Tickets restaurant</li></ul>",

@@ -12,6 +12,7 @@ import type {
   WebSearchQuery,
   WebSearchResult,
 } from "@findit/job-connectors";
+import type { SearchTarget } from "@findit/job-connectors";
 import {
   BraveSearchProvider,
   createPrismaConnectorRunStore,
@@ -21,7 +22,9 @@ import {
   LEVER_CONNECTOR_NAME,
   listCollectableSources,
   registerDiscoveredSource,
+  workableConnector,
 } from "@findit/job-connectors";
+import type { CollectionJob } from "./run-collection.js";
 import { createIngestionPersistence, runCollection } from "./run-collection.js";
 import type { CycleDeps } from "./run-cycle.js";
 
@@ -38,6 +41,30 @@ const sleep = (ms: number): Promise<void> =>
 
 /** Une recherche qui ne trouve jamais rien : la découverte sans clé Brave. */
 const noDiscovery = (): Promise<readonly WebSearchResult[]> => Promise.resolve([]);
+
+/*
+ * Requêtes Workable exécutées à chaque cycle. Le périmètre produit décide :
+ * alternance d'abord, stage ensuite, développement en Île-de-France. Workable
+ * cherche à travers tout son réseau, donc deux requêtes suffisent - le tri
+ * fin (métier, commune) appartient à la normalisation et à la classification.
+ */
+const WORKABLE_SEARCHES: readonly SearchTarget[] = [
+  { query: "alternance développeur", location: "Île-de-France, France" },
+  { query: "stage développeur", location: "Île-de-France, France" },
+];
+
+/*
+ * Le nom d'entreprise vient de chaque offre Workable ; le libellé vide sert de
+ * repli pour que jamais un libellé de requête ne devienne un employeur - une
+ * offre sans entreprise est rejetée par l'orchestrateur.
+ */
+const workableSearchJobs = (sourcePriority: number): CollectionJob<unknown>[] =>
+  WORKABLE_SEARCHES.map((target) => ({
+    connector: workableConnector,
+    target,
+    companyName: "",
+    sourcePriority,
+  }));
 
 /**
  * Assemble les dépendances réelles d'un cycle depuis l'environnement.
@@ -79,5 +106,6 @@ export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps
     maxQueries: provider === null ? 0 : env.WEB_SEARCH_MAX_QUERIES_PER_RUN,
     searchIntervalMs: 1000,
     sourcePriority: 100,
+    searchJobs: workableSearchJobs(100),
   };
 };

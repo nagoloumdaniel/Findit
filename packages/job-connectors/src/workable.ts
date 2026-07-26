@@ -124,6 +124,9 @@ const toRawJob = (raw: unknown, position: number): RawJob => {
     locationLabel: locationLabel(job),
     descriptionHtml: descriptionHtml(job),
     publishedAt: parsePublishedAt(job.created),
+    // La recherche traverse tout le réseau : l'employeur est celui que
+    // l'offre porte, jamais un libellé de requête.
+    companyName: job.company?.title ?? null,
     rawContent: JSON.stringify(raw),
     contentType: "application/json",
   };

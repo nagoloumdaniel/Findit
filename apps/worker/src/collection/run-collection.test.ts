@@ -77,6 +77,32 @@ const rawJob = (id: string, title: string): RawJob => ({
   contentType: "application/json",
 });
 
+describe("runCollection - employeur par offre", () => {
+  it("uses the offer's own company for search results, and rejects unnamed ones", async () => {
+    const store = new FakeStore({ ...registration, name: "workable" });
+    const persistence = new FakePersistence(() => "created");
+
+    const jobs: RawJob[] = [
+      { ...rawJob("1", "Alternance Dev"), companyName: "Acme" },
+      { ...rawJob("2", "Alternance Dev"), companyName: null },
+    ];
+
+    const job: CollectionJob<unknown> = {
+      connector: connectorYielding(jobs, "workable"),
+      target: { query: "alternance développeur", location: "Île-de-France, France" },
+      // Repli vide : jamais un libellé de requête comme employeur.
+      companyName: "",
+      sourcePriority: 100,
+    };
+
+    const summary = await runCollection([job], deps(store, persistence));
+
+    expect(persistence.seen).toHaveLength(1);
+    expect(persistence.seen[0]?.companyName).toBe("Acme");
+    expect(summary.jobs[0]).toMatchObject({ discovered: 2, accepted: 1, rejected: 1 });
+  });
+});
+
 const connectorYielding = (jobs: readonly RawJob[], name = "greenhouse"): JobSourceConnector => ({
   name,
   atsKind: AtsKind.GREENHOUSE,

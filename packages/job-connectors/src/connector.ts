@@ -15,6 +15,13 @@ export interface RawJob {
   readonly locationLabel: string | null;
   readonly descriptionHtml: string | null;
   readonly publishedAt: Date | null;
+  /**
+   * Nom d'employeur porté par l'offre elle-même. Les connecteurs par jeton
+   * n'en ont pas besoin - la cible nomme l'entreprise - mais une recherche
+   * réseau comme Workable rend des offres de nombreuses entreprises : le nom
+   * doit venir de chaque offre, jamais d'un libellé de requête.
+   */
+  readonly companyName?: string | null;
   readonly rawContent: string;
   readonly contentType: string;
 }
