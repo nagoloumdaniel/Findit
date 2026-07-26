@@ -1245,3 +1245,50 @@ h1 {
   display: grid;
   gap: 0.15rem;
 }
+
+/* Bouton Filtres : les filtres se replient, l'etat actif les garde ouverts. */
+.filters-toggle {
+  margin-top: 0.75rem;
+}
+
+.filters-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 1.2rem;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.filters-toggle-button::-webkit-details-marker {
+  display: none;
+}
+
+.filters-toggle-button::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.filters-toggle[open] > .filters-toggle-button::before {
+  transform: rotate(45deg);
+}
+
+.filters-toggle-button:hover {
+  border-color: var(--accent-ui);
+}
+
+.filters-toggle > .filters {
+  margin-top: 0.75rem;
+}
