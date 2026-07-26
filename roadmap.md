@@ -633,6 +633,17 @@ Vision : une page principale unique, sans cle a saisir, ou la recherche se fait 
 - [!] CI GitHub Actions : workflow pousse et enregistre, mais GitHub repond « Actions has been disabled for this user » - a debloquer dans les reglages du compte GitHub (facturation/verification), rien a corriger cote depot
 - [x] Documentation de deploiement vierge (docs/deployment.md)
 
+### Phase 19 - Elargissement des sources (recu le 2026-07-26, ordre du proprietaire)
+
+Vision : plus d'offres reelles sans attendre la seule saison Greenhouse/Lever/Workable.
+
+- [x] Socle HTTP etendu : fetchJson accepte POST et en-tetes (identite FinditBot non contournable), fetchText pour lire robots.txt, 204 lu comme reponse vide
+- [x] Connecteur France Travail (API officielle, OAuth partenaire) : recherche alternance (natureContrat E2,FS) x Ile-de-France (region 11) x fraicheur (publieeDepuis 3), employeur porte par chaque offre, libelle « 75 - PARIS 14 » ramene a la commune. Monte dans le cycle SEULEMENT si FRANCETRAVAIL_CLIENT_ID/SECRET existent - inscription gratuite sur francetravail.io a faire par le proprietaire, premiere collecte reelle a verifier alors
+- [x] Connecteur Workday (flux CXS par locataire) : robots.txt du locataire relu AVANT CHAQUE collecte (ALLOWED exige, Crawl-delay intenable = refus), listes en POST, detail par offre fraiche (date absolue startDate, description, URL officielle). Preuve reelle 2026-07-26 : Thales refuse (Disallow), Workday collecte (Allow)
+- [x] Decouverte web elargie : URLs myworkdayjobs.com reconnues (cible hote/site), requetes site: reordonnees pour que chaque cycle couvre TOUS les ATS autorises au lieu d'epuiser le premier
+- [x] SuccessFactors verifie le 2026-07-26 et reste ferme : aucun flux public stable, verification par locataire requise - constat au registre
+- [ ] Inscription francetravail.io par le proprietaire, puis premiere collecte reelle France Travail a constater
+
 ## 11. Bugs connus
 
 | ID   | Bug                                                 | Gravite | Reproduction                                    | Cause probable                                       | Correctif propose                        | Statut |

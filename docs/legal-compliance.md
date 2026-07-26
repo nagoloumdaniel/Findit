@@ -146,7 +146,60 @@ L'API `jobs.workable.com/api/v1/jobs` cherche à travers tout le réseau Workabl
 la fois, et rend une localisation **structurée** - `{ city, subregion, countryName }`, où `subregion`
 vaut « Île-de-France ». Aucun des autres ATS vérifiés ne donne cette information.
 
-### Teamtailor, Recruitee, Workday
+### France Travail
+
+| Élément             | Valeur                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Statut              | `OFFICIAL_API` - **activable**                                                                           |
+| Accès               | `GET https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search`                             |
+| Authentification    | OAuth2 « client credentials » (`entreprise.francetravail.fr`), inscription gratuite sur francetravail.io |
+| Limite annoncée     | Quelques appels/seconde par clé                                                                          |
+| Cadence à appliquer | 1 requête/seconde, par prudence                                                                          |
+| Vérifié le          | 2026-07-26                                                                                               |
+
+C'est l'API officielle de l'État, conçue exactement pour cet usage : le régime d'accès le plus
+clair du registre. L'accès exige un compte partenaire (gratuit) et ses identifiants ; sans eux, le
+connecteur n'est pas monté dans le cycle. Le filtre serveur porte l'alternance (`natureContrat`),
+la région (`region=11`) et la fraîcheur (`publieeDepuis=3`). Les identifiants restent côté
+serveur - jamais dans le navigateur, un log ou la base. La forme exacte des réponses sera
+confirmée à la première collecte réelle, les identifiants n'existant pas encore.
+
+### Workday
+
+| Élément             | Valeur                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Statut              | `AUTHORIZED_CRAWL` - **activable, locataire par locataire**                                                             |
+| Accès               | `POST https://{hôte}.myworkdayjobs.com/wday/cxs/{locataire}/{site}/jobs` puis `GET …/job/{chemin}`                      |
+| Authentification    | Aucune - c'est le flux que la page carrière publique charge elle-même                                                   |
+| `robots.txt`        | **Un par locataire.** Relevé sur `workday.wd5.myworkdayjobs.com` : `User-agent: *` avec `Allow:` sur les sites carrière |
+| Limite annoncée     | Aucun `Crawl-delay` sur les locataires relevés                                                                          |
+| Cadence à appliquer | 1 requête/seconde ; un `Crawl-delay` plus long vaut refus                                                               |
+| Vérifié le          | 2026-07-26                                                                                                              |
+
+La particularité : chaque entreprise vit sur son propre sous-domaine, avec son propre
+`robots.txt`. La vérification d'un locataire ne vaut donc **rien** pour les autres - c'est le cas
+prévu par le registre dynamique. Le connecteur relit le `robots.txt` du locataire **avant chaque
+collecte** et exige `ALLOWED` sur le site carrière et sur le flux ; `UNKNOWN`, un fichier muet ou
+un `Crawl-delay` intenable valent refus. Constaté en réel le 2026-07-26 : Thales (`Disallow` sur
+son site) est refusé, Workday (`Allow`) est collecté - les deux chemins fonctionnent.
+
+Le détail d'une offre porte une date absolue (`startDate`), une description et l'URL officielle ;
+le libellé relatif « Posted N Days Ago » de la liste ne sert qu'à écarter le vieux sans requête,
+jamais à fabriquer une date.
+
+### SAP SuccessFactors
+
+| Élément    | Valeur                        |
+| ---------- | ----------------------------- |
+| Statut     | `DISABLED_PENDING_PERMISSION` |
+| Vérifié le | 2026-07-26                    |
+
+Vérifié et resté fermé : aucun flux JSON public stable n'existe, chaque locataire diffère
+(`jobs.sap.com` n'interdit que la candidature et `/services/`, mais rien ne garantit la même
+chose ailleurs). Un connecteur exigerait une vérification par locataire ET un lecteur HTML par
+variante de site - la voie n'est pas empruntée à ce jour.
+
+### Teamtailor, Recruitee
 
 | Élément    | Valeur                        |
 | ---------- | ----------------------------- |

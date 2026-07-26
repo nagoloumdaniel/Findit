@@ -9,7 +9,12 @@ a déjà été tranché et pourquoi, et les pièges déjà payés.
 jamais inventées, commandes Telegram, doc de déploiement. CI écrite mais
 bloquée : GitHub répond « Actions has been disabled for this user » - à
 débloquer dans les réglages du compte GitHub, rien à corriger côté dépôt.
-Dernier point en attente : suppression des données démo dès les premières
+Sources élargies (ordre du propriétaire) : connecteur France Travail écrit
+(API officielle, s'active dès que FRANCETRAVAIL_CLIENT_ID/SECRET existent -
+inscription gratuite sur francetravail.io à faire par le propriétaire) et
+connecteur Workday actif (robots.txt du locataire relu avant chaque collecte ;
+prouvé en réel : Thales refusé, Workday collecté). SuccessFactors vérifié et
+resté fermé. En attente : suppression des données démo dès les premières
 vraies offres collectées (en saison).
 
 ---
@@ -261,18 +266,30 @@ le code et les commits tranchent.
   raisons. Prouvé sur PostgreSQL réel : fusion à 0,94, zéro trace après
   nettoyage. La clé privée est désormais mémorisée (localStorage) : plus de
   saisie à chaque visite, « Verrouiller » l'oublie.
+- **Sources élargies (2026-07-26)** : le client HTTP des connecteurs accepte
+  POST et en-têtes (l'identité FinditBot reste non contournable) et sait lire
+  du texte pour robots.txt. Connecteur **France Travail** (API officielle,
+  OAuth partenaire, alternance x Île-de-France x fraîcheur filtrées côté
+  serveur) : monté dans le cycle SEULEMENT si les identifiants existent ; la
+  première collecte réelle reste à constater après inscription sur
+  francetravail.io. Connecteur **Workday** (flux CXS par locataire) : robots
+  du locataire relu avant CHAQUE collecte, listes en POST, détail par offre
+  fraîche - la date vient de `startDate` (absolue), jamais du libellé relatif.
+  Prouvé sur le vrai réseau : Thales refusé par son robots, Workday collecté
+  (dates 2026-07-24, vraies descriptions). La découverte Brave reconnaît les
+  URLs `myworkdayjobs.com` et les requêtes couvrent désormais tous les ATS à
+  chaque cycle. SuccessFactors vérifié le 2026-07-26 : pas de flux stable,
+  reste fermé au registre.
 
 ### Pas encore fait
 
-- Export DOCX et rattachement des documents à un historique de candidatures.
-- Interface privée : profil, score, CV et lettre ne se voient qu'en API.
+- Export DOCX des documents générés.
 - Analyse GitHub.
-- Suivi des candidatures.
-- Commandes du bot Telegram (`/start`, `/status`, `/latest`, `/help`).
-- Écriture en base des groupes de doublons : la logique de décision existe, le
-  rattachement `DuplicateGroup` n'est pas branché.
 - Versions du CV source, conservation et chiffrement du **binaire** du CV : seul
   le texte extrait est stocké aujourd'hui.
+- Première collecte réelle France Travail : le connecteur est écrit et testé,
+  mais l'inscription francetravail.io (identifiants partenaires) appartient au
+  propriétaire.
 
 ### Un résultat à connaître avant de crier au bug
 

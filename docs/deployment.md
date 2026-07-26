@@ -47,6 +47,9 @@ Optionnelles :
 
 - `BRAVE_SEARCH_API_KEY` - découverte d'entreprises ; sans elle, la collecte
   se limite au registre connu.
+- `FRANCETRAVAIL_CLIENT_ID` / `FRANCETRAVAIL_CLIENT_SECRET` - API officielle
+  France Travail (inscription gratuite sur francetravail.io, produit « Offres
+  d'emploi v2 ») ; sans elles, la source est simplement absente du cycle.
 - `TELEGRAM_*` - alertes ; simulation par défaut tant que
   `TELEGRAM_NOTIFICATIONS_ENABLED` et `TELEGRAM_DRY_RUN` ne sont pas réglés.
 - `RESUME_RETENTION_HOURS` - rétention des CV importés (24 par défaut).
