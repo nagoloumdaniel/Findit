@@ -603,6 +603,18 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
   - Tests : suite complete + verification manuelle guidee
   - Resultat :
 
+### Phase 18 - Refonte UX v3 (recu le 2026-07-27, ordre du proprietaire - PRIORITAIRE)
+
+Vision : une page principale unique, sans cle a saisir, ou la recherche se fait par texte OU par CV.
+
+- [ ] Proxy serveur Next : routes `/api/ws/*` qui relaient vers l'API avec `INTERNAL_API_KEY` cote serveur - le navigateur ne voit JAMAIS la cle, plus aucune saisie. La porte a cle disparait.
+- [ ] A cote de la barre de recherche : input d'upload de CV. Deux modes de recherche - par texte (comportement actuel) ou PAR CV (upload → structuration → matching de toutes les offres → liste triee par score).
+- [ ] Liste des offres en mode CV : chaque carte montre entreprise, intitule, SCORE, et les actions Recalculer le score / Generer la lettre / Lettre en PDF / Suivre cette candidature / Voir les details. Ces actions n'apparaissent QUE en mode CV.
+- [ ] Page detail d'offre : memes fonctions - si on est arrive par recherche texte, on peut y uploader le CV et matcher cette offre, avec score et toutes les actions.
+- [ ] Barre de navigation avec bouton vers une page dediee `/candidatures` (suivi des candidatures).
+- [ ] La section « Mon espace candidat » disparait en tant que bloc separe : tout est fondu dans la recherche d'offres.
+- [ ] Ameliorations libres bienvenues (ordre du proprietaire).
+
 ### Phase 17 - Cahier des charges v2 (recu le 2026-07-27, ordre du proprietaire)
 
 - [ ] Charger la base d'entreprises reelles fournie par le proprietaire
