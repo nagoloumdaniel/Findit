@@ -4,8 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après l'espace privé dans le navigateur (/espace) et le
-modèle de CV bleu une page.
+À jour au 2026-07-26, après la candidature complète dans le navigateur :
+scores expliqués et lettres relisibles dans /espace.
 
 ---
 
@@ -216,6 +216,15 @@ le code et les commits tranchent.
 - **Modèle de CV v3** : bleu (#1D4ED8), compact pour tenir sur une page,
   liens cliquables (mailto et https ajoutés aux adresses sans protocole),
   stack sans préfixe de remplissage.
+- **Candidature dans le navigateur** (/espace, section « Candidature ») :
+  offres publiées listées, score calculé et expliqué (critères pondérés en
+  français, compétences couvertes et manquantes en pastilles,
+  recommandations, avertissement affiché tel quel), lettre générée avec
+  barre de progression estimée puis affichée en entier pour relecture (faits
+  utilisés, points fragiles), PDF de lettre téléchargeable. Scores et lettres
+  stockés rechargés à l'ouverture. Validé par le propriétaire dans le
+  navigateur. Le parcours complet vit désormais dans la page : importer,
+  structurer, scorer, lettre, PDF, supprimer.
 
 ### Pas encore fait
 

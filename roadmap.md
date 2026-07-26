@@ -89,7 +89,6 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 ### Ce qui manque
 
 - Conservation chiffree et versionnee du binaire original du CV.
-- Affichage du score offre / profil dans l'interface (calcul et raisons faits).
 - Messages recruteurs et export DOCX (CV et lettre s'exportent deja en PDF).
 - Analyse GitHub et selection de projets.
 - Suivi des candidatures, historique, rappels et statuts.
@@ -408,7 +407,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
   - Tests : unitaires sur pondérations + integration `JobMatch`
   - Resultat : `@findit/matching-engine` (dictionnaire technique, 4 criteres ponderes 50/20/15/15, renormalisation, avertissement donnees insuffisantes), table `SourceResumeMatch` en cascade, routes gardees POST/GET `/api/resumes/:id/matches`; prouve le 2026-07-25 contre Ollama et base reels : 93/100 offre front-end demo, 36/100 back-end avec manques listes (SQL, PostgreSQL, API REST) ; correctif `@findit/ai` au passage (retrait des mots-cles `pattern`/`format`/`minLength`/`maxLength` du schema envoye, revalidation Zod conservee) ; valide par ordre utilisateur du 2026-07-25.
 
-- [ ] Expliquer le score dans l'interface
+- [x] Expliquer le score dans l'interface
   - Priorite : P1
   - Complexite : M
   - Fichiers concernes : `apps/web`, `apps/api`
@@ -416,7 +415,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - L'utilisateur voit le score, les raisons, les forces, les manques et les limites.
     - Aucun score n'est affiche sans base de calcul verifiable.
   - Tests : rendu + API
-  - Resultat :
+  - Resultat : section « Candidature » de /espace - score en grand avec confiance, criteres ponderes en francais, competences couvertes et manquantes en pastilles, recommandations, avertissement affiche tel quel ; lettres generees, relisibles et exportables en PDF depuis la meme page ; valide par ordre utilisateur du 2026-07-26.
 
 ### Phase 8 - GitHub et projets
 
@@ -638,6 +637,13 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-26 (suite 3) - candidature dans le navigateur
+
+- Taches terminees et validees dans le navigateur par le proprietaire : section « Candidature » de /espace - offres publiees listees, score calcule et explique (criteres ponderes en francais, pastilles couvertes/manquantes, recommandations), lettre generee avec barre de progression estimee puis relisible en entier, PDF de lettre telechargeable, resultats stockes recharges a l'ouverture.
+- Le parcours complet vit dans la page : importer, structurer, scorer, generer la lettre, exporter les PDF, supprimer.
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29 (19 tests web), build 17/17.
+- Prochaine brique ordonnee : suivi des candidatures.
 
 ### 2026-07-26 (suite 2) - espace prive dans le navigateur
 
