@@ -4,8 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après le suivi des candidatures complet (base, API et
-page /espace) et la purge de la variable OPENAI_API_KEY obsolète du .env local.
+À jour au 2026-07-26, après le branchement de Workable dans le cycle de
+collecte réel (dette B003 fermée).
 
 ---
 
@@ -242,6 +242,13 @@ le code et les commits tranchent.
 - **Dette B005 fermée** : la variable OPENAI_API_KEY obsolète a été retirée
   du .env local (IA locale seule décision retenue). Si la clé était réelle,
   la révoquer chez OpenAI.
+- **Dette B003 fermée - Workable dans le cycle réel** : `RawJob` porte
+  l'employeur par offre (Workable le remplit, l'orchestrateur rejette une
+  offre de recherche sans entreprise plutôt que d'inventer un employeur), et
+  le cycle exécute deux recherches permanentes (« alternance développeur »,
+  « stage développeur », Île-de-France) avec les mêmes permis, la même
+  ingestion et les mêmes journaux. Prouvé par un cycle réel : 31 offres
+  Workable ramenées du vrai réseau, zéro échec, tri d'ingestion normal.
 
 ### Pas encore fait
 

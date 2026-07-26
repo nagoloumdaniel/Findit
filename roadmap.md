@@ -68,7 +68,6 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 ### Ce qui est partiellement fonctionnel
 
 - Base locale : 6 offres presentes, toutes marquees `isDemo = true`; les logs de traitement existent mais aucune offre reelle publiee n'est presente dans l'environnement local audite.
-- Workable est documente et teste comme connecteur actif, mais le cycle worker courant ne l'execute pas encore dans `createCycleDeps`.
 - Deduplication : le score et la decision existent, mais l'ecriture `DuplicateGroup` / `DuplicateDecision` n'est pas branchee dans l'ingestion.
 - CV : texte extrait, structure JSON, suppression et retention effectives et prouvees sur le reel ; il manque encore versions et binaire chiffre.
 - IA : le client local est teste avec faux transport et utilise par la route privee de structuration CV ; pas encore utilise pour matching ou generation.
@@ -99,7 +98,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 ### Risques principaux
 
 - Risque documentaire residuel : maintenir `HANDOFF.md`, `roadmap.md`, `README.md` et `docs/architecture.md` alignes a chaque brique.
-- Risque fonctionnel : Workable est actif dans le registre mais pas raccorde au cycle worker courant.
+- Risque fonctionnel : ferme le 2026-07-26 - Workable est raccorde au cycle et prouve sur le reseau reel.
 - Risque donnees personnelles : le CV source se supprime et expire desormais, mais le binaire original n'est ni conserve chiffre ni versionne.
 - Risque securite locale : ferme le 2026-07-26 - la variable obsolete `OPENAI_API_KEY` a ete retiree du `.env` local ; revoquer la cle chez OpenAI si elle etait reelle.
 - Historique Git : un incident Brave a existe et est documente comme traite ; ne jamais remettre de valeur reelle dans `.env.example`.
@@ -166,7 +165,7 @@ Espace prive
 | -------------------- | ----------------- | ----------------------------- | -------------------- | ----- | --------------------------- | -------- |
 | Socle monorepo       | N/A               | N/A                           | N/A                  | Oui   | Fonctionnel                 | P0       |
 | Offres publiques     | Liste + detail    | `GET /api/jobs*`              | `Job`, `Company`     | Oui   | Fonctionnel avec donnees DB | P0       |
-| Collecteurs ATS      | N/A               | Worker                        | `Connector*`         | Oui   | Partiel, Workable non cycle | P1       |
+| Collecteurs ATS      | N/A               | Worker                        | `Connector*`         | Oui   | Fonctionnel                 | P1       |
 | Normalisation        | N/A               | Pipeline                      | `ProcessingLog`      | Oui   | Fonctionnel                 | P0       |
 | Classification       | N/A               | Pipeline                      | Decisions partielles | Oui   | Fonctionnel                 | P0       |
 | Deduplication        | N/A               | Package pur                   | Tables presentes     | Oui   | Partiel                     | P1       |
@@ -225,12 +224,11 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ## 9. Dette technique
 
-| Element                                          | Impact                                        | Risque                                    | Solution proposee                                       | Priorite |
-| ------------------------------------------------ | --------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- | -------- |
-| Workable actif mais non raccorde au cycle worker | Source active inutilisee en production locale | Collecte incomplete malgre registre actif | Ajouter une voie explicite pour `SearchTarget` Workable | P1       |
-| Deduplication non persistee                      | Doublons non regroupes en base                | Liste publique moins fiable               | Brancher `findBestMatch` dans `persistDecision`         | P1       |
-| Pas de CI/CD `.github`                           | Validations locales seulement                 | Regressions non detectees avant push      | Ajouter workflow lint/typecheck/test/build              | P2       |
-| Pas d'observabilite exploitable                  | Diagnostic prod limite                        | Incidents difficiles a expliquer          | Logs structures, metriques, health worker               | P2       |
+| Element                         | Impact                         | Risque                               | Solution proposee                               | Priorite |
+| ------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------------- | -------- |
+| Deduplication non persistee     | Doublons non regroupes en base | Liste publique moins fiable          | Brancher `findBestMatch` dans `persistDecision` | P1       |
+| Pas de CI/CD `.github`          | Validations locales seulement  | Regressions non detectees avant push | Ajouter workflow lint/typecheck/test/build      | P2       |
+| Pas d'observabilite exploitable | Diagnostic prod limite         | Incidents difficiles a expliquer     | Logs structures, metriques, health worker       | P2       |
 
 ## 10. Roadmap detaillee
 
@@ -310,7 +308,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 - [x] Lecture `robots.txt`, content signals et decouverte Brave transitoire
 
-- [ ] Brancher Workable dans le cycle worker reel
+- [x] Brancher Workable dans le cycle worker reel
   - Priorite : P1
   - Complexite : M
   - Fichiers concernes : `apps/worker/src/collection/cycle-deps.ts`, `apps/worker/src/collection/run-cycle.ts`, `packages/job-connectors/src/workable.ts`
@@ -320,7 +318,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - La cadence reste bornee a une requete par seconde.
     - Les resultats passent par l'ingestion et les logs comme les autres sources.
   - Tests : tests worker + test connecteur Workable + smoke avec base/Redis reels
-  - Resultat :
+  - Resultat : `RawJob` porte l'employeur par offre (Workable le remplit, une offre de recherche sans entreprise est rejetee plutot qu'attribuee a un libelle de requete), le cycle execute deux recherches permanentes (alternance et stage developpeur, Ile-de-France) avec memes permis, ingestion et journaux ; prouve par un cycle reel le 2026-07-26 : 31 offres Workable ramenees du vrai reseau, zero echec, tri d'ingestion normal ; valide par ordre utilisateur du 2026-07-26.
 
 ### Phase 4 - Qualite des offres
 
@@ -618,7 +616,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | ---- | --------------------------------------------------- | ------- | ----------------------------------------------- | ---------------------------------------------------- | ---------------------------------------- | ------ |
 | B001 | `pnpm format:check` echouait                        | P0      | `pnpm format:check`                             | `packages/ai/src/ollama-client.test.ts` non Prettier | Reformater le fichier                    | Ferme  |
 | B002 | Documentation historique obsolete                   | P1      | Lire `README.md` et `docs/architecture.md`      | Docs non realignees apres phases recentes            | Recrire les sections d'etat/architecture | Ferme  |
-| B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ouvert |
+| B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ferme  |
 | B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Brancher dans `persistDecision`          | Ouvert |
 | B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retirer la variable locale si inutile    | Ferme  |
 | B006 | Pas de CI/CD                                        | P2      | Absence de dossier `.github`                    | Non implemente                                       | Ajouter workflow GitHub Actions          | Ouvert |
@@ -636,6 +634,12 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-26 (suite 6) - Workable dans le cycle reel (B003)
+
+- Taches terminees et validees : employeur par offre dans `RawJob` (rempli par Workable, repli registre pour les connecteurs par jeton, rejet des offres de recherche sans entreprise), recherches permanentes Workable dans le cycle (2 requetes Ile-de-France), memes permis/ingestion/journaux. Ordre utilisateur du 2026-07-26.
+- Preuve sur le reel : un cycle complet contre le vrai reseau - 33 collectes, 31 offres Workable vues (21 + 10), zero echec Workable, 2387 offres vues au total, toutes rejetees au tri (juillet hors saison, resultat documente).
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29 (107 connecteurs + 16 worker), build 17/17.
 
 ### 2026-07-26 (suite 5) - suivi dans /espace et dette B005
 
