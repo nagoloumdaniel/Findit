@@ -12,14 +12,18 @@ export interface ComparableOffer {
   readonly descriptionText: string;
 }
 
-/** Score par critère, entre 0 et 1. Correspond au `scoreBreakdown` en base. */
-export interface SimilarityBreakdown {
+/*
+ * Score par critère, entre 0 et 1. Correspond au `scoreBreakdown` en base.
+ * Type et non interface : le détail part tel quel dans un champ JSON Prisma,
+ * qui n'accepte que les formes littérales indexables.
+ */
+export type SimilarityBreakdown = {
   readonly company: number;
   readonly title: number;
   readonly location: number;
   readonly date: number;
   readonly description: number;
-}
+};
 
 export interface Similarity {
   /** Score global entre 0 et 1. */

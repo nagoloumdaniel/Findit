@@ -531,6 +531,8 @@ enum DuplicateAction {
   MERGED
   UNMERGED
   REJECTED
+  /// Doute non tranché : les offres sont groupées en attendant un contrôle.
+  REVIEW
 }
 
 /// Trace de chaque fusion et de chaque annulation, avec le détail du score.

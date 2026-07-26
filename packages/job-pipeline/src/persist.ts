@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@findit/database";
+import { findBestMatch, type ComparableOffer } from "@findit/job-deduplication";
 
 import type { IngestionDecision, JobDraft } from "./ingest.js";
 import { jobSlug, slugify } from "./slug.js";
@@ -44,6 +45,120 @@ const resolveCompany = async (prisma: PrismaClient, name: string): Promise<strin
   });
 
   return company.id;
+};
+
+/** Borne du lot comparé : au-delà, le titre est trop générique pour décider. */
+const DUPLICATE_CANDIDATES = 25;
+
+/*
+ * Rattache une offre nouvellement créée à son doublon éventuel. Le lot comparé
+ * partage le même titre normalisé - c'est l'index qui borne le coût. Une
+ * fusion passe la nouvelle offre en DUPLICATE (la liste publique ne la montre
+ * plus deux fois) ; un doute la groupe sans la fusionner, en attendant un
+ * contrôle. La décision est écrite avec son score et son détail : réversible.
+ */
+const attachDuplicate = async (
+  prisma: PrismaClient,
+  jobId: string,
+  draft: JobDraft,
+  context: PersistContext,
+): Promise<"MERGED" | "REVIEW" | null> => {
+  const rows = await prisma.job.findMany({
+    where: { normalizedTitle: draft.normalizedTitle, id: { not: jobId } },
+    orderBy: { publishedAt: "desc" },
+    take: DUPLICATE_CANDIDATES,
+    select: {
+      id: true,
+      city: true,
+      departmentCode: true,
+      publishedAt: true,
+      description: true,
+      normalizedTitle: true,
+      duplicateGroupId: true,
+      company: { select: { normalizedName: true } },
+    },
+  });
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const candidate: ComparableOffer = {
+    normalizedTitle: draft.normalizedTitle,
+    normalizedCompany: normalizedName(draft.companyName),
+    departmentCode: draft.departmentCode,
+    city: draft.city,
+    publishedAt: draft.publishedAt,
+    descriptionText: draft.description,
+  };
+
+  const best = findBestMatch(
+    candidate,
+    rows.map((row) => ({
+      row,
+      normalizedTitle: row.normalizedTitle,
+      normalizedCompany: row.company.normalizedName,
+      departmentCode: row.departmentCode,
+      city: row.city,
+      publishedAt: row.publishedAt,
+      descriptionText: row.description,
+    })),
+  );
+  if (best === null) {
+    return null;
+  }
+
+  const { row } = best.match;
+  const score = best.decision.similarity.score;
+
+  // Le groupe existant est réutilisé ; sinon l'offre déjà en base devient la
+  // canonique du groupe créé.
+  const groupId =
+    row.duplicateGroupId ??
+    (await prisma.duplicateGroup.create({ data: { canonicalJobId: row.id }, select: { id: true } }))
+      .id;
+  if (row.duplicateGroupId === null) {
+    await prisma.job.update({
+      where: { id: row.id },
+      data: { duplicateGroupId: groupId, duplicateConfidence: score },
+    });
+  }
+
+  const merged = best.decision.action === "MERGE";
+  await prisma.job.update({
+    where: { id: jobId },
+    data: {
+      duplicateGroupId: groupId,
+      duplicateConfidence: score,
+      ...(merged ? { status: "DUPLICATE" } : {}),
+    },
+  });
+
+  await prisma.duplicateDecision.create({
+    data: {
+      groupId,
+      jobId,
+      action: merged ? "MERGED" : "REVIEW",
+      score,
+      scoreBreakdown: best.decision.similarity.breakdown,
+      reasons: [...best.decision.similarity.reasons],
+      decidedBy: "RULE",
+    },
+  });
+
+  await prisma.processingLog.create({
+    data: {
+      jobId,
+      stage: "deduplication",
+      toStatus: merged ? "DUPLICATE" : null,
+      succeeded: true,
+      message: merged
+        ? `Fusionnée avec l'offre ${row.id} (score ${score.toFixed(2)}).`
+        : `Groupée pour contrôle avec l'offre ${row.id} (score ${score.toFixed(2)}).`,
+      correlationId: context.correlationId,
+    },
+  });
+
+  return merged ? "MERGED" : "REVIEW";
 };
 
 const writeJob = async (
@@ -128,10 +243,20 @@ const writeJob = async (
     },
   });
 
+  // La recherche de doublon ne court qu'à la création : une recollecte met à
+  // jour la même ligne, elle ne peut pas créer de doublon nouveau.
+  let status: string = draft.status;
+  if (existing === null) {
+    const duplicate = await attachDuplicate(prisma, job.id, draft, context);
+    if (duplicate === "MERGED") {
+      status = "DUPLICATE";
+    }
+  }
+
   return {
     kind: existing === null ? "created" : "updated",
     jobId: job.id,
-    status: draft.status,
+    status,
   };
 };
 

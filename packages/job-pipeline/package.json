@@ -18,6 +18,7 @@
   "dependencies": {
     "@findit/database": "workspace:*",
     "@findit/job-classification": "workspace:*",
+    "@findit/job-deduplication": "workspace:*",
     "@findit/job-normalization": "workspace:*",
     "@findit/shared": "workspace:*"
   }
