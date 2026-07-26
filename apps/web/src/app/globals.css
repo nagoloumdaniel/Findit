@@ -1292,3 +1292,32 @@ h1 {
 .filters-toggle > .filters {
   margin-top: 0.75rem;
 }
+
+/*
+ * Recherche + bouton Filtres sur une ligne. Le details passe en
+ * display: contents : son bouton devient un enfant de la grille (colonne
+ * droite) et le panneau deplie prend toute la largeur en dessous.
+ */
+.search-filter-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.search-filter-row .job-search {
+  min-width: 0;
+}
+
+.filters-toggle {
+  display: contents;
+}
+
+.filters-toggle > .filters {
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+
+.filters-toggle-button::before {
+  content: none;
+}

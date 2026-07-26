@@ -72,21 +72,39 @@ export default async function HomePage({ searchParams }: PageProps) {
         )}
       </header>
 
-      <JobSearch current={search} />
-
-      {/* Les filtres ne s'affichent qu'à la demande (bouton Filtres), mais
-          restent ouverts quand l'un d'eux est actif : l'état doit se voir. */}
-      {options.ok ? (
-        <details
-          className="filters-toggle"
-          open={["freshness", "role", "contract", "department", "workMode"].some(
-            (key) => search.get(key) !== null,
-          )}
-        >
-          <summary className="filters-toggle-button">Filtres</summary>
-          <JobFilters options={options.data} current={search} />
-        </details>
-      ) : null}
+      {/* Recherche et bouton Filtres sur la même ligne ; le panneau déplié
+          occupe toute la largeur en dessous (details en display: contents).
+          Les filtres restent ouverts quand l'un d'eux est actif : l'état
+          doit se voir. */}
+      <div className="search-filter-row">
+        <JobSearch current={search} />
+        {options.ok ? (
+          <details
+            className="filters-toggle"
+            open={["freshness", "role", "contract", "department", "workMode"].some(
+              (key) => search.get(key) !== null,
+            )}
+          >
+            <summary className="filters-toggle-button">
+              <svg
+                aria-hidden="true"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <path d="M3 5h18l-7 8.5V19l-4 2v-7.5L3 5z" />
+              </svg>
+              Filtres
+            </summary>
+            <JobFilters options={options.data} current={search} />
+          </details>
+        ) : null}
+      </div>
 
       <section className="results" aria-label="Offres">
         {!jobs.ok ? (
