@@ -1,6 +1,7 @@
 import { AiDisabledError, AiOutputError, AiUnavailableError } from "@findit/ai";
 import {
   BadGatewayException,
+  Body,
   ConflictException,
   Controller,
   Get,
@@ -17,8 +18,12 @@ import {
 
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { WorkspaceGuard } from "../workspace/workspace.guard.js";
-import { letterListParamsSchema, letterParamsSchema } from "./letters-input.js";
-import type { LetterListParams, LetterParams } from "./letters-input.js";
+import {
+  letterAdditionsSchema,
+  letterListParamsSchema,
+  letterParamsSchema,
+} from "./letters-input.js";
+import type { LetterAdditions, LetterListParams, LetterParams } from "./letters-input.js";
 import {
   LetterInventsFactsError,
   LettersService,
@@ -39,10 +44,12 @@ export class LettersController {
 
   @Post(":slug")
   @HttpCode(200)
-  @UsePipes(new ZodValidationPipe(letterParamsSchema))
-  async generate(@Param() params: LetterParams): Promise<LetterView> {
+  async generate(
+    @Param(new ZodValidationPipe(letterParamsSchema)) params: LetterParams,
+    @Body(new ZodValidationPipe(letterAdditionsSchema)) input: LetterAdditions,
+  ): Promise<LetterView> {
     try {
-      const result = await this.letters.generate(params.id, params.slug);
+      const result = await this.letters.generate(params.id, params.slug, input);
       if (result === "resume_not_found") {
         throw new NotFoundException("CV introuvable.");
       }

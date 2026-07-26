@@ -55,6 +55,7 @@ const letterOutput: GeneratedLetter = {
   ],
   usedFacts: ["BTS SIO", "stage WebAgence", "React", "TypeScript"],
   warnings: [],
+  learningNotes: [],
 };
 
 const storedRow = (over: Record<string, unknown> = {}) => ({

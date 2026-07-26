@@ -18,6 +18,7 @@ import {
 } from "../../lib/workspace-api";
 import { LetterCard } from "./letter-card";
 import { MatchCard } from "./match-card";
+import { SkillTriage, type SkillAddition } from "./skill-triage";
 
 /*
  * Sur la page détail d'une offre : matcher SON CV avec CETTE offre, avec
@@ -32,6 +33,7 @@ export const OfferMatch = ({ slug }: { slug: string }) => {
   const [progress, setProgress] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [tracked, setTracked] = useState(false);
+  const [triageOpen, setTriageOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,6 +68,20 @@ export const OfferMatch = ({ slug }: { slug: string }) => {
     } finally {
       setBusy(null);
     }
+  };
+
+  const runLetter = (additions: SkillAddition[]) => {
+    if (resume === null) {
+      return;
+    }
+    void withBusy("letter", async () => {
+      const result = await generateLetter("proxy", resume.id, slug, additions);
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
+      setLetter(result.data);
+    });
   };
 
   const runMatch = (target: ResumeSummary) => {
@@ -180,14 +196,20 @@ export const OfferMatch = ({ slug }: { slug: string }) => {
               className="workspace-button"
               disabled={busy !== null}
               onClick={() => {
-                void withBusy("letter", async () => {
-                  const result = await generateLetter("proxy", resume.id, slug);
-                  if (!result.ok) {
-                    setMessage(result.message);
-                    return;
-                  }
-                  setLetter(result.data);
-                });
+                /*
+                 * Des compétences de l'offre manquent au CV : la popup de tri
+                 * décide de leur sort AVANT la génération - jamais d'ajout
+                 * silencieux.
+                 */
+                const missing = [
+                  ...(match?.missingSkills ?? []),
+                  ...(match?.missingKeywords ?? []),
+                ];
+                if (missing.length > 0) {
+                  setTriageOpen(true);
+                  return;
+                }
+                runLetter([]);
               }}
             >
               {busy === "letter"
@@ -252,6 +274,22 @@ export const OfferMatch = ({ slug }: { slug: string }) => {
 
       {match !== null && <MatchCard match={match} />}
       {letter !== null && <LetterCard letter={letter} />}
+
+      {triageOpen && match !== null && (
+        <SkillTriage
+          skills={[
+            ...match.missingSkills.map((skill) => ({ skill, reason: "exigée par l'offre" })),
+            ...match.missingKeywords.map((skill) => ({ skill, reason: "souhaitée par l'offre" })),
+          ]}
+          onConfirm={(additions) => {
+            setTriageOpen(false);
+            runLetter(additions);
+          }}
+          onCancel={() => {
+            setTriageOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 };

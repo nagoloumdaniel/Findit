@@ -6,7 +6,11 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
 import { resumeFactsSchema, type ResumeFacts } from "../resume/structured-resume.js";
-import { generatedLetterSchema, type GeneratedLetter } from "./letters-input.js";
+import {
+  generatedLetterSchema,
+  type GeneratedLetter,
+  type LetterAdditions,
+} from "./letters-input.js";
 
 export const LETTERS_AI_MODEL = Symbol("LETTERS_AI_MODEL");
 export const LETTERS_CLOCK = Symbol("LETTERS_CLOCK");
@@ -154,7 +158,12 @@ export class LettersService {
    * cite rien d'absent du CV, puis la stocke. Une seule lettre courante par
    * couple : régénérer remplace, la relecture passe par GET.
    */
-  async generate(resumeId: string, jobSlug: string): Promise<LetterView | LetterFailure> {
+  async generate(
+    resumeId: string,
+    jobSlug: string,
+    input?: LetterAdditions,
+  ): Promise<LetterView | LetterFailure> {
+    const additions = input?.additions ?? [];
     await this.purgeExpired();
 
     const resume = await this.prisma.sourceResume.findFirst({
@@ -180,32 +189,76 @@ export class LettersService {
     }
 
     const facts = resumeFactsSchema.parse(resume.structuredFacts);
+
+    /*
+     * Ajouts triés par le propriétaire dans la popup : une compétence
+     * possédée se cite comme acquise (il est la source de vérité sur
+     * lui-même), une compétence en cours d'acquisition ne se présente JAMAIS
+     * comme acquise et produit ses notions à apprendre.
+     */
+    const possessed = additions.filter((a) => a.status === "possessed").map((a) => a.skill);
+    const learning = additions.filter((a) => a.status === "learning").map((a) => a.skill);
+    const additionsPrompt = [
+      ...(possessed.length > 0
+        ? [
+            `Le candidat confirme posseder aussi, hors CV : ${possessed.join(", ")}. Tu peux les citer comme acquises.`,
+          ]
+        : []),
+      ...(learning.length > 0
+        ? [
+            `Le candidat est EN COURS D'ACQUISITION de : ${learning.join(", ")}. Tu peux les mentionner uniquement comme apprentissage en cours, jamais comme acquises, et tu remplis learningNotes pour chacune avec 3 a 5 notions concretes a apprendre, en rapport direct avec l'offre.`,
+          ]
+        : []),
+    ];
+
     const letter = await this.model.generateStructured({
       schema: generatedLetterSchema,
       system: LETTER_SYSTEM,
-      prompt: buildLetterPrompt(facts, {
-        title: job.title,
-        companyName: job.company.name,
-        city: job.city,
-        requirements: job.requirements,
-        responsibilities: job.responsibilities,
-        description: job.description,
-      }),
+      prompt: [
+        buildLetterPrompt(facts, {
+          title: job.title,
+          companyName: job.company.name,
+          city: job.city,
+          requirements: job.requirements,
+          responsibilities: job.responsibilities,
+          description: job.description,
+        }),
+        ...additionsPrompt,
+      ].join("\n"),
       // Un peu de latitude pour que la lettre se lise bien ; les faits, eux,
       // sont verrouillés par le schéma et la vérification qui suit.
       temperature: 0.3,
     });
 
-    const invented = findInventedSkills(letter, facts);
+    // Le garde-fou tolère uniquement ce que le propriétaire a explicitement trié.
+    const allowed = new Set(additions.map((a) => a.skill.toLowerCase()));
+    const invented = findInventedSkills(letter, facts).filter(
+      (skill) => !allowed.has(skill.toLowerCase()),
+    );
     if (invented.length > 0) {
       throw new LetterInventsFactsError(invented);
     }
+
+    /*
+     * La traçabilité des ajouts vit dans la lettre stockée : les warnings
+     * portent la raison de chaque ajout et les notions à apprendre - la
+     * relecture et le PDF les montrent tels quels.
+     */
+    const additionWarnings = [
+      ...possessed.map((skill) => `Ajout déclaré possédé (hors CV) : ${skill}.`),
+      ...learning.map(
+        (skill) => `En cours d'acquisition, jamais présenté comme acquis : ${skill}.`,
+      ),
+      ...letter.learningNotes.map(
+        (note) => `À apprendre - ${note.skill} : ${note.notions.join(" ; ")}.`,
+      ),
+    ];
 
     const data = {
       subject: letter.subject,
       paragraphs: letter.paragraphs,
       usedFacts: letter.usedFacts,
-      warnings: letter.warnings,
+      warnings: [...letter.warnings, ...additionWarnings],
       computedBy: DecisionSource.AI,
     };
     const stored = await this.prisma.sourceCoverLetter.upsert({

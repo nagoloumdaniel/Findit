@@ -18,6 +18,7 @@ import {
 } from "../../lib/workspace-api";
 import { LetterCard } from "./letter-card";
 import { MatchCard } from "./match-card";
+import { SkillTriage, type SkillAddition } from "./skill-triage";
 
 export type ApplicationPanelProps = Readonly<{
   workspaceKey: string;
@@ -47,6 +48,7 @@ export const ApplicationPanel = ({
   const [busy, setBusy] = useState<Record<string, string>>({});
   const [letterProgress, setLetterProgress] = useState<Record<string, number>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [triageSlug, setTriageSlug] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchPublishedOffers().then((result) => {
@@ -80,6 +82,40 @@ export const ApplicationPanel = ({
         return next;
       });
     }
+  };
+
+  const runLetter = (slug: string, additions: SkillAddition[]) => {
+    const startedAt = Date.now();
+    const estimatedMs = 50_000;
+    setLetterProgress((current) => ({ ...current, [slug]: 0 }));
+    const ticker = setInterval(() => {
+      const ratio = (Date.now() - startedAt) / estimatedMs;
+      setLetterProgress((current) => ({
+        ...current,
+        [slug]: Math.min(95, Math.round(ratio * 100)),
+      }));
+    }, 500);
+    void withBusy(slug, "letter", async () => {
+      try {
+        const result = await generateLetter(workspaceKey, resume.id, slug, additions);
+        if (!result.ok) {
+          setMessage(result.message);
+          return;
+        }
+        setLetterProgress((current) => ({ ...current, [slug]: 100 }));
+        setLetters((current) => ({ ...current, [slug]: result.data }));
+        setOpen((current) => ({ ...current, [slug]: true }));
+      } finally {
+        clearInterval(ticker);
+        setTimeout(() => {
+          setLetterProgress((current) => {
+            const next = { ...current };
+            delete next[slug];
+            return next;
+          });
+        }, 800);
+      }
+    });
   };
 
   const runMatchAll = () => {
@@ -210,41 +246,17 @@ export const ApplicationPanel = ({
                       className="workspace-button"
                       disabled={offerBusy !== null}
                       onClick={() => {
-                        const startedAt = Date.now();
-                        const estimatedMs = 50_000;
-                        setLetterProgress((current) => ({ ...current, [offer.slug]: 0 }));
-                        const ticker = setInterval(() => {
-                          const ratio = (Date.now() - startedAt) / estimatedMs;
-                          setLetterProgress((current) => ({
-                            ...current,
-                            [offer.slug]: Math.min(95, Math.round(ratio * 100)),
-                          }));
-                        }, 500);
-                        void withBusy(offer.slug, "letter", async () => {
-                          try {
-                            const result = await generateLetter(
-                              workspaceKey,
-                              resume.id,
-                              offer.slug,
-                            );
-                            if (!result.ok) {
-                              setMessage(result.message);
-                              return;
-                            }
-                            setLetterProgress((current) => ({ ...current, [offer.slug]: 100 }));
-                            setLetters((current) => ({ ...current, [offer.slug]: result.data }));
-                            setOpen((current) => ({ ...current, [offer.slug]: true }));
-                          } finally {
-                            clearInterval(ticker);
-                            setTimeout(() => {
-                              setLetterProgress((current) => {
-                                const next = { ...current };
-                                delete next[offer.slug];
-                                return next;
-                              });
-                            }, 800);
-                          }
-                        });
+                        // Compétences manquantes : la popup de tri décide de
+                        // leur sort AVANT la génération, jamais en silence.
+                        const missing = [
+                          ...(match?.missingSkills ?? []),
+                          ...(match?.missingKeywords ?? []),
+                        ];
+                        if (missing.length > 0) {
+                          setTriageSlug(offer.slug);
+                          return;
+                        }
+                        runLetter(offer.slug, []);
                       }}
                     >
                       {offerBusy === "letter"
@@ -315,6 +327,28 @@ export const ApplicationPanel = ({
               );
             })}
         </div>
+      )}
+      {triageSlug !== null && matches[triageSlug] !== undefined && (
+        <SkillTriage
+          skills={[
+            ...(matches[triageSlug]?.missingSkills ?? []).map((skill) => ({
+              skill,
+              reason: "exigée par l'offre",
+            })),
+            ...(matches[triageSlug]?.missingKeywords ?? []).map((skill) => ({
+              skill,
+              reason: "souhaitée par l'offre",
+            })),
+          ]}
+          onConfirm={(additions) => {
+            const slug = triageSlug;
+            setTriageSlug(null);
+            runLetter(slug, additions);
+          }}
+          onCancel={() => {
+            setTriageSlug(null);
+          }}
+        />
       )}
     </section>
   );

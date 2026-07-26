@@ -194,8 +194,17 @@ export const generateLetter = (
   key: string,
   resumeId: string,
   slug: string,
+  additions?: { skill: string; status: "possessed" | "learning" }[],
 ): Promise<WorkspaceResult<LetterView>> =>
-  request<LetterView>(key, `/api/resumes/${resumeId}/letters/${slug}`, { method: "POST" });
+  request<LetterView>(key, `/api/resumes/${resumeId}/letters/${slug}`, {
+    method: "POST",
+    ...(additions !== undefined && additions.length > 0
+      ? {
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ additions }),
+        }
+      : {}),
+  });
 
 export const listLetters = (
   key: string,

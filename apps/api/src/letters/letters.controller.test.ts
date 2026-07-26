@@ -46,34 +46,36 @@ const createController = (
 describe("LettersController.generate", () => {
   it("returns the stored letter for review", async () => {
     const { controller, service } = createController();
-    await expect(controller.generate(params)).resolves.toBe(view);
-    expect(service.generate).toHaveBeenCalledWith(params.id, params.slug);
+    await expect(controller.generate(params, undefined)).resolves.toBe(view);
+    expect(service.generate).toHaveBeenCalledWith(params.id, params.slug, undefined);
   });
 
   it("maps not-found unions to 404", async () => {
     const { controller } = createController({
       generate: vi.fn().mockResolvedValue("resume_not_found"),
     });
-    await expect(controller.generate(params)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.generate(params, undefined)).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("maps an unstructured resume to 409", async () => {
     const { controller } = createController({
       generate: vi.fn().mockRejectedValue(new ResumeNotStructuredForLetterError()),
     });
-    await expect(controller.generate(params)).rejects.toBeInstanceOf(ConflictException);
+    await expect(controller.generate(params, undefined)).rejects.toBeInstanceOf(ConflictException);
   });
 
   it("maps invented facts and invalid AI output to 502", async () => {
     const { controller } = createController({
       generate: vi.fn().mockRejectedValue(new LetterInventsFactsError(["Docker"])),
     });
-    await expect(controller.generate(params)).rejects.toBeInstanceOf(BadGatewayException);
+    await expect(controller.generate(params, undefined)).rejects.toBeInstanceOf(
+      BadGatewayException,
+    );
 
     const { controller: second } = createController({
       generate: vi.fn().mockRejectedValue(new AiOutputError("sortie invalide")),
     });
-    await expect(second.generate(params)).rejects.toBeInstanceOf(BadGatewayException);
+    await expect(second.generate(params, undefined)).rejects.toBeInstanceOf(BadGatewayException);
   });
 });
 

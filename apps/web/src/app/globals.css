@@ -1402,3 +1402,72 @@ button.filters-toggle-button {
   display: inline-flex;
   align-items: center;
 }
+
+/* Popup de tri des competences : superposition sobre, decisions explicites. */
+.triage-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 11, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.triage-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  max-width: 34rem;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.triage-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+
+.triage-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.triage-row {
+  display: grid;
+  gap: 0.35rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.7rem;
+}
+
+.triage-skill {
+  font-weight: var(--weight-semibold);
+}
+
+.triage-reason {
+  color: var(--fg-subtle);
+  font-size: var(--text-sm);
+}
+
+.triage-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.triage-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
