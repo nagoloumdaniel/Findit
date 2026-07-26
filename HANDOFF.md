@@ -4,8 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après le branchement de Workable dans le cycle de
-collecte réel (dette B003 fermée).
+À jour au 2026-07-27, après la déduplication persistée (dette B004 fermée) et
+la réception du cahier des charges v2 (roadmap, Phase 17).
 
 ---
 
@@ -249,6 +249,13 @@ le code et les commits tranchent.
   « stage développeur », Île-de-France) avec les mêmes permis, la même
   ingestion et les mêmes journaux. Prouvé par un cycle réel : 31 offres
   Workable ramenées du vrai réseau, zéro échec, tri d'ingestion normal.
+- **Dette B004 fermée - déduplication persistée** : à la création d'une offre,
+  comparaison aux candidates de même titre normalisé, fusion en DUPLICATE
+  (groupe + canonique, la liste publique ne montre plus deux fois la même) ou
+  groupement REVIEW en cas de doute, décision écrite avec score, détail et
+  raisons. Prouvé sur PostgreSQL réel : fusion à 0,94, zéro trace après
+  nettoyage. La clé privée est désormais mémorisée (localStorage) : plus de
+  saisie à chaque visite, « Verrouiller » l'oublie.
 
 ### Pas encore fait
 

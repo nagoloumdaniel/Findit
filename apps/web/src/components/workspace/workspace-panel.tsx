@@ -18,8 +18,9 @@ import { ApplicationsPanel } from "./applications-panel";
 import { ResumeCard } from "./resume-card";
 
 /*
- * La clé ne vit que dans la session du navigateur : fermer l'onglet la fait
- * oublier. Elle n'apparaît ni dans une adresse ni dans le code de la page.
+ * La clé est mémorisée par le navigateur (demande du propriétaire : pas de
+ * saisie à chaque visite). Elle n'apparaît ni dans une adresse ni dans le
+ * code de la page ; « Verrouiller » l'oublie. Machine partagée = verrouiller.
  */
 const KEY_STORAGE = "findit-workspace-key";
 
@@ -48,7 +49,7 @@ export const WorkspacePanel = () => {
   // Reprend la clé de la session si elle y est déjà, et la revérifie :
   // une clé périmée ne doit pas laisser croire que l'espace est ouvert.
   useEffect(() => {
-    const stored = sessionStorage.getItem(KEY_STORAGE);
+    const stored = localStorage.getItem(KEY_STORAGE);
     if (stored === null) {
       return;
     }
@@ -57,7 +58,7 @@ export const WorkspacePanel = () => {
         setKey(stored);
         setResumes(result.data);
       } else {
-        sessionStorage.removeItem(KEY_STORAGE);
+        localStorage.removeItem(KEY_STORAGE);
       }
     });
   }, []);
@@ -69,13 +70,13 @@ export const WorkspacePanel = () => {
       setGateError(result.status === 401 ? "Clé refusée." : result.message);
       return;
     }
-    sessionStorage.setItem(KEY_STORAGE, candidate);
+    localStorage.setItem(KEY_STORAGE, candidate);
     setKey(candidate);
     setResumes(result.data);
   };
 
   const lock = () => {
-    sessionStorage.removeItem(KEY_STORAGE);
+    localStorage.removeItem(KEY_STORAGE);
     setKey(null);
     setResumes([]);
     setDetails({});

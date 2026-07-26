@@ -68,7 +68,6 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 ### Ce qui est partiellement fonctionnel
 
 - Base locale : 6 offres presentes, toutes marquees `isDemo = true`; les logs de traitement existent mais aucune offre reelle publiee n'est presente dans l'environnement local audite.
-- Deduplication : le score et la decision existent, mais l'ecriture `DuplicateGroup` / `DuplicateDecision` n'est pas branchee dans l'ingestion.
 - CV : texte extrait, structure JSON, suppression et retention effectives et prouvees sur le reel ; il manque encore versions et binaire chiffre.
 - IA : le client local est teste avec faux transport et utilise par la route privee de structuration CV ; pas encore utilise pour matching ou generation.
 - Telegram : l'alerte de nouvelles offres existe, mais les commandes bot (`/start`, `/status`, `/latest`, `/help`) sont absentes.
@@ -168,7 +167,7 @@ Espace prive
 | Collecteurs ATS      | N/A               | Worker                        | `Connector*`         | Oui   | Fonctionnel                 | P1       |
 | Normalisation        | N/A               | Pipeline                      | `ProcessingLog`      | Oui   | Fonctionnel                 | P0       |
 | Classification       | N/A               | Pipeline                      | Decisions partielles | Oui   | Fonctionnel                 | P0       |
-| Deduplication        | N/A               | Package pur                   | Tables presentes     | Oui   | Partiel                     | P1       |
+| Deduplication        | N/A               | Branchee a l'ingestion        | Tables ecrites       | Oui   | Fonctionnel                 | P1       |
 | Worker cron          | N/A               | BullMQ worker                 | Runs/logs            | Oui   | Fonctionnel                 | P0       |
 | Telegram alertes     | N/A               | Worker + package              | Notification table   | Oui   | Partiel, simulation defaut  | P1       |
 | Espace prive         | Page /espace (CV) | Guard + profil                | `CandidateProfile`   | Oui   | Partiel, scores/lettres UI  | P1       |
@@ -224,11 +223,10 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ## 9. Dette technique
 
-| Element                         | Impact                         | Risque                               | Solution proposee                               | Priorite |
-| ------------------------------- | ------------------------------ | ------------------------------------ | ----------------------------------------------- | -------- |
-| Deduplication non persistee     | Doublons non regroupes en base | Liste publique moins fiable          | Brancher `findBestMatch` dans `persistDecision` | P1       |
-| Pas de CI/CD `.github`          | Validations locales seulement  | Regressions non detectees avant push | Ajouter workflow lint/typecheck/test/build      | P2       |
-| Pas d'observabilite exploitable | Diagnostic prod limite         | Incidents difficiles a expliquer     | Logs structures, metriques, health worker       | P2       |
+| Element                         | Impact                        | Risque                               | Solution proposee                          | Priorite |
+| ------------------------------- | ----------------------------- | ------------------------------------ | ------------------------------------------ | -------- |
+| Pas de CI/CD `.github`          | Validations locales seulement | Regressions non detectees avant push | Ajouter workflow lint/typecheck/test/build | P2       |
+| Pas d'observabilite exploitable | Diagnostic prod limite        | Incidents difficiles a expliquer     | Logs structures, metriques, health worker  | P2       |
 
 ## 10. Roadmap detaillee
 
@@ -326,17 +324,12 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 - [x] Classification contrat/metier, detection d'ecoles et ingestion en base
 
-- [~] Deduplication
+- [x] Deduplication
   - Priorite : P1
   - Complexite : M
-  - Fait : score pur, decision `MERGE` / `REVIEW` / `DISTINCT`, tests.
-  - Manque :
-    - Recherche des candidates existantes avant ecriture.
-    - Creation et rattachement `DuplicateGroup`.
-    - Ecriture `DuplicateDecision`.
-  - Fichiers concernes : `packages/job-deduplication`, `packages/job-pipeline/src/persist.ts`, schema Prisma deja present
-  - Tests : tests unitaires + test d'integration de persistance
-  - Resultat :
+  - Fichiers concernes : `packages/job-deduplication`, `packages/job-pipeline/src/persist.ts`, schema Prisma
+  - Tests : tests unitaires + preuve d'integration reelle
+  - Resultat : branchee a l'ingestion a la creation d'une offre - candidates de meme titre normalise (lot 25), fusion en statut DUPLICATE avec groupe et canonique, doute groupe en REVIEW (enum etendu par migration additive), decision ecrite avec score/detail/raisons, trace ProcessingLog ; prouve sur PostgreSQL reel (fusion a 0.94, nettoyage a zero trace) ; valide par ordre utilisateur du 2026-07-27.
 
 ### Phase 5 - Authentification et profil
 
@@ -610,6 +603,25 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
   - Tests : suite complete + verification manuelle guidee
   - Resultat :
 
+### Phase 17 - Cahier des charges v2 (recu le 2026-07-27, ordre du proprietaire)
+
+- [ ] Charger la base d'entreprises reelles fournie par le proprietaire
+  - Priorite : P1
+  - Attente : la liste (≈400 entreprises + sites carrieres) doit etre fournie en texte/CSV - une image ne suffit pas pour recopier des URL sans risque d'invention.
+  - Regle maintenue : seuls les sites sur Greenhouse/Lever/Workable ou dont robots.txt autorise FinditBot deviennent collectables ; les autres sont enregistres mais non collectes (registre de conformite).
+- [ ] Supprimer les donnees de demonstration une fois de vraies offres presentes
+- [x] Cle privee memorisee : plus de saisie a chaque visite (localStorage, bouton Verrouiller pour l'oublier)
+- [ ] Page unique avec bouton Filtres (dates, metiers, contrats, departements, presence) repliables
+- [ ] Cartes d'offres : lien externe seul quand l'extraction a echoue, page detail quand elle a reussi
+- [ ] « Faire matcher mon CV » : recherche des offres les plus compatibles depuis le CV, scoring affiche sur chaque carte, avec toutes les actions (structurer, CV, lettre, suivi)
+- [ ] Matching a l'offre unique conserve, avec les memes actions
+- [ ] Ameliorations de CV detaillees et poussees, exploitables hors application
+- [ ] Competences manquantes dans CV/lettres : AJUSTEMENT PROPOSE - jamais presentees comme acquises ; ajoutees seulement marquees « en cours d'acquisition » dans le document, avec popup detaillant chaque ajout, sa raison face a l'offre et les notions a apprendre. Un document qui affirme une competence non possedee reste refuse (regle « rien d'invente »). A valider par le proprietaire.
+- [ ] Extraction : dates jamais plus precises que la source (« 2025 » reste « 2025 »)
+- [ ] Commandes Telegram (/start, /status, /latest, /help)
+- [ ] CI GitHub Actions (format, lint, typecheck, test, build)
+- [ ] Documentation de deploiement vierge
+
 ## 11. Bugs connus
 
 | ID   | Bug                                                 | Gravite | Reproduction                                    | Cause probable                                       | Correctif propose                        | Statut |
@@ -617,8 +629,8 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | B001 | `pnpm format:check` echouait                        | P0      | `pnpm format:check`                             | `packages/ai/src/ollama-client.test.ts` non Prettier | Reformater le fichier                    | Ferme  |
 | B002 | Documentation historique obsolete                   | P1      | Lire `README.md` et `docs/architecture.md`      | Docs non realignees apres phases recentes            | Recrire les sections d'etat/architecture | Ferme  |
 | B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ferme  |
-| B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Brancher dans `persistDecision`          | Ouvert |
-| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retirer la variable locale si inutile    | Ferme  |
+| B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Branchee dans `persistDecision`          | Ferme  |
+| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retiree du `.env` local                  | Ferme  |
 | B006 | Pas de CI/CD                                        | P2      | Absence de dossier `.github`                    | Non implemente                                       | Ajouter workflow GitHub Actions          | Ouvert |
 
 ## 12. Decisions techniques
@@ -634,6 +646,12 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-27 - deduplication persistee (B004) et cahier des charges v2
+
+- Taches terminees et validees : deduplication branchee a l'ingestion - a la creation d'une offre, comparaison aux candidates de meme titre normalise (lot 25), fusion (statut DUPLICATE, groupe avec canonique) ou groupement pour controle (nouvelle valeur d'enum REVIEW, migration additive), decision ecrite avec score, detail et raisons, trace ProcessingLog. Prouve sur le reel : deux offres quasi identiques via la vraie chaine - A publiee, B fusionnee (score 0.94), decision MERGED par RULE, nettoyage a zero trace. Ordre utilisateur du 2026-07-27.
+- Controles : format, lint 30/30, typecheck 30/30, test 30/30 (26 pipeline), build 17/17.
+- Cahier des charges v2 recu du proprietaire, enregistre en Phase 17.
 
 ### 2026-07-26 (suite 6) - Workable dans le cycle reel (B003)
 
