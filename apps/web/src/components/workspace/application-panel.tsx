@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   computeAllMatches,
@@ -25,6 +25,8 @@ export type ApplicationPanelProps = Readonly<{
   resume: ResumeSummary;
   /** Appelé quand un dossier de suivi vient d'être créé. */
   onTracked: () => void;
+  /** Lance le matching de toutes les offres dès l'affichage (recherche par CV). */
+  autoMatch?: boolean;
 }>;
 
 /*
@@ -32,7 +34,12 @@ export type ApplicationPanelProps = Readonly<{
  * (immédiat, sans IA) et une lettre factuelle (modèle local, longue). Les
  * résultats stockés sont rechargés à l'ouverture : recalculer remplace.
  */
-export const ApplicationPanel = ({ workspaceKey, resume, onTracked }: ApplicationPanelProps) => {
+export const ApplicationPanel = ({
+  workspaceKey,
+  resume,
+  onTracked,
+  autoMatch = false,
+}: ApplicationPanelProps) => {
   const [offers, setOffers] = useState<OfferSummary[] | null>(null);
   const [matches, setMatches] = useState<Record<string, MatchView>>({});
   const [letters, setLetters] = useState<Record<string, LetterView>>({});
@@ -75,6 +82,26 @@ export const ApplicationPanel = ({ workspaceKey, resume, onTracked }: Applicatio
     }
   };
 
+  const runMatchAll = () => {
+    void withBusy("__all__", "match-all", async () => {
+      const result = await computeAllMatches(workspaceKey, resume.id);
+      if (!result.ok) {
+        setMessage(result.message);
+        return;
+      }
+      setMatches(Object.fromEntries(result.data.map((match) => [match.job.slug, match])));
+    });
+  };
+
+  // La recherche par CV lance le matching d'elle-même, une seule fois.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoMatch && !autoRan.current) {
+      autoRan.current = true;
+      runMatchAll();
+    }
+  });
+
   return (
     <section className="application" aria-label="Candidature">
       <h2 className="application-title">Candidature</h2>
@@ -90,16 +117,7 @@ export const ApplicationPanel = ({ workspaceKey, resume, onTracked }: Applicatio
           type="button"
           className="job-search-submit"
           disabled={busy["__all__"] !== undefined}
-          onClick={() => {
-            void withBusy("__all__", "match-all", async () => {
-              const result = await computeAllMatches(workspaceKey, resume.id);
-              if (!result.ok) {
-                setMessage(result.message);
-                return;
-              }
-              setMatches(Object.fromEntries(result.data.map((match) => [match.job.slug, match])));
-            });
-          }}
+          onClick={runMatchAll}
         >
           {busy["__all__"] !== undefined
             ? "Matching en cours…"

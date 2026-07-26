@@ -1300,7 +1300,7 @@ h1 {
  */
 .search-filter-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 0.6rem;
   align-items: end;
 }
@@ -1335,4 +1335,24 @@ h1 {
 
 .workspace-details > .filters-toggle-button::-webkit-details-marker {
   display: none;
+}
+
+/* Recherche par CV : bouton dans la ligne de recherche, resultats en pleine
+   largeur en dessous (meme technique display: contents que les filtres). */
+.cv-search {
+  display: contents;
+}
+
+.cv-search-results {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.cv-search-results:empty {
+  display: none;
+}
+
+.cv-search-change {
+  justify-self: start;
 }

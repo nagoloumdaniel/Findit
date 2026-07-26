@@ -12,7 +12,6 @@ import {
   type ResumeDetail,
   type ResumeSummary,
 } from "../../lib/workspace-api";
-import { ApplicationPanel } from "./application-panel";
 import { ApplicationsPanel } from "./applications-panel";
 import { ResumeCard } from "./resume-card";
 
@@ -29,7 +28,7 @@ export const WorkspacePanel = () => {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [uploading, setUploading] = useState(false);
   const [pickedName, setPickedName] = useState<string | null>(null);
-  const [trackRefresh, setTrackRefresh] = useState(0);
+  const [trackRefresh] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -244,21 +243,8 @@ export const WorkspacePanel = () => {
         </div>
       )}
 
-      {/* La candidature s'appuie sur le CV structuré le plus récent : les
-          scores se calculent et les lettres se relisent depuis la même page. */}
-      {(() => {
-        const structured = resumes.find((resume) => resume.structuredAt !== null);
-        return structured === undefined ? null : (
-          <ApplicationPanel
-            workspaceKey={key}
-            resume={structured}
-            onTracked={() => {
-              setTrackRefresh((current) => current + 1);
-            }}
-          />
-        );
-      })()}
-
+      {/* La candidature vit désormais dans la recherche par CV, en haut de
+          page. Ici ne restent que la gestion du CV et le suivi des dossiers. */}
       <ApplicationsPanel workspaceKey={key} refreshToken={trackRefresh} />
     </div>
   );

@@ -1,6 +1,7 @@
 import { PageShell } from "@findit/ui";
 
 import { JobCard } from "../components/job-card";
+import { CvSearch } from "../components/workspace/cv-search";
 import { WorkspacePanel } from "../components/workspace/workspace-panel";
 import { JobFilters } from "../components/job-filters";
 import { JobPagination } from "../components/job-pagination";
@@ -79,6 +80,7 @@ export default async function HomePage({ searchParams }: PageProps) {
           doit se voir. */}
       <div className="search-filter-row">
         <JobSearch current={search} />
+        <CvSearch />
         {options.ok ? (
           <details
             className="filters-toggle"
