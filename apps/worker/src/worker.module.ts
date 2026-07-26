@@ -14,6 +14,7 @@ import {
 } from "./queue/queue.constants.js";
 import { QueueLifecycleService } from "./queue/queue-lifecycle.service.js";
 import { createRedisConnectionOptions } from "./queue/redis-options.js";
+import { TelegramCommandsService } from "./telegram/telegram-commands.service.js";
 
 /** Ferme le pool de connexions PostgreSQL quand le worker s'arrête. */
 @Injectable()
@@ -43,6 +44,7 @@ export class WorkerModule {
         QueueLifecycleService,
         PrismaLifecycleService,
         CollectionSchedulerService,
+        TelegramCommandsService,
       ],
     };
   }
