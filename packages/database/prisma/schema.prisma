@@ -185,6 +185,7 @@ model Job {
   matches                JobMatch[]
   sourceResumeMatches    SourceResumeMatch[]
   sourceCoverLetters     SourceCoverLetter[]
+  applications           Application[]
   coverLetters           CoverLetter[]
   telegramNotifications  TelegramJobNotification[]
 
@@ -893,6 +894,64 @@ model TelegramJobNotification {
 ///
 /// La plateforme est personnelle : ce profil n'existe qu'en un seul exemplaire.
 /// La contrainte est portée par une valeur fixe de `singleton`, unique.
+/// États d'une candidature du propriétaire. L'ordre raconte le parcours.
+enum ApplicationStatus {
+  TO_APPLY
+  APPLIED
+  INTERVIEW
+  OFFER_RECEIVED
+  REJECTED
+  WITHDRAWN
+}
+
+/// Dossier de candidature du propriétaire. Il photographie l'offre, le CV, le
+/// score et la lettre au moment de candidater : le dossier reste lisible même
+/// quand l'offre expire, que le CV est purgé ou que la lettre est régénérée.
+/// Le lien vers l'offre vivante est conservé tant qu'elle existe, sans plus.
+model Application {
+  id String @id @default(uuid(7))
+
+  jobId String?
+  job   Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  jobSlug     String
+  jobTitle    String
+  companyName String
+
+  resumeFileName   String?
+  matchScore       Int?
+  letterSubject    String?
+  letterParagraphs String[] @default([])
+
+  status ApplicationStatus @default(TO_APPLY)
+  notes  String?
+
+  /// Date d'envoi réelle, renseignée au passage au statut APPLIED.
+  appliedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events ApplicationEvent[]
+
+  @@index([status, updatedAt])
+  @@index([jobSlug])
+}
+
+/// Chaque changement de statut est conservé : l'historique ne se réécrit pas.
+model ApplicationEvent {
+  id String @id @default(uuid(7))
+
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  status     ApplicationStatus
+  note       String?
+  occurredAt DateTime @default(now())
+
+  @@index([applicationId, occurredAt])
+}
+
 model CandidateProfile {
   id String @id @default(uuid(7))
 

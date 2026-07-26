@@ -1,6 +1,7 @@
 export { createPrismaClient } from "./client.js";
 export { PrismaClient, Prisma } from "./generated/prisma/client.js";
 export {
+  ApplicationStatus,
   AtsKind,
   ConnectorRunStatus,
   ConnectorStatus,

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { ApplicationsModule } from "./applications/applications.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
@@ -19,6 +20,7 @@ import { PrismaModule } from "./prisma/prisma.module.js";
     MatchingModule,
     DocumentsModule,
     LettersModule,
+    ApplicationsModule,
   ],
 })
 export class AppModule {}
