@@ -274,6 +274,9 @@ importers:
       '@findit/job-classification':
         specifier: workspace:*
         version: link:../job-classification
+      '@findit/job-deduplication':
+        specifier: workspace:*
+        version: link:../job-deduplication
       '@findit/job-normalization':
         specifier: workspace:*
         version: link:../job-normalization
