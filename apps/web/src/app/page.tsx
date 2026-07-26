@@ -53,6 +53,9 @@ export default async function HomePage({ searchParams }: PageProps) {
     <PageShell>
       <header className="hero">
         <Logo />
+        <nav className="top-nav" aria-label="Navigation">
+          <a href="/candidatures">Mes candidatures</a>
+        </nav>
         <h1>Alternances développeur en Île-de-France</h1>
         <p className="intro">
           Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des

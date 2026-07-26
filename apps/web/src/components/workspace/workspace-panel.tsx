@@ -12,7 +12,6 @@ import {
   type ResumeDetail,
   type ResumeSummary,
 } from "../../lib/workspace-api";
-import { ApplicationsPanel } from "./applications-panel";
 import { ResumeCard } from "./resume-card";
 
 /*
@@ -28,7 +27,6 @@ export const WorkspacePanel = () => {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [uploading, setUploading] = useState(false);
   const [pickedName, setPickedName] = useState<string | null>(null);
-  const [trackRefresh] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -243,9 +241,8 @@ export const WorkspacePanel = () => {
         </div>
       )}
 
-      {/* La candidature vit désormais dans la recherche par CV, en haut de
-          page. Ici ne restent que la gestion du CV et le suivi des dossiers. */}
-      <ApplicationsPanel workspaceKey={key} refreshToken={trackRefresh} />
+      {/* La candidature vit dans la recherche par CV, le suivi sur la page
+          /candidatures : ici ne reste que la gestion des CV importés. */}
     </div>
   );
 };
