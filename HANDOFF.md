@@ -1,10 +1,11 @@
-# Passation — Findit
+# Passation - Findit
 
 Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après la lettre de motivation factuelle et son PDF.
+À jour au 2026-07-26, après l'espace privé dans le navigateur (/espace) et le
+modèle de CV bleu une page.
 
 ---
 
@@ -49,27 +50,27 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 
 **Applications** (`apps/`)
 
-- `web` — Next.js 16, port **3100**.
-- `api` — NestJS sur Fastify, port **4000**.
-- `worker` — NestJS + BullMQ, collecte planifiée.
+- `web` - Next.js 16, port **3100**.
+- `api` - NestJS sur Fastify, port **4000**.
+- `worker` - NestJS + BullMQ, collecte planifiée.
 
 **Paquets** (`packages/`)
 
-- `config` — schémas d'environnement Zod + `loadRootEnv()`.
-- `database` — Prisma 7.8, client généré, migrations **additives uniquement**.
-- `shared`, `ui` — types communs, composants.
-- `job-connectors` — connecteurs ATS, lecture `robots.txt`, découverte Brave.
-- `job-normalization` — HTML → texte, titre comparable, localisation Île-de-France.
-- `job-classification` — contrat + métier, détection d'écoles.
-- `job-deduplication` — score de similarité, décision de fusion.
-- `job-pipeline` — décision d'ingestion et écriture en base.
-- `notifications` — Telegram.
-- `ai` — modèle local (voir §7).
-- `matching-engine` — score CV/offre pur, sans IA, déterministe et explicable.
-- `documents` — modèles de CV et de lettre pré-conçus, rendu PDF déterministe
+- `config` - schémas d'environnement Zod + `loadRootEnv()`.
+- `database` - Prisma 7.8, client généré, migrations **additives uniquement**.
+- `shared`, `ui` - types communs, composants.
+- `job-connectors` - connecteurs ATS, lecture `robots.txt`, découverte Brave.
+- `job-normalization` - HTML → texte, titre comparable, localisation Île-de-France.
+- `job-classification` - contrat + métier, détection d'écoles.
+- `job-deduplication` - score de similarité, décision de fusion.
+- `job-pipeline` - décision d'ingestion et écriture en base.
+- `notifications` - Telegram.
+- `ai` - modèle local (voir §7).
+- `matching-engine` - score CV/offre pur, sans IA, déterministe et explicable.
+- `documents` - modèles de CV et de lettre pré-conçus, rendu PDF déterministe
   (React-PDF, pur Node, aucun navigateur). Le design et les formules d'usage
   vivent dans le code, pas dans l'IA.
-- `resume-parser` — **vide**, README seulement.
+- `resume-parser` - **vide**, README seulement.
 
 ---
 
@@ -77,7 +78,7 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 
 ```bash
 pnpm install
-pnpm setup:hooks        # active le hook anti-secret — à faire une fois
+pnpm setup:hooks        # active le hook anti-secret - à faire une fois
 pnpm infra:up           # postgres + redis via docker compose
 pnpm db:migrate
 pnpm dev                # turbo, toutes les apps
@@ -106,6 +107,11 @@ curl http://localhost:11434/api/tags   # doit lister qwen2.5:7b
   `no-unused-vars` (mode `after-used`), `require-await`,
   `no-unnecessary-type-assertion`.
 - Imports relatifs avec l'extension `.js` (modules NodeNext).
+- **Jamais de tiret cadratin (U+2014) ni demi-cadratin (U+2013)** : toujours le
+  tiret simple « - ». Règle définitive du propriétaire (2026-07-26), valable
+  pour le code, les docs, le site, les PDF et toute feature à venir. Seules
+  exceptions : les données externes à traiter (la regex de `location.ts` qui
+  les élimine, et les entrées de tests qui prouvent cette élimination).
 - Commentaires et documentation **en français**, et ils expliquent le _pourquoi_,
   pas le _quoi_.
 - Tables Markdown **alignées** (la règle MD060 avertit sinon).
@@ -127,11 +133,11 @@ le code et les commits tranchent.
 
 - **Fondations** : monorepo, schéma métier, migrations, API des offres (recherche,
   filtres, liste, détail).
-- **Connecteurs ATS** actifs : Greenhouse, Lever (délai 1 s), Workable — tous
+- **Connecteurs ATS** actifs : Greenhouse, Lever (délai 1 s), Workable - tous
   `PUBLIC_FEED`, vérifiés contre les API réelles. Refusés et documentés :
   SmartRecruiters, Ashby, LinkedIn, Indeed, Glassdoor, Welcome to the Jungle.
 - **Garde-fou structurel** : un connecteur dont le `SourceAccessStatus` ne
-  l'autorise pas **ne peut pas** s'exécuter — la permission est un type, non une
+  l'autorise pas **ne peut pas** s'exécuter - la permission est un type, non une
   déclaration, donc non contournable par oubli.
 - **Lecture de `robots.txt` et des Content-Signals** avant toute collecte.
 - **Traitement** : normalisation HTML → texte, titre comparable, localisation
@@ -164,7 +170,7 @@ le code et les commits tranchent.
   401 sans clé, upload avec `expiresAt` à +24 h, DELETE 204 puis 404, expiration
   forcée en SQL suivie d'une purge physique constatée à zéro ligne.
 - **Score de correspondance offre/profil** : `@findit/matching-engine`, moteur
-  pur sans IA — dictionnaire technique explicite, 4 critères pondérés
+  pur sans IA - dictionnaire technique explicite, 4 critères pondérés
   (exigées 50, souhaitées 20, intitulé 15, langues 15), renormalisation quand
   un critère n'a pas de signal, avertissement explicite quand la matière
   manque. Routes gardées `POST /api/resumes/:id/matches/:slug` (recalcule et
@@ -178,7 +184,7 @@ le code et les commits tranchent.
   **envoyé** ; la revalidation Zod conserve toutes les contraintes. Sans ce
   correctif, la structuration n'avait jamais fonctionné contre le serveur réel.
 - **Modèle de CV + rendu PDF** (2026-07-26) : `@findit/documents` rend un A4
-  sobre depuis les faits structurés — champ absent, absent du PDF ; les tests
+  sobre depuis les faits structurés - champ absent, absent du PDF ; les tests
   relisent le texte du PDF rendu. Route gardée
   `GET /api/resumes/:id/documents/cv.pdf`, régénérée à chaque appel, 409 tant
   que le CV n'est pas structuré. Prouvé contre Ollama et base réels.
@@ -189,12 +195,27 @@ le code et les commits tranchent.
 - **Lettre de motivation factuelle** (2026-07-26) : `SourceCoverLetter` (une
   lettre courante par couple CV/offre, cascade), génération via le modèle
   local (`AI_MODEL_REASONING`, température 0,3) contrainte par schéma **puis**
-  garde-fou anti-invention — toute technologie citée doit exister dans le CV
+  garde-fou anti-invention - toute technologie citée doit exister dans le CV
   structuré, même dictionnaire que le score ; violation → 502, rien stocké.
   Relecture par `GET /api/resumes/:id/letters` avant le PDF
   (`GET .../letters/:slug/pdf`). Les formules d'adresse et de politesse sont
   du modèle de document, pas de l'IA. Prouvé sur le réel : lettre 100 %
   factuelle en 33 s, PDF relu fidèle, cascade vérifiée à zéro ligne.
+- **Espace privé dans le navigateur** (`/espace`, 2026-07-26) : porte à clé
+  (sessionStorage, jamais dans une URL ni le code), import de CV avec input
+  stylé, structuration avec barre de progression estimée (annoncée comme
+  estimation), faits extraits affichés, export CV PDF, suppression. Erreurs
+  affichées avec la vraie raison de l'API. Page non indexable, lien discret
+  depuis l'accueil. Validé par le propriétaire dans le navigateur avec son
+  vrai CV.
+- **Corrections payées sur le vrai CV du propriétaire** : URLs acceptées
+  telles qu'écrites (« github.com/x » sans protocole), dates lues jusqu'à
+  120 caractères (« admission prévue, rentrée 2026 - ... »), prompt durci
+  (technologies individuelles et jamais les intitulés de rubriques, noms de
+  projets et titres de postes conservés).
+- **Modèle de CV v3** : bleu (#1D4ED8), compact pour tenir sur une page,
+  liens cliquables (mailto et https ajoutés aux adresses sans protocole),
+  stack sans préfixe de remplissage.
 
 ### Pas encore fait
 
@@ -213,7 +234,7 @@ le code et les commits tranchent.
 En juillet, **hors saison**, aucune alternance développeur en Île-de-France
 n'existe sur les ATS autorisés. Vérifié sur 462 offres réelles et par recherche
 web. Une collecte qui remonte zéro offre exploitable **n'est pas forcément
-cassée** — vérifier la saison avant de suspecter la chaîne.
+cassée** - vérifier la saison avant de suspecter la chaîne.
 
 ---
 
@@ -227,7 +248,7 @@ Les rouvrir demande une raison, pas une préférence.
 
 Un fournisseur distant (Anthropic) avait été retenu le matin même, puis écarté :
 il faisait payer des tokens à chaque offre. Le local règle le coût **et** la
-conformité — comme rien ne quitte le poste, les signaux `ai-train` et `ai-input`
+conformité - comme rien ne quitte le poste, les signaux `ai-train` et `ai-input`
 de Lever **deviennent sans objet** : ils encadrent ce qu'un tiers a le droit de
 faire d'un contenu qu'on lui envoie, or on n'envoie rien.
 
@@ -239,7 +260,7 @@ chaud, GPU. Le démarrage à froid charge 4,7 Go et prend du temps.
 Les **modèles de CV et de lettre sont pré-conçus et designés à part**. L'IA ne
 fait que **remplir le texte** et produire des analyses courtes. Le **rendu PDF est
 déterministe**, sans IA. Le **score de correspondance se calcule par recoupement**
-de compétences et de mots-clés, **sans IA** — donc gratuit et explicable.
+de compétences et de mots-clés, **sans IA** - donc gratuit et explicable.
 
 Conséquence : on ne régénère pas un CV entier par offre. C'était le point de
 départ de la décision.
@@ -266,29 +287,29 @@ Les stages sont collectés, mais le filtre par défaut porte sur l'alternance.
 
 Chacun a coûté du temps. Les relire évite de les repayer.
 
-- **`.env` non lu** — appeler `loadRootEnv()` avant toute lecture de
+- **`.env` non lu** - appeler `loadRootEnv()` avant toute lecture de
   `process.env`, et avant que Nest ne construise ses modules.
-- **`next build` cassé par `NODE_ENV`** — la valeur venant du fichier `.env`
+- **`next build` cassé par `NODE_ENV`** - la valeur venant du fichier `.env`
   empoisonnait la compilation ; `run-next.mjs` retire `NODE_ENV` du fichier et
   garde celui du shell.
-- **Injection NestJS silencieusement cassée** — esbuild n'émet pas
+- **Injection NestJS silencieusement cassée** - esbuild n'émet pas
   `emitDecoratorMetadata`, donc un contrôleur recevait un service `undefined` en
   développement. **Écrire `@Inject(MonService)` explicitement** dans chaque
   contrôleur.
-- **Champs JSON Prisma** — écrire seulement des objets validés par Zod et
+- **Champs JSON Prisma** - écrire seulement des objets validés par Zod et
   compatibles JSON ; ne jamais stocker une sortie IA brute.
-- **`unpdf`** — passer `new Uint8Array(buffer)` directement à `extractText` ;
+- **`unpdf`** - passer `new Uint8Array(buffer)` directement à `extractText` ;
   passer par `getDocumentProxy` donne un type qui ne se résout pas.
-- **Port 4000 occupé** par un processus fantôme — le retrouver avec
+- **Port 4000 occupé** par un processus fantôme - le retrouver avec
   `Get-NetTCPConnection -LocalPort 4000` puis le tuer.
-- **pnpm ne remonte pas les dépendances** — un script placé à la racine ne résout
+- **pnpm ne remonte pas les dépendances** - un script placé à la racine ne résout
   pas `zod`. Exécuter depuis le paquet qui déclare la dépendance.
-- **L'outil Bash n'est pas PowerShell** — une chaîne `@'...'@` y est prise au pied
+- **L'outil Bash n'est pas PowerShell** - une chaîne `@'...'@` y est prise au pied
   de la lettre et a produit un message de commit encadré de `@`. Utiliser un
   heredoc.
 - **Le serveur Ollama meurt avec sa session** s'il est lancé en processus caché.
   Vérifier `/api/tags` avant d'appeler le modèle, et relancer si besoin.
-- **Incident sécurité, déjà traité** — une vraie clé Brave a été écrite dans
+- **Incident sécurité, déjà traité** - une vraie clé Brave a été écrite dans
   `.env.example` puis poussée sur un dépôt public. Historique réécrit, clé
   révoquée, hook de pré-commit ajouté. **Aucune valeur réelle dans
   `.env.example`, jamais.**
@@ -343,7 +364,7 @@ reste à les exposer dans une interface.
 
 Dette d'extraction connue : le modèle local invente parfois des jours précis
 (« 2025-01-01 » quand le CV dit « 2025 »). Rien de faux ne franchit Zod, mais
-la précision affichée peut dépasser la source — à durcir dans une brique
+la précision affichée peut dépasser la source - à durcir dans une brique
 extraction dédiée.
 
 Deux dettes connues, plus petites : les **commandes du bot Telegram**

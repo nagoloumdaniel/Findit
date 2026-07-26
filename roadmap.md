@@ -163,25 +163,25 @@ Espace prive
 
 ## 6. Etat des modules
 
-| Module               | Frontend       | Backend/API                   | Base de donnees      | Tests | Statut reel                 | Priorite |
-| -------------------- | -------------- | ----------------------------- | -------------------- | ----- | --------------------------- | -------- |
-| Socle monorepo       | N/A            | N/A                           | N/A                  | Oui   | Fonctionnel                 | P0       |
-| Offres publiques     | Liste + detail | `GET /api/jobs*`              | `Job`, `Company`     | Oui   | Fonctionnel avec donnees DB | P0       |
-| Collecteurs ATS      | N/A            | Worker                        | `Connector*`         | Oui   | Partiel, Workable non cycle | P1       |
-| Normalisation        | N/A            | Pipeline                      | `ProcessingLog`      | Oui   | Fonctionnel                 | P0       |
-| Classification       | N/A            | Pipeline                      | Decisions partielles | Oui   | Fonctionnel                 | P0       |
-| Deduplication        | N/A            | Package pur                   | Tables presentes     | Oui   | Partiel                     | P1       |
-| Worker cron          | N/A            | BullMQ worker                 | Runs/logs            | Oui   | Fonctionnel                 | P0       |
-| Telegram alertes     | N/A            | Worker + package              | Notification table   | Oui   | Partiel, simulation defaut  | P1       |
-| Espace prive         | Absent         | Guard + profil                | `CandidateProfile`   | Oui   | Backend uniquement          | P1       |
-| CV source            | Absent         | Upload/liste/detail/structure | `SourceResume`       | Oui   | Partiel                     | P1       |
-| IA locale            | Absent         | Package + route CV            | Prompt tables        | Oui   | Partiel                     | P1       |
-| Matching CV/offre    | Absent         | Moteur + routes gardees       | `SourceResumeMatch`  | Oui   | Backend fonctionnel         | P1       |
-| GitHub               | Absent         | Absent                        | Absent               | Non   | Absent                      | P2       |
-| Generation documents | Absent         | PDF CV + lettre generee       | `SourceCoverLetter`  | Oui   | Partiel, DOCX absent        | P1       |
-| Suivi candidatures   | Absent         | Absent                        | Absent               | Non   | Absent                      | P1       |
-| Admin                | Absent         | Absent                        | Partiel via logs     | Non   | Absent                      | P3       |
-| CI/CD                | Absent         | N/A                           | N/A                  | Non   | Absent                      | P2       |
+| Module               | Frontend          | Backend/API                   | Base de donnees      | Tests | Statut reel                 | Priorite |
+| -------------------- | ----------------- | ----------------------------- | -------------------- | ----- | --------------------------- | -------- |
+| Socle monorepo       | N/A               | N/A                           | N/A                  | Oui   | Fonctionnel                 | P0       |
+| Offres publiques     | Liste + detail    | `GET /api/jobs*`              | `Job`, `Company`     | Oui   | Fonctionnel avec donnees DB | P0       |
+| Collecteurs ATS      | N/A               | Worker                        | `Connector*`         | Oui   | Partiel, Workable non cycle | P1       |
+| Normalisation        | N/A               | Pipeline                      | `ProcessingLog`      | Oui   | Fonctionnel                 | P0       |
+| Classification       | N/A               | Pipeline                      | Decisions partielles | Oui   | Fonctionnel                 | P0       |
+| Deduplication        | N/A               | Package pur                   | Tables presentes     | Oui   | Partiel                     | P1       |
+| Worker cron          | N/A               | BullMQ worker                 | Runs/logs            | Oui   | Fonctionnel                 | P0       |
+| Telegram alertes     | N/A               | Worker + package              | Notification table   | Oui   | Partiel, simulation defaut  | P1       |
+| Espace prive         | Page /espace (CV) | Guard + profil                | `CandidateProfile`   | Oui   | Partiel, scores/lettres UI  | P1       |
+| CV source            | Absent            | Upload/liste/detail/structure | `SourceResume`       | Oui   | Partiel                     | P1       |
+| IA locale            | Absent            | Package + route CV            | Prompt tables        | Oui   | Partiel                     | P1       |
+| Matching CV/offre    | Absent            | Moteur + routes gardees       | `SourceResumeMatch`  | Oui   | Backend fonctionnel         | P1       |
+| GitHub               | Absent            | Absent                        | Absent               | Non   | Absent                      | P2       |
+| Generation documents | Absent            | PDF CV + lettre generee       | `SourceCoverLetter`  | Oui   | Partiel, DOCX absent        | P1       |
+| Suivi candidatures   | Absent            | Absent                        | Absent               | Non   | Absent                      | P1       |
+| Admin                | Absent            | Absent                        | Partiel via logs     | Non   | Absent                      | P3       |
+| CI/CD                | Absent            | N/A                           | N/A                  | Non   | Absent                      | P2       |
 
 ## 7. API presentes
 
@@ -452,7 +452,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Rendu deterministe.
     - Les faits utilises sont traçables.
   - Tests : snapshots/rendu + validation donnees
-  - Resultat : modele de CV fait et valide le 2026-07-26 — `@findit/documents`, A4 sobre en Helvetica integree, rendu React-PDF pur Node, champ absent = absent du PDF, tests qui relisent le texte du PDF rendu ; route gardee `GET /api/resumes/:id/documents/cv.pdf` (409 tant que le CV n'est pas structure, 401 sans cle), prouvee contre Ollama et base reels. Modele de lettre fait et valide le 2026-07-26 : formules d'adresse et de politesse dans le modele de document, jamais dans l'IA.
+  - Resultat : modele de CV fait et valide le 2026-07-26 - `@findit/documents`, A4 sobre en Helvetica integree, rendu React-PDF pur Node, champ absent = absent du PDF, tests qui relisent le texte du PDF rendu ; route gardee `GET /api/resumes/:id/documents/cv.pdf` (409 tant que le CV n'est pas structure, 401 sans cle), prouvee contre Ollama et base reels. Modele de lettre fait et valide le 2026-07-26 : formules d'adresse et de politesse dans le modele de document, jamais dans l'IA.
 
 - [x] Generer une lettre de motivation factuelle
   - Priorite : P1
@@ -639,17 +639,26 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ## 13. Journal d'avancement
 
-### 2026-07-26 (suite) — lettre de motivation factuelle
+### 2026-07-26 (suite 2) - espace prive dans le navigateur
+
+- Taches terminees et validees dans le navigateur par le proprietaire, avec son vrai CV : page `/espace` (porte a cle en sessionStorage, import de CV avec input style, structuration avec barre de progression estimee, faits affiches, export CV PDF, suppression, verrouillage), lien discret depuis l'accueil, page non indexable.
+- Corrections payees sur le vrai CV : URLs acceptees sans protocole, dates lues jusqu'a 120 caracteres, `identity` requise dans le schema, prompt durci (technologies individuelles, noms de projets et titres conserves, liens jamais fabriques depuis un e-mail).
+- Modele de CV v3 : bleu #1D4ED8, compact une page, liens cliquables, competences groupees par categorie.
+- Regle typographique definitive du proprietaire : aucun tiret cadratin (U+2014) ni demi-cadratin (U+2013) nulle part - remplaces par « - » dans 70 fichiers ; seules exceptions les donnees externes a traiter (regex `location.ts`, entrees de tests).
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29, build 17/17.
+- Reste pour l'UI privee : scores et lettres dans la page (brique UI 2/2).
+
+### 2026-07-26 (suite) - lettre de motivation factuelle
 
 - Taches terminees et validees : `SourceCoverLetter` (migration `20260726100000_source_cover_letter`, zero derive), modele de lettre dans `@findit/documents`, module `letters` (generation, relecture, PDF), garde-fou anti-invention partage avec le dictionnaire du score. Ordre utilisateur du 2026-07-26.
 - Preuve sur le reel, Ollama `qwen2.5:7b` et PostgreSQL Docker, sans mock :
   - 409 avant structuration ; 401 sans cle ; 404 PDF sans lettre.
   - Lettre generee en 33 s : trois paragraphes, uniquement des faits du CV (BTS SIO, stage WebAgence, React/TypeScript/CSS/Git), `usedFacts` listes, un point fragile mis en warning au lieu d'etre brode.
   - PDF `lettre-<slug>.pdf` relu : expediteur, destinataire, date, objet, corps fideles.
-  - Suppression du CV : 204, cascade constatee — 0 CV, 0 lettre, 0 score.
+  - Suppression du CV : 204, cascade constatee - 0 CV, 0 lettre, 0 score.
 - Controles : format, lint 29/29, typecheck 29/29, test 29/29, build 17/17 ; timeout des tests de rendu PDF releve a 20 s (`vitest.config.ts` du paquet documents) apres un timeout sous charge parallele turbo.
 
-### 2026-07-26 — modele de CV et rendu PDF
+### 2026-07-26 - modele de CV et rendu PDF
 
 - Taches terminees et validees : paquet `@findit/documents` (modele de CV pre-conçu, rendu React-PDF pur Node, deterministe), route gardee `GET /api/resumes/:id/documents/cv.pdf`, durcissement extraction (`identity` requise dans le schema car la grammaire de decodage saute un objet optionnel ; prompt interdisant les « links » fabriques depuis un e-mail). Ordre utilisateur du 2026-07-26.
 - Preuve sur le reel, Ollama `qwen2.5:7b` et PostgreSQL Docker, sans mock :
@@ -666,11 +675,11 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
   - `GET /api/resumes` sans cle : 401.
   - Upload TXT avec cle : `expiresAt` a +24 h de `createdAt`, conforme a `RESUME_RETENTION_HOURS=24`.
   - `DELETE /api/resumes/:id` : 204, puis `GET` et `DELETE` rejoues : 404.
-  - Expiration forcee en SQL puis passage sur la liste : 0 CV renvoye, 0 ligne `SourceResume` en base — purge physique constatee.
+  - Expiration forcee en SQL puis passage sur la liste : 0 CV renvoye, 0 ligne `SourceResume` en base - purge physique constatee.
   - Nettoyage : API de test arretee, port 4000 libere, base laissee sans CV de test.
 - Prochaine etape ordonnee : score de correspondance offre / profil, sans IA, explicable.
 
-### 2026-07-25 (suite) — score de correspondance
+### 2026-07-25 (suite) - score de correspondance
 
 - Taches terminees et validees : moteur `@findit/matching-engine`, modele `SourceResumeMatch` (migration `20260725050000_source_resume_match`, zero derive constatee par `prisma migrate diff`), routes gardees de matching, correctif `@findit/ai` sur le schema envoye a Ollama. Ordre utilisateur du 2026-07-25.
 - Preuve sur le reel, Ollama `qwen2.5:7b` et PostgreSQL Docker, sans mock :
