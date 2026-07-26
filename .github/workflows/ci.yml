@@ -1,0 +1,35 @@
+# CI : les cinq contrôles du projet, exactement ceux joués en local avant
+# chaque commit. Aucun secret requis : les tests utilisent des doublures
+# nommées et le client Prisma ne se connecte jamais pendant la suite.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.13.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      # Le .env d'exemple suffit : aucune valeur réelle n'est nécessaire.
+      - run: cp .env.example .env
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
