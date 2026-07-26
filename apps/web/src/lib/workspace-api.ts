@@ -192,6 +192,57 @@ export const listLetters = (
 ): Promise<WorkspaceResult<LetterView[]>> =>
   request<LetterView[]>(key, `/api/resumes/${resumeId}/letters`);
 
+export type ApplicationEventView = {
+  status: string;
+  note: string | null;
+  occurredAt: string;
+};
+
+export type ApplicationView = {
+  id: string;
+  jobSlug: string;
+  jobTitle: string;
+  companyName: string;
+  jobStillExists: boolean;
+  resumeFileName: string | null;
+  matchScore: number | null;
+  letterSubject: string | null;
+  letterParagraphs: string[];
+  status: string;
+  notes: string | null;
+  appliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  events: ApplicationEventView[];
+};
+
+export const createApplication = (
+  key: string,
+  input: { jobSlug: string; resumeId?: string },
+): Promise<WorkspaceResult<ApplicationView>> =>
+  request<ApplicationView>(key, "/api/applications", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+export const listApplications = (key: string): Promise<WorkspaceResult<ApplicationView[]>> =>
+  request<ApplicationView[]>(key, "/api/applications");
+
+export const updateApplication = (
+  key: string,
+  id: string,
+  input: { status?: string; note?: string; notes?: string },
+): Promise<WorkspaceResult<ApplicationView>> =>
+  request<ApplicationView>(key, `/api/applications/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+export const deleteApplication = (key: string, id: string): Promise<WorkspaceResult<undefined>> =>
+  request<undefined>(key, `/api/applications/${id}`, { method: "DELETE" });
+
 /*
  * Un lien ne peut pas porter l'en-tête de clé : le PDF se télécharge donc par
  * fetch, puis un lien temporaire vers le blob déclenche l'enregistrement.

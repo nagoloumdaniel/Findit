@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   computeMatch,
+  createApplication,
   downloadPdf,
   fetchPublishedOffers,
   generateLetter,
@@ -21,6 +22,8 @@ export type ApplicationPanelProps = Readonly<{
   workspaceKey: string;
   /** Le CV structuré qui sert de base aux scores et aux lettres. */
   resume: ResumeSummary;
+  /** Appelé quand un dossier de suivi vient d'être créé. */
+  onTracked: () => void;
 }>;
 
 /*
@@ -28,7 +31,7 @@ export type ApplicationPanelProps = Readonly<{
  * (immédiat, sans IA) et une lettre factuelle (modèle local, longue). Les
  * résultats stockés sont rechargés à l'ouverture : recalculer remplace.
  */
-export const ApplicationPanel = ({ workspaceKey, resume }: ApplicationPanelProps) => {
+export const ApplicationPanel = ({ workspaceKey, resume, onTracked }: ApplicationPanelProps) => {
   const [offers, setOffers] = useState<OfferSummary[] | null>(null);
   const [matches, setMatches] = useState<Record<string, MatchView>>({});
   const [letters, setLetters] = useState<Record<string, LetterView>>({});
@@ -220,6 +223,26 @@ export const ApplicationPanel = ({ workspaceKey, resume }: ApplicationPanelProps
                     }}
                   >
                     {offerBusy === "pdf" ? "Génération…" : "Lettre en PDF"}
+                  </button>
+                  <button
+                    type="button"
+                    className="workspace-button"
+                    disabled={offerBusy !== null}
+                    onClick={() => {
+                      void withBusy(offer.slug, "track", async () => {
+                        const result = await createApplication(workspaceKey, {
+                          jobSlug: offer.slug,
+                          resumeId: resume.id,
+                        });
+                        if (!result.ok) {
+                          setMessage(result.message);
+                          return;
+                        }
+                        onTracked();
+                      });
+                    }}
+                  >
+                    {offerBusy === "track" ? "Création…" : "Suivre cette candidature"}
                   </button>
                   {(match !== undefined || letter !== undefined) && (
                     <button

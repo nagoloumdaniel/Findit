@@ -14,6 +14,7 @@ import {
   type ResumeSummary,
 } from "../../lib/workspace-api";
 import { ApplicationPanel } from "./application-panel";
+import { ApplicationsPanel } from "./applications-panel";
 import { ResumeCard } from "./resume-card";
 
 /*
@@ -30,6 +31,7 @@ export const WorkspacePanel = () => {
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [uploading, setUploading] = useState(false);
   const [pickedName, setPickedName] = useState<string | null>(null);
+  const [trackRefresh, setTrackRefresh] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [gateError, setGateError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -323,9 +325,17 @@ export const WorkspacePanel = () => {
       {(() => {
         const structured = resumes.find((resume) => resume.structuredAt !== null);
         return structured === undefined ? null : (
-          <ApplicationPanel workspaceKey={key} resume={structured} />
+          <ApplicationPanel
+            workspaceKey={key}
+            resume={structured}
+            onTracked={() => {
+              setTrackRefresh((current) => current + 1);
+            }}
+          />
         );
       })()}
+
+      <ApplicationsPanel workspaceKey={key} refreshToken={trackRefresh} />
     </div>
   );
 };

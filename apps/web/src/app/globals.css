@@ -1190,3 +1190,58 @@ h1 {
   color: var(--fg-subtle);
   font-style: italic;
 }
+
+/* Suivi des candidatures : formulaires compacts et historique date. */
+.application-status-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.application-select {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.9rem;
+}
+
+.application-note-input {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.9rem;
+  flex: 1;
+  min-width: 12rem;
+}
+
+.application-notes-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.application-notes {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  resize: vertical;
+}
+
+.application-history {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  display: grid;
+  gap: 0.15rem;
+}
