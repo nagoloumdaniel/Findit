@@ -70,7 +70,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 - Base locale : 6 offres presentes, toutes marquees `isDemo = true`; les logs de traitement existent mais aucune offre reelle publiee n'est presente dans l'environnement local audite.
 - CV : texte extrait, structure JSON, suppression et retention effectives et prouvees sur le reel ; il manque encore versions et binaire chiffre.
 - IA : le client local est teste avec faux transport et utilise par la route privee de structuration CV ; pas encore utilise pour matching ou generation.
-- Telegram : l'alerte de nouvelles offres existe, mais les commandes bot (`/start`, `/status`, `/latest`, `/help`) sont absentes.
+- Telegram : alertes et commandes bot (`/start`, `/status`, `/latest`, `/help`) implementees ; actives seulement quand token et chat sont configures hors simulation.
 - Documentation : `HANDOFF.md`, cette roadmap, `README.md` et `docs/architecture.md` sont realignes.
 
 ### Ce qui est simule ou mocke
@@ -90,9 +90,8 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 - Messages recruteurs et export DOCX (CV et lettre s'exportent deja en PDF).
 - Analyse GitHub et selection de projets.
 - Rappels et statistiques personnelles de candidature (le suivi avec statuts et historique est fait).
-- Commandes Telegram.
 - Recherche web en production complete, avec politique de non-stockage des resultats Brave maintenue.
-- Administration, observabilite, monitoring, sauvegardes, CI/CD.
+- Administration, observabilite, monitoring, sauvegardes ; CI ecrite mais bloquee par le compte GitHub (Actions desactivees pour l'utilisateur).
 
 ### Risques principaux
 
@@ -607,17 +606,17 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 Vision : une page principale unique, sans cle a saisir, ou la recherche se fait par texte OU par CV.
 
-- [ ] Proxy serveur Next : routes `/api/ws/*` qui relaient vers l'API avec `INTERNAL_API_KEY` cote serveur - le navigateur ne voit JAMAIS la cle, plus aucune saisie. La porte a cle disparait.
-- [ ] A cote de la barre de recherche : input d'upload de CV. Deux modes de recherche - par texte (comportement actuel) ou PAR CV (upload → structuration → matching de toutes les offres → liste triee par score).
-- [ ] Liste des offres en mode CV : chaque carte montre entreprise, intitule, SCORE, et les actions Recalculer le score / Generer la lettre / Lettre en PDF / Suivre cette candidature / Voir les details. Ces actions n'apparaissent QUE en mode CV.
-- [ ] Page detail d'offre : memes fonctions - si on est arrive par recherche texte, on peut y uploader le CV et matcher cette offre, avec score et toutes les actions.
-- [ ] Barre de navigation avec bouton vers une page dediee `/candidatures` (suivi des candidatures).
-- [ ] La section « Mon espace candidat » disparait en tant que bloc separe : tout est fondu dans la recherche d'offres.
+- [x] Proxy serveur Next : routes `/api/ws/*` qui relaient vers l'API avec `INTERNAL_API_KEY` cote serveur - le navigateur ne voit JAMAIS la cle, plus aucune saisie. La porte a cle disparait.
+- [x] A cote de la barre de recherche : input d'upload de CV. Deux modes de recherche - par texte (comportement actuel) ou PAR CV (upload → structuration → matching de toutes les offres → liste triee par score).
+- [x] Liste des offres en mode CV : chaque carte montre entreprise, intitule, SCORE, et les actions Recalculer le score / Generer la lettre / Lettre en PDF / Suivre cette candidature / Voir les details. Ces actions n'apparaissent QUE en mode CV.
+- [x] Page detail d'offre : memes fonctions - si on est arrive par recherche texte, on peut y uploader le CV et matcher cette offre, avec score et toutes les actions.
+- [x] Barre de navigation avec bouton vers une page dediee `/candidatures` (suivi des candidatures).
+- [x] La section « Mon espace candidat » disparait en tant que bloc separe : tout est fondu dans la recherche d'offres.
 - [ ] Ameliorations libres bienvenues (ordre du proprietaire).
 
 ### Phase 17 - Cahier des charges v2 (recu le 2026-07-27, ordre du proprietaire)
 
-- [ ] Charger la base d'entreprises reelles fournie par le proprietaire
+- [x] Charger la base d'entreprises reelles fournie par le proprietaire (400 lignes, 430 entreprises en base, pnpm db:import-companies)
   - Priorite : P1
   - Attente : la liste (≈400 entreprises + sites carrieres) doit etre fournie en texte/CSV - une image ne suffit pas pour recopier des URL sans risque d'invention.
   - Regle maintenue : seuls les sites sur Greenhouse/Lever/Workable ou dont robots.txt autorise FinditBot deviennent collectables ; les autres sont enregistres mais non collectes (registre de conformite).
@@ -628,11 +627,11 @@ Vision : une page principale unique, sans cle a saisir, ou la recherche se fait 
 - [ ] « Faire matcher mon CV » : recherche des offres les plus compatibles depuis le CV, scoring affiche sur chaque carte, avec toutes les actions (structurer, CV, lettre, suivi)
 - [ ] Matching a l'offre unique conserve, avec les memes actions
 - [ ] Ameliorations de CV detaillees et poussees, exploitables hors application
-- [ ] Competences manquantes dans CV/lettres : AJUSTEMENT PROPOSE - jamais presentees comme acquises ; ajoutees seulement marquees « en cours d'acquisition » dans le document, avec popup detaillant chaque ajout, sa raison face a l'offre et les notions a apprendre. Un document qui affirme une competence non possedee reste refuse (regle « rien d'invente »). A valider par le proprietaire.
-- [ ] Extraction : dates jamais plus precises que la source (« 2025 » reste « 2025 »)
-- [ ] Commandes Telegram (/start, /status, /latest, /help)
-- [ ] CI GitHub Actions (format, lint, typecheck, test, build)
-- [ ] Documentation de deploiement vierge
+- [x] Competences manquantes dans CV/lettres : AJUSTEMENT VALIDE puis livre (popup de tri : possedee / en cours d'acquisition / ne pas ajouter, notions a apprendre generees) - jamais presentees comme acquises ; ajoutees seulement marquees « en cours d'acquisition » dans le document, avec popup detaillant chaque ajout, sa raison face a l'offre et les notions a apprendre. Un document qui affirme une competence non possedee reste refuse (regle « rien d'invente »). A valider par le proprietaire.
+- [x] Extraction : dates jamais plus precises que la source (« 2025 » reste « 2025 »)
+- [x] Commandes Telegram (/start, /status, /latest, /help) - poller worker actif quand Telegram est configure hors simulation
+- [!] CI GitHub Actions : workflow pousse et enregistre, mais GitHub repond « Actions has been disabled for this user » - a debloquer dans les reglages du compte GitHub (facturation/verification), rien a corriger cote depot
+- [x] Documentation de deploiement vierge (docs/deployment.md)
 
 ## 11. Bugs connus
 

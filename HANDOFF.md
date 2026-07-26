@@ -4,8 +4,13 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-27, après la déduplication persistée (dette B004 fermée) et
-la réception du cahier des charges v2 (roadmap, Phase 17).
+À jour au 2026-07-27. Refonte UX v3 livrée (proxy zéro clé, recherche par CV,
+/candidatures, matching sur page détail), popup de tri des compétences, dates
+jamais inventées, commandes Telegram, doc de déploiement. CI écrite mais
+bloquée : GitHub répond « Actions has been disabled for this user » - à
+débloquer dans les réglages du compte GitHub, rien à corriger côté dépôt.
+Dernier point en attente : suppression des données démo dès les premières
+vraies offres collectées (en saison).
 
 ---
 
