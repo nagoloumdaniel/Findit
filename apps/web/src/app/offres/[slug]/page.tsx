@@ -1,4 +1,6 @@
 import { PageShell } from "@findit/ui";
+
+import { OfferMatch } from "../../../components/workspace/offer-match";
 import Link from "next/link";
 
 import { fetchJobDetail } from "../../../lib/api";
@@ -198,6 +200,10 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
           </>
         ) : null}
       </section>
+
+      {/* Arrivé par la recherche texte : on peut matcher son CV ici même,
+          avec score expliqué, lettre, PDF et suivi. */}
+      <OfferMatch slug={job.slug} />
     </PageShell>
   );
 }
