@@ -9,6 +9,7 @@ import type { ResumeFileType } from "./extract-text.js";
 import { extractResumeText } from "./extract-text.js";
 import {
   resumeFactsSchema,
+  sanitizeDatesAgainstSource,
   structuredResumeSchema,
   type ResumeFacts,
   type StructuredResume,
@@ -146,11 +147,15 @@ export class ResumeService {
     });
     const structuredAt = this.now();
 
+    // Une date que le CV n'écrit pas ne se stocke pas : réduite à l'année
+    // lue ou retirée, toujours avec avertissement.
+    const sanitized = sanitizeDatesAgainstSource(structured.facts, row.extractedText);
+
     const updated = await this.prisma.sourceResume.update({
       where: { id },
       data: {
-        structuredFacts: structured.facts,
-        structuredWarnings: structured.warnings,
+        structuredFacts: sanitized.facts,
+        structuredWarnings: [...structured.warnings, ...sanitized.warnings],
         structuredConfidence: structured.confidence,
         structuredAt,
       },

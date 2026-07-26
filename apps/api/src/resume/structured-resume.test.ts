@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { structuredResumeSchema } from "./structured-resume.js";
+import { sanitizeDatesAgainstSource, structuredResumeSchema } from "./structured-resume.js";
+import type { ResumeFacts } from "./structured-resume.js";
 
 describe("structuredResumeSchema", () => {
   it("accepts factual CV data with missing optional fields omitted", () => {
@@ -110,6 +111,44 @@ describe("structuredResumeSchema", () => {
         confidence: 90,
       }),
     ).toThrow();
+  });
+
+  it("never keeps a date more precise than the resume wrote", () => {
+    // Cas payé sur le modèle réel : « 2025 » devenait « 2025-01-01 ».
+    const facts: ResumeFacts = {
+      identity: {},
+      education: [{ school: "INGETIS", startDate: "2024-09-01", endDate: "2026" }],
+      experiences: [
+        {
+          title: "Stage",
+          startDate: "avril 2026",
+          endDate: "2026-06-30",
+          achievements: [],
+          skills: [],
+        },
+      ],
+      projects: [],
+      skills: [],
+      languages: [],
+      certifications: [{ name: "Cert", date: "2031-05-12" }],
+      links: [],
+    };
+    const source =
+      "Stage développeur, avril - juin 2026. Bachelor INGETIS 2024 - 2026. Certification Cert.";
+
+    const { facts: fixed, warnings } = sanitizeDatesAgainstSource(facts, source);
+
+    // « avril 2026 » : tous les mots sont écrits dans le CV, gardée telle quelle.
+    expect(fixed.experiences[0]?.startDate).toBe("avril 2026");
+    // Précision inventée : ramenée à l'année réellement écrite.
+    expect(fixed.experiences[0]?.endDate).toBe("2026");
+    expect(fixed.education[0]?.startDate).toBe("2024");
+    expect(fixed.education[0]?.endDate).toBe("2026");
+    // Année introuvable dans le CV : la date disparaît plutôt que de mentir.
+    expect(fixed.certifications[0]?.date).toBeUndefined();
+    expect(warnings.length).toBe(3);
+    expect(warnings.join(" ")).toContain("devient");
+    expect(warnings.join(" ")).toContain("retirée");
   });
 
   it("rejects unknown fields instead of storing model inventions", () => {

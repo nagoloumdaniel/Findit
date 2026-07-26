@@ -136,3 +136,107 @@ export const structuredResumeSchema = z
 
 export type ResumeFacts = z.infer<typeof resumeFactsSchema>;
 export type StructuredResume = z.infer<typeof structuredResumeSchema>;
+
+/*
+ * Garde-fou anti-invention sur les dates, constaté nécessaire sur le modèle
+ * réel : « 2025 » dans le CV devenait « 2025-01-01 » - une précision que la
+ * source n'a jamais écrite. Règle déterministe : une date n'est gardée que si
+ * le CV l'écrit (chaîne exacte, ou tous ses mots présents) ; sinon elle est
+ * réduite à l'année réellement écrite ; sinon retirée. Chaque correction
+ * laisse un avertissement - rien ne se répare en silence.
+ */
+const normalizeForSearch = (text: string): string =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const hasToken = (source: string, token: string): boolean =>
+  new RegExp(`(?<![a-z0-9])${escapeRegExp(token)}(?![a-z0-9])`, "u").test(source);
+
+const dateAsRead = (value: string, source: string): string | null => {
+  const normalized = normalizeForSearch(value);
+  if (source.includes(normalized)) {
+    return value;
+  }
+  const tokens = normalized.split(/[^a-z0-9]+/u).filter((token) => token.length > 0);
+  if (tokens.length > 0 && tokens.every((token) => hasToken(source, token))) {
+    return value;
+  }
+  const year = /(?:19|20)\d{2}/u.exec(normalized)?.[0];
+  if (year !== undefined && hasToken(source, year)) {
+    return year;
+  }
+  return null;
+};
+
+export const sanitizeDatesAgainstSource = (
+  facts: ResumeFacts,
+  sourceText: string,
+): { facts: ResumeFacts; warnings: string[] } => {
+  const source = normalizeForSearch(sourceText);
+  const warnings: string[] = [];
+
+  const fix = (value: string | undefined, label: string): string | undefined => {
+    if (value === undefined) {
+      return undefined;
+    }
+    const kept = dateAsRead(value, source);
+    if (kept === value) {
+      return value;
+    }
+    if (kept === null) {
+      warnings.push(`Date retirée, absente du CV : « ${value} » (${label}).`);
+      return undefined;
+    }
+    warnings.push(
+      `Date ramenée à ce que le CV écrit : « ${value} » devient « ${kept} » (${label}).`,
+    );
+    return kept;
+  };
+
+  const fixRange = <T extends { startDate?: string | undefined; endDate?: string | undefined }>(
+    entry: T,
+    label: string,
+  ): T => {
+    const copy = { ...entry };
+    const start = fix(copy.startDate, label);
+    if (start === undefined) {
+      delete copy.startDate;
+    } else {
+      copy.startDate = start;
+    }
+    const end = fix(copy.endDate, label);
+    if (end === undefined) {
+      delete copy.endDate;
+    } else {
+      copy.endDate = end;
+    }
+    return copy;
+  };
+
+  return {
+    facts: {
+      ...facts,
+      experiences: facts.experiences.map((entry, index) =>
+        fixRange(entry, `expérience ${String(index + 1)}`),
+      ),
+      education: facts.education.map((entry, index) =>
+        fixRange(entry, `formation ${String(index + 1)}`),
+      ),
+      certifications: facts.certifications.map((entry, index) => {
+        const copy = { ...entry };
+        const date = fix(copy.date, `certification ${String(index + 1)}`);
+        if (date === undefined) {
+          delete copy.date;
+        } else {
+          copy.date = date;
+        }
+        return copy;
+      }),
+    },
+    warnings,
+  };
+};
