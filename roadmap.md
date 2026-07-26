@@ -91,7 +91,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 - Conservation chiffree et versionnee du binaire original du CV.
 - Messages recruteurs et export DOCX (CV et lettre s'exportent deja en PDF).
 - Analyse GitHub et selection de projets.
-- Suivi des candidatures, historique, rappels et statuts.
+- Rappels et statistiques personnelles de candidature (le suivi avec statuts et historique est fait).
 - Commandes Telegram.
 - Recherche web en production complete, avec politique de non-stockage des resultats Brave maintenue.
 - Administration, observabilite, monitoring, sauvegardes, CI/CD.
@@ -101,7 +101,7 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 - Risque documentaire residuel : maintenir `HANDOFF.md`, `roadmap.md`, `README.md` et `docs/architecture.md` alignes a chaque brique.
 - Risque fonctionnel : Workable est actif dans le registre mais pas raccorde au cycle worker courant.
 - Risque donnees personnelles : le CV source se supprime et expire desormais, mais le binaire original n'est ni conserve chiffre ni versionne.
-- Risque securite locale : `.env` contient une variable obsolete `OPENAI_API_KEY`; elle n'est pas committee mais doit etre nettoyee si l'IA locale reste la decision.
+- Risque securite locale : ferme le 2026-07-26 - la variable obsolete `OPENAI_API_KEY` a ete retiree du `.env` local ; revoquer la cle chez OpenAI si elle etait reelle.
 - Historique Git : un incident Brave a existe et est documente comme traite ; ne jamais remettre de valeur reelle dans `.env.example`.
 
 ## 4. Stack detectee
@@ -229,7 +229,6 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | ------------------------------------------------ | --------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- | -------- |
 | Workable actif mais non raccorde au cycle worker | Source active inutilisee en production locale | Collecte incomplete malgre registre actif | Ajouter une voie explicite pour `SearchTarget` Workable | P1       |
 | Deduplication non persistee                      | Doublons non regroupes en base                | Liste publique moins fiable               | Brancher `findBestMatch` dans `persistDecision`         | P1       |
-| `.env` contient `OPENAI_API_KEY`                 | Variable obsolete pour decision IA locale     | Confusion et risque de reutilisation      | Nettoyer `.env` local sans jamais committer la valeur   | P1       |
 | Pas de CI/CD `.github`                           | Validations locales seulement                 | Regressions non detectees avant push      | Ajouter workflow lint/typecheck/test/build              | P2       |
 | Pas d'observabilite exploitable                  | Diagnostic prod limite                        | Incidents difficiles a expliquer          | Logs structures, metriques, health worker               | P2       |
 
@@ -508,7 +507,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ### Phase 12 - Securite et donnees personnelles
 
-- [ ] Nettoyer l'environnement local obsolète
+- [x] Nettoyer l'environnement local obsolète
   - Priorite : P1
   - Complexite : XS
   - Fichiers concernes : `.env` local non committe
@@ -516,7 +515,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - `OPENAI_API_KEY` est retiree si aucun fournisseur distant n'est retenu.
     - Les variables necessaires restent documentees dans `.env.example`.
   - Tests : `pnpm typecheck`, demarrage API/worker si necessaire
-  - Resultat :
+  - Resultat : ligne `OPENAI_API_KEY` retiree du `.env` local le 2026-07-26, API verifiee saine ensuite ; recommandation donnee de revoquer la cle chez OpenAI si elle etait reelle ; valide par ordre utilisateur du 2026-07-26.
 
 - [ ] Formaliser retention, export et suppression des donnees
   - Priorite : P1
@@ -621,7 +620,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | B002 | Documentation historique obsolete                   | P1      | Lire `README.md` et `docs/architecture.md`      | Docs non realignees apres phases recentes            | Recrire les sections d'etat/architecture | Ferme  |
 | B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ouvert |
 | B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Brancher dans `persistDecision`          | Ouvert |
-| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retirer la variable locale si inutile    | Ouvert |
+| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retirer la variable locale si inutile    | Ferme  |
 | B006 | Pas de CI/CD                                        | P2      | Absence de dossier `.github`                    | Non implemente                                       | Ajouter workflow GitHub Actions          | Ouvert |
 
 ## 12. Decisions techniques
@@ -637,6 +636,12 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-26 (suite 5) - suivi dans /espace et dette B005
+
+- Taches terminees et validees : section « Suivi des candidatures » dans /espace - bouton « Suivre cette candidature » sur chaque offre (instantanes CV/score/lettre), changement de statut avec note d'historique optionnelle, notes libres, historique date, suppression avec confirmation, offre retiree du flux signalee sans perdre le dossier. Ordre utilisateur du 2026-07-26.
+- Dette B005 fermee : `OPENAI_API_KEY` retiree du `.env` local, API verifiee saine, revocation de la cle recommandee.
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29 (20 tests web), build 17/17.
 
 ### 2026-07-26 (suite 4) - socle du suivi des candidatures
 

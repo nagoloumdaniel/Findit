@@ -4,7 +4,8 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après le socle du suivi des candidatures (base + API).
+À jour au 2026-07-26, après le suivi des candidatures complet (base, API et
+page /espace) et la purge de la variable OPENAI_API_KEY obsolète du .env local.
 
 ---
 
@@ -232,7 +233,15 @@ le code et les commits tranchent.
   « envoyée » fixe `appliedAt` une seule fois. Routes gardées
   POST/GET/PATCH/DELETE `/api/applications`. Prouvé sur le réel avec le vrai
   CV du propriétaire (instantanés constatés, historique daté, base laissée
-  propre). L'UI de suivi dans /espace est la brique suivante.
+  propre).
+- **Suivi dans /espace** : « Suivre cette candidature » sur chaque offre crée
+  le dossier avec ses instantanés ; la section « Suivi des candidatures »
+  liste les dossiers avec statut (menu déroulant), note d'historique
+  optionnelle, notes libres, historique daté et suppression. Une offre
+  retirée du flux est signalée, le dossier reste.
+- **Dette B005 fermée** : la variable OPENAI_API_KEY obsolète a été retirée
+  du .env local (IA locale seule décision retenue). Si la clé était réelle,
+  la révoquer chez OpenAI.
 
 ### Pas encore fait
 
