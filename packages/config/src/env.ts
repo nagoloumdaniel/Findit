@@ -7,7 +7,7 @@ const origin = z.url().transform((value) => new URL(value).origin);
 /**
  * Booléen lu depuis une variable d'environnement, toujours une chaîne. Seul
  * « true » vaut vrai : une valeur absente, vide ou inattendue reste fausse, ce
- * qui fait qu'un réglage sensible — comme l'envoi Telegram — est éteint par
+ * qui fait qu'un réglage sensible - comme l'envoi Telegram - est éteint par
  * défaut plutôt qu'allumé par accident.
  */
 const boolFromEnv = (fallback: boolean) =>
@@ -25,7 +25,7 @@ export const apiEnvSchema = z.object({
   INTERNAL_API_KEY: z.string().min(32),
   RESUME_RETENTION_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   /*
-   * Fournisseur IA. Retenu : IA locale via Ollama — le modèle tourne sur la
+   * Fournisseur IA. Retenu : IA locale via Ollama - le modèle tourne sur la
    * machine, rien ne part en ligne. Pas de clé, pas de token facturé, et la
    * question ai-train/ai-input de Lever disparaît : aucune donnée ne quitte le
    * poste. Voir docs/legal-compliance.md. Éteint par défaut.
@@ -48,7 +48,7 @@ export const workerEnvSchema = z.object({
   /*
    * La recherche web est facultative : sans clé, le worker collecte quand même
    * les entreprises déjà connues du registre, il ne découvre simplement rien de
-   * nouveau. La clé reste côté serveur — jamais dans le navigateur ni un log.
+   * nouveau. La clé reste côté serveur - jamais dans le navigateur ni un log.
    */
   BRAVE_SEARCH_API_KEY: z.string().min(1).optional(),
   /// Cron de la collecte. Toutes les 4 heures par défaut, heure de Paris.
@@ -60,7 +60,7 @@ export const workerEnvSchema = z.object({
   /*
    * Telegram. Éteint par défaut, et en simulation par défaut : sans les deux
    * interrupteurs à « true » et un token, rien n'est envoyé. Le token reste
-   * côté serveur — jamais dans le navigateur, un log ou la base.
+   * côté serveur - jamais dans le navigateur, un log ou la base.
    */
   TELEGRAM_NOTIFICATIONS_ENABLED: boolFromEnv(false),
   TELEGRAM_DRY_RUN: boolFromEnv(true),

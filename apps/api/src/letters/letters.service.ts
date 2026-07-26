@@ -123,7 +123,7 @@ interface LetterJobInput {
 /*
  * Garde-fou anti-invention : toute technologie du dictionnaire citée dans la
  * lettre doit exister dans le CV structuré. Le même dictionnaire que le score
- * de correspondance — la règle est donc identique partout et explicable.
+ * de correspondance - la règle est donc identique partout et explicable.
  */
 const findInventedSkills = (letter: GeneratedLetter, facts: ResumeFacts): string[] => {
   const resumeSkillIds = new Set(

@@ -7,7 +7,7 @@ import { loadRootEnv } from "@findit/config";
  * Next ne lit que le `.env` de son propre dossier, or le dépôt n'en tient qu'un,
  * à la racine. Et son port est arrêté par la ligne de commande, avant que
  * next.config.ts ne soit chargé : aucune configuration ne peut le changer après
- * coup. Ce lanceur fait les deux — il charge le `.env` de la racine, puis passe
+ * coup. Ce lanceur fait les deux - il charge le `.env` de la racine, puis passe
  * le port à Next.
  *
  * Sans lui, WEB_PORT serait une variable que personne ne lit, et

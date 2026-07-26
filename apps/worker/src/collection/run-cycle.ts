@@ -34,7 +34,7 @@ const hostOf = (url: string): string | null => {
 /**
  * Traduit une entreprise découverte en source à enregistrer. Le type d'ATS
  * vient du connecteur, l'hôte de la première URL qui l'a fait découvrir. Rend
- * `null` si le connecteur ne se collecte pas par jeton — la recherche réseau,
+ * `null` si le connecteur ne se collecte pas par jeton - la recherche réseau,
  * comme Workable, ne passe pas par le registre d'entreprises.
  */
 export const toDiscoveredSource = (
@@ -86,7 +86,7 @@ export interface CycleDeps {
  * Un cycle complet : chercher, retenir les entreprises trouvées, puis collecter
  * tout ce que le registre autorise.
  *
- * La recherche ne sert qu'à **découvrir** — ses résultats ne sont jamais
+ * La recherche ne sert qu'à **découvrir** - ses résultats ne sont jamais
  * stockés, seulement transformés en entreprises à surveiller. La collecte, elle,
  * part du registre : une entreprise trouvée à un cycle est recollectée aux
  * suivants sans repasser par la recherche.

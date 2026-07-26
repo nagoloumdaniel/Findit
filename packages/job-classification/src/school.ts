@@ -95,7 +95,7 @@ const containsPhrase = (haystack: string, phrase: string): boolean => haystack.i
  * La règle est prudente à dessein : « formation », « diplôme » et « RNCP »
  * apparaissent dans des alternances parfaitement réelles, donc ils ne comptent
  * pas seuls. Ce qui compte, c'est un **nom d'école**, une **demande de frais**,
- * ou une **promesse de placement** — des choses qu'un employeur n'écrit pas.
+ * ou une **promesse de placement** - des choses qu'un employeur n'écrit pas.
  *
  * Un cabinet de recrutement est reconnu comme tel, jamais rangé parmi les
  * écoles.

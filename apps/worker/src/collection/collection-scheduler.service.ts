@@ -27,7 +27,7 @@ import { runCycle } from "./run-cycle.js";
 /**
  * Programme la collecte et l'exécute.
  *
- * La planification est récurrente — toutes les quatre heures, heure de Paris —
+ * La planification est récurrente - toutes les quatre heures, heure de Paris -
  * et posée par `upsertJobScheduler`, donc idempotente : redémarrer le worker ne
  * l'empile pas. Le consommateur tourne en **concurrence 1** : c'est le verrou.
  * Deux cycles ne se chevauchent jamais, et si l'un dépasse quatre heures, le

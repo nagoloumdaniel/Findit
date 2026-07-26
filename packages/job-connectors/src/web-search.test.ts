@@ -5,7 +5,7 @@ import { BraveSearchProvider, WebSearchError } from "./web-search.js";
 
 /*
  * Forme relevée sur https://api.search.brave.com/res/v1/web/search le
- * 2026-07-17. Seuls url, title et description sont retenus — le reste est jeté,
+ * 2026-07-17. Seuls url, title et description sont retenus - le reste est jeté,
  * et surtout rien de tout cela ne doit finir en base : les CGU de Brave
  * interdisent de conserver ses résultats.
  */

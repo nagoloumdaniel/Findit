@@ -9,7 +9,7 @@ export const WORKSPACE_SECRET = Symbol("WORKSPACE_SECRET");
 
 /**
  * Protège les routes de l'espace privé. Sans la clé attendue dans l'en-tête,
- * la requête est refusée avant d'atteindre le contrôleur — aucune donnée privée
+ * la requête est refusée avant d'atteindre le contrôleur - aucune donnée privée
  * ne sort sans elle.
  *
  * Le refus ne dit jamais *pourquoi* il refuse : un message unique, quelle que

@@ -2,7 +2,7 @@ import type { IleDeFranceDepartment } from "@findit/shared";
 
 /*
  * Table générée par `generate-communes.mjs` le 2026-07-17,
- * depuis geo.api.gouv.fr — l'API officielle du découpage administratif français.
+ * depuis geo.api.gouv.fr - l'API officielle du découpage administratif français.
  * Ne pas modifier à la main : rejouer le script.
  *
  * 1262 communes, dont 4 dont le nom est porté par
@@ -10,7 +10,7 @@ import type { IleDeFranceDepartment } from "@findit/shared";
  * d'une offre ne suffit pas à les départager, et deviner le département
  * reviendrait à inventer la localisation.
  *
- * La clé est le nom normalisé — sans accent, sans apostrophe, sans tiret — parce
+ * La clé est le nom normalisé - sans accent, sans apostrophe, sans tiret - parce
  * que les offres écrivent « Boulogne-Billancourt », « Boulogne Billancourt » et
  * « boulogne billancourt » pour la même ville.
  */

@@ -12,7 +12,7 @@ export class JobsController {
    * La dépendance est nommée explicitement plutôt que déduite du type. Le
    * serveur de développement exécute le TypeScript avec esbuild, qui n'émet pas
    * `emitDecoratorMetadata` : sans ce nom, Nest n'a rien à injecter et le
-   * contrôleur reçoit `undefined`. La compilation, elle, émet la métadonnée —
+   * contrôleur reçoit `undefined`. La compilation, elle, émet la métadonnée -
    * l'oubli ne se voyait donc qu'en développement, à l'exécution.
    */
   constructor(@Inject(JobsService) private readonly jobs: JobsService) {}

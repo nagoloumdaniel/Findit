@@ -18,7 +18,7 @@ export const jobQuerySchema = z.object({
   /*
    * Sans filtre, le flux s'en tient au défaut de `@findit/shared` : les
    * alternances des métiers du développement. `role=DATA_ANALYST` ou
-   * `contract=INTERNSHIP` restent servis — ils sont dans le périmètre, ils ne
+   * `contract=INTERNSHIP` restent servis - ils sont dans le périmètre, ils ne
    * sont simplement pas montrés d'office.
    */
   role: z.enum(JOB_ROLE_CATEGORIES).optional(),

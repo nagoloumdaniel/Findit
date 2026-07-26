@@ -41,7 +41,7 @@ describe("decideDuplicate", () => {
   });
 
   it("never merges across departments, whatever the rest says", () => {
-    // Même entreprise, même titre, même date — mais deux départements : une
+    // Même entreprise, même titre, même date - mais deux départements : une
     // publication d'Île-de-France n'a qu'un lieu.
     const decision = decideDuplicate(offer(), offer({ departmentCode: "92", city: "Nanterre" }));
 

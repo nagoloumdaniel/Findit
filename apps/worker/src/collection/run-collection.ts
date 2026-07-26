@@ -9,7 +9,7 @@ import { decideIngestion, persistDecision } from "@findit/job-pipeline";
 
 /**
  * Une chose à collecter : un connecteur, la cible qu'il vise, et le nom de
- * l'entreprise à porter sur les offres. Le type de la cible reste ouvert —
+ * l'entreprise à porter sur les offres. Le type de la cible reste ouvert -
  * Greenhouse vise une entreprise, Workable une recherche.
  */
 export interface CollectionJob<TTarget> {
@@ -60,7 +60,7 @@ export interface RunCollectionDeps {
  *
  * Une offre écartée par la décision d'ingestion n'est pas une erreur de la
  * collecte : la collecte a réussi, l'offre n'a simplement pas sa place. Les deux
- * comptes restent donc distincts — `failed` dit si la source a lâché, les
+ * comptes restent donc distincts - `failed` dit si la source a lâché, les
  * compteurs disent le tri.
  */
 const decideAndPersist = async (
@@ -96,7 +96,7 @@ const decideAndPersist = async (
 /**
  * Exécute une liste de collectes, l'une après l'autre.
  *
- * L'échec d'une source n'arrête pas les autres : c'est la règle de conformité —
+ * L'échec d'une source n'arrête pas les autres : c'est la règle de conformité -
  * « la collecte continue avec les autres ». Chaque collecte laisse sa trace dans
  * `ConnectorRun`, à laquelle on ajoute le sort des offres une fois décidées.
  */

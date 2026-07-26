@@ -19,7 +19,7 @@ export type JobCardProps = Readonly<{ job: JobListItem; now: Date }>;
 export const JobCard = ({ job, now }: JobCardProps) => (
   <article className="job-card">
     {job.isDemo ? (
-      <p className="demo-flag">Démonstration — cette offre n’existe chez aucun employeur</p>
+      <p className="demo-flag">Démonstration - cette offre n’existe chez aucun employeur</p>
     ) : null}
 
     <div className="job-card-head">
@@ -36,7 +36,7 @@ export const JobCard = ({ job, now }: JobCardProps) => (
     </h3>
 
     <p className="job-company">
-      {job.companyName} — {job.city} ({job.departmentCode} ·{" "}
+      {job.companyName} - {job.city} ({job.departmentCode} ·{" "}
       {departmentLabels[job.departmentCode] ?? "Île-de-France"})
     </p>
 

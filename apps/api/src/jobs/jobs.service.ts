@@ -92,7 +92,7 @@ export class JobsService {
       /*
        * Sans filtre explicite, le flux s'en tient au défaut : les alternances
        * des métiers du développement. Un filtre demandé l'emporte et peut aller
-       * chercher un stage ou un poste data — ils sont dans le périmètre, ils ne
+       * chercher un stage ou un poste data - ils sont dans le périmètre, ils ne
        * sont simplement pas montrés d'office.
        */
       roleCategory: query.role ?? { in: [...DEFAULT_ROLE_CATEGORIES] },

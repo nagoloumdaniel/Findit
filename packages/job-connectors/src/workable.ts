@@ -8,7 +8,7 @@ import type { CollectionPermit } from "./permit.js";
 export const WORKABLE_CONNECTOR_NAME = "workable";
 
 /**
- * `apply.workable.com/robots.txt` dit « `Disallow:` » — rien n'est interdit — et
+ * `apply.workable.com/robots.txt` dit « `Disallow:` » - rien n'est interdit - et
  * `jobs.workable.com` ne vise que `/search…` et `/profile*`, jamais `/api/`.
  * Aucun `Crawl-delay` n'est annoncé : une requête par seconde, par prudence.
  * Voir docs/legal-compliance.md.
@@ -74,7 +74,7 @@ const issuesOf = (error: z.ZodError): string =>
 
 /**
  * Recolle la localisation dans le libellé que le reste de la chaîne sait lire.
- * Workable la rend déjà découpée — « Paris », « Île-de-France », « France » —
+ * Workable la rend déjà découpée - « Paris », « Île-de-France », « France » -
  * et l'écrire dans cet ordre donne exactement la forme que Greenhouse produit
  * naturellement, sans rien inventer.
  */

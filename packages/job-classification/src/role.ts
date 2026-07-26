@@ -65,7 +65,7 @@ const ROLE_TOKENS: ReadonlyArray<readonly [JobRoleCategory, readonly string[]]> 
 /*
  * `normalizeForMatching` rend un texte encadré d'espaces et à espaces uniques.
  * Chercher « mot » entouré d'espaces suffit donc à trouver un mot entier, sans
- * expression régulière — et donc sans avoir à échapper « c++ » ou « c# », dont
+ * expression régulière - et donc sans avoir à échapper « c++ » ou « c# », dont
  * les caractères sont des métacaractères de regex.
  */
 const mentions = (haystack: string, needle: string): boolean => haystack.includes(` ${needle} `);

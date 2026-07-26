@@ -105,6 +105,6 @@ describe("renderCvPdf", () => {
       experiences: [{ title: "Développeur", achievements: [], skills: [] }],
     });
     expect(text).toContain("Développeur");
-    expect(text).not.toContain("–");
+    expect(text).not.toContain("-");
   });
 });

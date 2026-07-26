@@ -34,7 +34,7 @@ const findRepoRoot = (startDir: string): string | null => {
 
 /**
  * Charge le `.env` de la racine dans `process.env`, s'il existe. Rend le chemin
- * lu, ou `null` si aucun fichier n'a été trouvé — l'absence n'est pas une
+ * lu, ou `null` si aucun fichier n'a été trouvé - l'absence n'est pas une
  * erreur : en production, les variables viennent de l'environnement, pas d'un
  * fichier.
  *

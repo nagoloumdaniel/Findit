@@ -33,8 +33,8 @@ const normalizeHeading = (text: string): string =>
  * de leurs équivalents français courants.
  *
  * Le périmètre de Findit est l'Île-de-France : ces offres sont écrites en
- * français ou en anglais. L'allemand présent sur certains boards — Doctolib
- * publie aussi à Berlin — n'est pas reconnu : ces offres sont hors zone et
+ * français ou en anglais. L'allemand présent sur certains boards - Doctolib
+ * publie aussi à Berlin - n'est pas reconnu : ces offres sont hors zone et
  * seront écartées à l'étape de localisation.
  *
  * La correspondance se fait par inclusion, parce qu'un intertitre réel traîne
@@ -121,8 +121,8 @@ const sectionFor = (heading: string): SectionKind | null => {
  *
  * Un vrai `<h1>`…`<h6>` en ouvre une, sans discussion. Un paragraphe entièrement
  * en gras aussi, mais à une condition : qu'une puce le suive. Beaucoup
- * d'employeurs écrivent leurs intertitres ainsi — 189 fois chez Doctolib, dont
- * 149 suivis d'une liste — et les ignorer viderait leurs sections. Le gras seul
+ * d'employeurs écrivent leurs intertitres ainsi - 189 fois chez Doctolib, dont
+ * 149 suivis d'une liste - et les ignorer viderait leurs sections. Le gras seul
  * ne suffit pas : c'est la liste qui le suit qui prouve qu'il annonçait quelque
  * chose.
  */

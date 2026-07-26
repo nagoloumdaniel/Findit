@@ -23,7 +23,7 @@ connecteur sans passer le contrôle ne compile pas.
 ## Le connecteur ne fait pas ses requêtes lui-même
 
 `runConnector` passe au connecteur un `fetchJson` qui est son seul accès réseau. Ce client annonce le
-user-agent de Findit et tient la cadence déclarée par la source — `Crawl-delay: 1` chez Lever devient
+user-agent de Findit et tient la cadence déclarée par la source - `Crawl-delay: 1` chez Lever devient
 `minRequestIntervalMs: 1000`. Les requêtes sont mises à la file, jamais parallélisées, y compris si le
 connecteur les lance en même temps. Un connecteur n'a donc aucun moyen de dépasser la limite annoncée
 ni de masquer son identité.
@@ -46,13 +46,13 @@ Deux constats tirés de la réponse réelle, et non de la documentation :
 
 - L'API rend tout le tableau en une seule réponse. `meta.total` vaut le nombre d'entrées de `jobs`, et
   aucun paramètre de page n'est proposé : un appel par entreprise suffit.
-- `content` arrive **entièrement échappé** — la charge utile ne contient aucun `<`, seulement `&lt;`,
+- `content` arrive **entièrement échappé** - la charge utile ne contient aucun `<`, seulement `&lt;`,
   `&gt;`, `&quot;`, `&#39;` et `&amp;`. Le connecteur le décode, `&amp;` en dernier pour qu'un `&lt;`
   littéral du texte d'origine ne devienne pas une balise.
 
 Une offre est datée par `first_published`, jamais par `updated_at` : une offre remaniée hier n'est pas
 une offre publiée hier. Une date absente ou illisible laisse `publishedAt` à `null` plutôt que de
-prendre l'heure courante — une offre sans date fiable ne doit pas pouvoir se faire passer pour
+prendre l'heure courante - une offre sans date fiable ne doit pas pouvoir se faire passer pour
 fraîche. Un changement de structure lève une erreur au lieu de rendre une liste vide.
 
 ### Lever
@@ -68,11 +68,11 @@ Lever ne ressemble à Greenhouse sur presque rien, et chaque écart vient d'un r
 - Le titre s'appelle `text`, et `createdAt` est un nombre de millisecondes.
 - **Le texte de l'offre est éclaté en trois.** `description` ne porte que l'introduction ; les
   prérequis vivent dans `lists`, et la clôture dans `additional`. Le connecteur recolle les trois
-  dans l'ordre rendu par la source — s'en tenir à `description` perdrait ce qui est demandé au
+  dans l'ordre rendu par la source - s'en tenir à `description` perdrait ce qui est demandé au
   candidat. L'intitulé d'une section est du texte : il est échappé, jamais réinjecté comme balisage.
 
 Les pages sont demandées explicitement, `limit=100` et `skip` croissant, jusqu'à une page incomplète.
-Sans `limit`, l'API rend tout — mais rien ne l'annonce et aucun total n'est fourni, donc rien ne
+Sans `limit`, l'API rend tout - mais rien ne l'annonce et aucun total n'est fourni, donc rien ne
 permettrait de repérer une réponse tronquée. Au-delà de 5000 offres pour une entreprise, la collecte
 lève une erreur plutôt que de rendre une liste amputée en silence. Une entreprise inconnue répond
 `404` et remonte comme telle.
@@ -80,12 +80,12 @@ lève une erreur plutôt que de rendre une liste amputée en silence. Une entrep
 ## Trace d'une exécution
 
 `runRecordedConnector` est le point d'entrée branché sur la base. Il lit le registre, ouvre une ligne
-`ConnectorRun`, exécute, puis la ferme avec ce que la collecte a réellement fait — pages demandées,
+`ConnectorRun`, exécute, puis la ferme avec ce que la collecte a réellement fait - pages demandées,
 offres trouvées, erreurs. La ligne est ouverte **avant** la collecte : un processus tué laisse une
 exécution `RUNNING`, ce qui la rend repérable au lieu de la faire disparaître.
 
 Un refus n'ouvre aucune exécution : ce n'est pas une collecte, c'est une collecte qui n'a pas eu lieu.
-Il est consigné en `ConnectorError` sans `runId` — ce que le `runId` facultatif du schéma permet
+Il est consigné en `ConnectorError` sans `runId` - ce que le `runId` facultatif du schéma permet
 exactement. Une exécution ratée, elle, conserve le nombre de pages déjà demandées : elle a bel et bien
 touché la source, et déclarer zéro serait faux.
 
@@ -94,15 +94,15 @@ appartiennent à la phase 4, qui n'existe pas encore.
 
 ## Découverte par moteur de recherche
 
-Un moteur de recherche ne collecte pas — il **découvre**. Brave rend des `WebSearchResult`
+Un moteur de recherche ne collecte pas - il **découvre**. Brave rend des `WebSearchResult`
 transitoires (jamais écrits en base : ses CGU l'interdisent), dont on extrait quelles entreprises de
 nos ATS déjà autorisés publient ce qu'on cherche.
 
-Le test réel a tranché la forme des requêtes. Une requête libre remonte les agrégateurs fermés —
-Indeed, Welcome to the Jungle — qu'on ne peut pas collecter. Une requête `site:boards.greenhouse.io`
+Le test réel a tranché la forme des requêtes. Une requête libre remonte les agrégateurs fermés -
+Indeed, Welcome to the Jungle - qu'on ne peut pas collecter. Une requête `site:boards.greenhouse.io`
 remonte les entreprises de cet ATS. `buildDiscoveryQueries` ne vise donc que les ATS qu'on sait lire ;
 `recognizeTarget` lit le jeton d'entreprise dans l'URL (par `URL`, pas par expression régulière, ce
-qui coupe proprement les paramètres) ; `collectDiscoveries` déduplique — `ivalua` vu dix fois est
+qui coupe proprement les paramètres) ; `collectDiscoveries` déduplique - `ivalua` vu dix fois est
 collecté une fois, mais toutes les URLs qui l'ont fait découvrir sont conservées comme preuve.
 
 Un domaine inconnu n'est **pas** collecté ici : il est marqué `unknown` et relève du registre
@@ -111,8 +111,8 @@ dynamique, qui exige de lire son `robots.txt` avant toute visite (voir `decideRo
 Ce que la preuve de bout en bout du 2026-07-17 a établi. Une requête `site:boards.greenhouse.io
 alternance développeur Paris` a découvert 12 entreprises ; leurs boards ont rendu 273 offres réelles,
 toutes passées par la classification et la localisation. **Zéro retenue.** Ce n'est pas une panne : la
-chaîne fonctionne. Brave avait indexé des alternances dev que les boards vivants n'ont plus — soit
-elles ont expiré, soit la correspondance `site:` de Brave est approximative — et ce qui reste est hors
+chaîne fonctionne. Brave avait indexé des alternances dev que les boards vivants n'ont plus - soit
+elles ont expiré, soit la correspondance `site:` de Brave est approximative - et ce qui reste est hors
 Île-de-France ou hors du flux par défaut. C'est le même constat que depuis le début, vérifié une fois
 de plus sur du réel : **mi-juillet, hors saison, le gisement d'alternances dev franciliennes est
 mince**, quel que soit le canal.

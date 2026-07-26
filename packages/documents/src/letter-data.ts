@@ -11,7 +11,7 @@ export type CoverLetterDocumentData = {
   senderContact: string[];
   companyName: string;
   jobTitle: string;
-  /** « Paris, le 26 juillet 2026 » — fournie par l'appelant, jamais calculée ici. */
+  /** « Paris, le 26 juillet 2026 » - fournie par l'appelant, jamais calculée ici. */
   cityAndDate?: string | undefined;
   subject: string;
   /** Corps de la lettre, sans adresse ni politesse : le modèle les ajoute. */

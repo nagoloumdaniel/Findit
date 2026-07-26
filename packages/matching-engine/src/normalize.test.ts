@@ -5,7 +5,7 @@ import { canonicalizeSkill, detectSkillsInText } from "./tech-dictionary.js";
 
 describe("normalizeText", () => {
   it("drops case and accents but keeps technical characters", () => {
-    expect(normalizeText("Développeur C++ / C# — Node.js")).toBe("developpeur c++ / c# — node.js");
+    expect(normalizeText("Développeur C++ / C# - Node.js")).toBe("developpeur c++ / c# - node.js");
   });
 });
 

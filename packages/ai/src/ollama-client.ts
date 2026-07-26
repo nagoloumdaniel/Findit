@@ -57,8 +57,8 @@ const buildMessages = (system: string | undefined, prompt: string): ChatMessage[
 
 /*
  * llama.cpp compile le schéma JSON en grammaire de décodage et ne sait pas
- * compiler certaines regex — notamment les lookaheads des contraintes e-mail
- * et URL de Zod — ce qui fait échouer toute la requête (400 « failed to parse
+ * compiler certaines regex - notamment les lookaheads des contraintes e-mail
+ * et URL de Zod - ce qui fait échouer toute la requête (400 « failed to parse
  * grammar »). Les bornes `minLength`/`maxLength` cassent de la même façon,
  * vérifié contre le serveur réel : une grande borne fait exploser la grammaire
  * déroulée. Ces mots-clés sont donc retirés du schéma *envoyé* ; la

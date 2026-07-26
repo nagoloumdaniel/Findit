@@ -1,7 +1,7 @@
 /*
  * Données que le modèle de CV sait afficher. La forme est structurellement
  * compatible avec les faits structurés du CV source : le modèle ne rend que ce
- * qui existe, un champ absent reste absent — rien n'est inventé au rendu.
+ * qui existe, un champ absent reste absent - rien n'est inventé au rendu.
  */
 
 export type CvIdentity = {

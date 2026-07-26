@@ -45,7 +45,7 @@ describe("environment parsing", () => {
     expect(worker.JOB_COLLECTION_CRON).toBe("0 */4 * * *");
     expect(worker.JOB_COLLECTION_TIMEZONE).toBe("Europe/Paris");
     expect(worker.WEB_SEARCH_MAX_QUERIES_PER_RUN).toBe(6);
-    // Sans clé, la découverte est neutralisée — pas une erreur de configuration.
+    // Sans clé, la découverte est neutralisée - pas une erreur de configuration.
     expect(worker.BRAVE_SEARCH_API_KEY).toBeUndefined();
   });
 });

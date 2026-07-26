@@ -3,7 +3,7 @@
  *
  * Le glyphe est rendu via `background-image` en CSS plutôt qu'avec deux balises
  * `img`. Deux `img` obligeaient le navigateur à télécharger les deux variantes
- * — React précharge celle qui est masquée — alors qu'une seule est affichée.
+ * - React précharge celle qui est masquée - alors qu'une seule est affichée.
  * Une règle CSS sous media query ne charge que la variante retenue. Le fichier
  * noir sert le thème clair, le fichier blanc le thème sombre.
  *

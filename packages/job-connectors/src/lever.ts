@@ -75,7 +75,7 @@ const escapeHtmlText = (text: string): string =>
 
 /**
  * Lever éclate une offre en trois : `description` porte l'introduction, `lists`
- * les sections à puces — les prérequis en font partie — et `additional` la
+ * les sections à puces - les prérequis en font partie - et `additional` la
  * clôture. Prendre `description` seule reviendrait à perdre ce qui est demandé
  * au candidat. Les morceaux sont recollés dans l'ordre où la source les rend ;
  * la charge utile d'origine, elle, part intacte dans `rawContent`.

@@ -40,6 +40,9 @@ const normalizeCommune = (name: string): string =>
  * London », « Remote - United States ». C'est une information réelle de la
  * source, pas une déduction.
  */
+// Les tirets longs de la classe [-–—:] sont des DONNÉES : les offres
+// externes les écrivent, et cette regex sert justement à les éliminer. Rien de
+// produit par Findit n'en contient.
 const WORK_MODE_PREFIX =
   /^(hybrid|hybride|remote|télétravail|teletravail|on-?site|présentiel|presentiel)\s*[-–—:]\s*/iu;
 
@@ -61,7 +64,7 @@ const WORK_MODES: ReadonlyMap<string, JobWorkMode> = new Map([
  * même s'il contient par ailleurs un nom de commune française.
  *
  * Ce garde-fou a une limite connue : un libellé qui nomme une subdivision
- * étrangère sans son pays — « Paris, Texas » — passerait au travers. Le cas ne
+ * étrangère sans son pays - « Paris, Texas » - passerait au travers. Le cas ne
  * s'est pas présenté sur les 348 offres relevées, et exiger « France » dans le
  * libellé rejetterait « Paris » seul, que les sources écrivent réellement.
  */
@@ -146,7 +149,7 @@ const stripWorkMode = (label: string): { rest: string; workMode: JobWorkMode | n
  * écrite ; le département vient de la table officielle des communes, jamais
  * d'une supposition.
  *
- * Un libellé peut porter plusieurs lieux — « Berlin, Berlin, Germany; Paris,
+ * Un libellé peut porter plusieurs lieux - « Berlin, Berlin, Germany; Paris,
  * Paris, France » existe réellement. Il suffit qu'un seul soit en
  * Île-de-France : l'offre y est ouverte.
  */

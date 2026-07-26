@@ -7,12 +7,12 @@ import type { WebSearchResult } from "./web-search.js";
  * Ce qu'une URL découverte désigne.
  *
  * `known` : une entreprise sur un ATS que Findit sait déjà collecter. La
- * découverte rend alors un jeton d'entreprise à un connecteur existant — la
+ * découverte rend alors un jeton d'entreprise à un connecteur existant - la
  * collecte reste dans une source autorisée, et le résultat de recherche n'a
  * servi qu'à trouver le nom.
  *
  * `unknown` : un domaine que Findit ne sait pas encore lire. Il n'est pas
- * collecté ici — il relève du registre dynamique, qui exige de lire son
+ * collecté ici - il relève du registre dynamique, qui exige de lire son
  * `robots.txt` avant toute visite. Le distinguer permet de ne pas le confondre
  * avec une source prête.
  */
@@ -72,7 +72,7 @@ export const recognizeTarget = (result: WebSearchResult): DiscoveredTarget | nul
   }
 
   /*
-   * L'identifiant d'entreprise est le jeton de l'ATS — « ivalua », « mirakllabs ».
+   * L'identifiant d'entreprise est le jeton de l'ATS - « ivalua », « mirakllabs ».
    * Le nom d'affichage, lui, n'est pas fiable à ce stade : le titre du résultat
    * commence souvent par « Alternance » ou le métier, pas par l'entreprise. On
    * s'en tient donc au jeton, quitte à l'améliorer plus tard depuis la collecte.
@@ -106,7 +106,7 @@ export interface DiscoveryOutcome {
  *
  * La déduplication est le vrai travail : la même entreprise ressort de
  * plusieurs requêtes et de plusieurs offres. `ivalua` vu dix fois ne doit être
- * collecté qu'une fois — mais toutes les URLs qui l'ont fait découvrir sont
+ * collecté qu'une fois - mais toutes les URLs qui l'ont fait découvrir sont
  * conservées, parce qu'elles sont la preuve de la découverte.
  */
 export const collectDiscoveries = (results: readonly WebSearchResult[]): DiscoveryOutcome => {

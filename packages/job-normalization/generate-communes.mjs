@@ -66,7 +66,7 @@ const file = `import type { IleDeFranceDepartment } from "@findit/shared";
 
 /*
  * Table générée par \`generate-communes.mjs\` le ${new Date().toISOString().slice(0, 10)},
- * depuis geo.api.gouv.fr — l'API officielle du découpage administratif français.
+ * depuis geo.api.gouv.fr - l'API officielle du découpage administratif français.
  * Ne pas modifier à la main : rejouer le script.
  *
  * ${entries.length} communes, dont ${ambiguous.length} dont le nom est porté par
@@ -74,7 +74,7 @@ const file = `import type { IleDeFranceDepartment } from "@findit/shared";
  * d'une offre ne suffit pas à les départager, et deviner le département
  * reviendrait à inventer la localisation.
  *
- * La clé est le nom normalisé — sans accent, sans apostrophe, sans tiret — parce
+ * La clé est le nom normalisé - sans accent, sans apostrophe, sans tiret - parce
  * que les offres écrivent « Boulogne-Billancourt », « Boulogne Billancourt » et
  * « boulogne billancourt » pour la même ville.
  */
@@ -90,5 +90,5 @@ writeFileSync(target, file, "utf8");
 
 console.log(`${entries.length} communes écrites dans src/ile-de-france-communes.ts`);
 console.log(
-  `dont ambiguës : ${ambiguous.length}${ambiguous.length > 0 ? " — " + ambiguous.map(([k]) => k).join(", ") : ""}`,
+  `dont ambiguës : ${ambiguous.length}${ambiguous.length > 0 ? " - " + ambiguous.map(([k]) => k).join(", ") : ""}`,
 );

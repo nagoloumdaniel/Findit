@@ -8,8 +8,8 @@ import { FINDIT_USER_AGENT } from "./http.js";
  * un `WebSearchResult` vit en mémoire le temps d'en extraire une URL à visiter,
  * puis il est jeté. Rien ici ne doit finir dans une table.
  *
- * Ce que la recherche produit, c'est une piste — « une offre existe peut-être à
- * cette adresse » — pas une offre. L'offre, s'il y en a une, est collectée à la
+ * Ce que la recherche produit, c'est une piste - « une offre existe peut-être à
+ * cette adresse » - pas une offre. L'offre, s'il y en a une, est collectée à la
  * source officielle sous le régime du registre.
  */
 export interface WebSearchResult {
@@ -82,8 +82,8 @@ const BRAVE_MAX_RESULTS = 20;
  *
  * Il annonce l'identité de Findit et porte la clé dans l'en-tête que Brave
  * attend. Il ne conserve rien : chaque appel rend des `WebSearchResult`
- * transitoires que l'appelant consomme et jette. La cadence — une requête par
- * seconde — est tenue par l'exécuteur qui l'appelle, comme pour les connecteurs.
+ * transitoires que l'appelant consomme et jette. La cadence - une requête par
+ * seconde - est tenue par l'exécuteur qui l'appelle, comme pour les connecteurs.
  */
 export class BraveSearchProvider implements WebSearchProvider {
   readonly name = "brave";

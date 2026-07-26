@@ -1,7 +1,7 @@
 /*
  * Le titre normalisé ne sert qu'à rapprocher deux publications de la même
  * offre. Il n'est jamais affiché : `Job.title` conserve le titre d'origine tel
- * que l'employeur l'a écrit. C'est pourquoi le nettoyage peut être franc — il
+ * que l'employeur l'a écrit. C'est pourquoi le nettoyage peut être franc - il
  * ne détruit rien, il produit une forme comparable à côté de l'originale.
  */
 
@@ -45,7 +45,7 @@ const NON_MEANINGFUL = /[^a-z0-9+#]+/gu;
  * sans contrat et sans code interne.
  *
  * Rend une chaîne vide si le titre ne portait que ces mentions. C'est un cas
- * réel — « Stage H/F » existe — et il vaut mieux le rendre visible que
+ * réel - « Stage H/F » existe - et il vaut mieux le rendre visible que
  * fabriquer un titre qui n'a jamais été écrit.
  */
 export const normalizeTitle = (title: string): string =>

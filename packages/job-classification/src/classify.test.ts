@@ -35,7 +35,7 @@ describe("classifyJob", () => {
   });
 
   it("lets the weakest link set the confidence", () => {
-    // Le contrat est certain — titre et source concordent — mais le métier
+    // Le contrat est certain - titre et source concordent - mais le métier
     // n'est pas nommé. Une certitude sur l'un ne rachète pas le doute sur
     // l'autre.
     expect(
@@ -146,7 +146,7 @@ describe("classifyJob", () => {
   it("reads a technology whose name is made of regex metacharacters", () => {
     // « c++ » et « c# » ont failli être cherchés par expression régulière, où
     // « + » est un quantificateur. Le texte normalisé étant borné par des
-    // espaces, la recherche est une inclusion — il n'y a plus rien à échapper.
+    // espaces, la recherche est une inclusion - il n'y a plus rien à échapper.
     expect(classifyJob({ title: "Alternance Développeur C# .NET" })).toMatchObject({
       outcome: "ACCEPTED",
       roleCategory: "BACKEND",

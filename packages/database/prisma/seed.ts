@@ -120,7 +120,7 @@ const main = async (): Promise<void> => {
       data: {
         isDemo: true,
         slug: "demo-alternance-developpeur-front-end-react-paris",
-        title: "Alternance — Développeur Front-end React H/F",
+        title: "Alternance - Développeur Front-end React H/F",
         normalizedTitle: "developpeur front-end react",
         roleCategory: "FRONTEND",
         companyId: orbit.id,

@@ -4,8 +4,8 @@ import type { CoverLetterDocumentData } from "./letter-data.js";
 
 /*
  * Modèle de lettre pré-conçu : A4 sobre, Helvetica intégrée, aucune ressource
- * externe. Les formules d'adresse et de politesse sont du modèle — texte
- * fixe et assumé — jamais de l'IA. Le rendu est déterministe.
+ * externe. Les formules d'adresse et de politesse sont du modèle - texte
+ * fixe et assumé - jamais de l'IA. Le rendu est déterministe.
  */
 const styles = StyleSheet.create({
   page: {

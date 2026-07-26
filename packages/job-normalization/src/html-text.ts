@@ -6,8 +6,8 @@ type ParentNode = DefaultTreeAdapterTypes.ParentNode;
 /**
  * Un bloc de texte, avec la nature que le balisage lui donnait. Rien n'est
  * deviné : `heading` vient d'un `<h1>`…`<h6>`, `listItem` d'un `<li>`. Cette
- * nature sert à retrouver les sections d'une offre — responsabilités, prérequis,
- * avantages — sans reparcourir le HTML.
+ * nature sert à retrouver les sections d'une offre - responsabilités, prérequis,
+ * avantages - sans reparcourir le HTML.
  */
 export interface TextBlock {
   readonly kind: "heading" | "paragraph" | "listItem";
@@ -18,7 +18,7 @@ export interface TextBlock {
    * Vrai quand tout le contenu du bloc tenait dans du `<strong>` ou du `<b>`.
    * C'est un fait porté par le balisage, pas une interprétation : beaucoup
    * d'employeurs écrivent leurs intertitres ainsi plutôt qu'en `<h2>`. Ce que ce
-   * gras signifie est décidé ailleurs — voir `extractSections`.
+   * gras signifie est décidé ailleurs - voir `extractSections`.
    *
    * Absent quand le bloc n'était pas entièrement en gras.
    */

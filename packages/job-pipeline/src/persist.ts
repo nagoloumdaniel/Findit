@@ -139,7 +139,7 @@ const writeJob = async (
  * Écrit ce qu'une décision d'ingestion a établi.
  *
  * Une offre retenue ou en quarantaine devient une ligne `Job` traçable, avec sa
- * source. Une offre rejetée n'a pas de ligne `Job` — le modèle l'interdit — mais
+ * source. Une offre rejetée n'a pas de ligne `Job` - le modèle l'interdit - mais
  * elle laisse une trace dans `ProcessingLog`, le seul endroit prévu pour une
  * offre écartée. Rien n'est perdu en silence.
  */

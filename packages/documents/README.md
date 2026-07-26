@@ -3,7 +3,7 @@
 ## Responsabilité
 
 Rendre des documents PDF pré-conçus à partir de faits vérifiés. Le design vit
-ici, dans le code du modèle — jamais dans l'IA.
+ici, dans le code du modèle - jamais dans l'IA.
 
 ## Modèle de CV
 

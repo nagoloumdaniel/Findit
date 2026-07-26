@@ -856,7 +856,7 @@ enum NotificationStatus {
 }
 
 /// Une notification pour une offre, vers un chat. La clé d'idempotence empêche
-/// de notifier deux fois la même offre — y compris quand une nouvelle source
+/// de notifier deux fois la même offre - y compris quand une nouvelle source
 /// s'ajoute à une offre déjà connue.
 ///
 /// Aucun secret ici : ni le token du bot, ni rien qui permette de le
@@ -925,7 +925,7 @@ model CandidateProfile {
 }
 
 /// CV source du propriétaire, importé dans l'espace privé. À la différence de
-/// `Resume` — dépôt public anonyme et éphémère — celui-ci est durable et privé.
+/// `Resume` - dépôt public anonyme et éphémère - celui-ci est durable et privé.
 ///
 /// Le texte extrait est conservé ; le fichier d'origine ne l'est pas encore, ce
 /// qui suffit pour lire et analyser, pas pour ré-exporter l'original. La

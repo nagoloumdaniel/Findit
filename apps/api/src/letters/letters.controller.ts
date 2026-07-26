@@ -28,7 +28,7 @@ import type { LetterView } from "./letters.service.js";
 
 /**
  * Lettres de motivation de l'espace privé. POST régénère et remplace la
- * lettre du couple CV/offre — d'où le 200 — puis l'utilisateur la relit via
+ * lettre du couple CV/offre - d'où le 200 - puis l'utilisateur la relit via
  * GET avant d'en tirer un PDF. Une sortie IA invalide ou qui cite des
  * compétences absentes du CV est refusée, jamais stockée.
  */

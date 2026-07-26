@@ -36,7 +36,7 @@ export interface CollectedOffer {
 /**
  * Ce qu'il faut pour écrire une ligne `Job`. Assemblé ici, écrit ailleurs :
  * l'assemblage est pur et vérifiable sans base, la persistance est une étape à
- * part. `companyId` n'y est pas — il est résolu au moment de l'écriture.
+ * part. `companyId` n'y est pas - il est résolu au moment de l'écriture.
  */
 export interface JobDraft {
   readonly title: string;
@@ -84,7 +84,7 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 
 /**
  * Le travail par défaut, quand la source ne le dit pas. Une alternance qui ne
- * précise rien est présumée sur site — c'est le cas le plus courant, et c'est
+ * précise rien est présumée sur site - c'est le cas le plus courant, et c'est
  * une convention documentée, pas un fait inventé sur cette offre-là.
  */
 const DEFAULT_WORK_MODE: JobWorkMode = "ONSITE";
@@ -121,7 +121,7 @@ const qualityScore = (parts: {
  * Un principe tenu du modèle de données : une ligne `Job` ne peut pas exister
  * sans métier, sans contrat, sans département d'Île-de-France et sans date. Une
  * offre à qui l'un de ces éléments manque est donc **rejetée**, pas mise en
- * quarantaine — la quarantaine suppose une offre complète mais douteuse.
+ * quarantaine - la quarantaine suppose une offre complète mais douteuse.
  */
 export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDecision => {
   // 1. Contrat et métier. C'est la porte qui écarte le plus.
@@ -147,8 +147,8 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
     return { outcome: "REJECTED", stage: "localisation", reasons: [location.detail] };
   }
 
-  // 3. Fraîcheur. Une date absente rend l'offre non stockable — `publishedAt`
-  //    est NOT NULL — donc rejetée, et non mise en quarantaine.
+  // 3. Fraîcheur. Une date absente rend l'offre non stockable - `publishedAt`
+  //    est NOT NULL - donc rejetée, et non mise en quarantaine.
   if (offer.publishedAt === null) {
     return {
       outcome: "REJECTED",

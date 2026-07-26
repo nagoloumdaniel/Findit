@@ -11,7 +11,7 @@ export const WORKSPACE_KEY_HEADER = "x-workspace-key";
  * La comparaison est à **temps constant** : une comparaison caractère par
  * caractère qui s'arrête au premier écart laisserait deviner le secret par la
  * mesure du temps de réponse. `timingSafeEqual` exige des tampons de même
- * longueur, d'où le contrôle de longueur préalable — il révèle la longueur du
+ * longueur, d'où le contrôle de longueur préalable - il révèle la longueur du
  * secret, ce qui est un compromis admis et usuel.
  *
  * Une clé absente ou un secret vide ne correspondent jamais : l'espace privé

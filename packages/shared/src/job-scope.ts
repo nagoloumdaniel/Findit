@@ -19,7 +19,7 @@ export type JobRoleCategory = (typeof JOB_ROLE_CATEGORIES)[number];
  * Stocker et montrer sont deux choses. Le périmètre ci-dessus dit ce qui a le
  * droit d'exister en base ; celui-ci dit seulement ce qui s'affiche par défaut.
  * Une offre hors de ce défaut reste collectée, stockée et atteignable par un
- * filtre — changer d'avis est alors un réglage, jamais une migration.
+ * filtre - changer d'avis est alors un réglage, jamais une migration.
  */
 export const DEFAULT_CONTRACTS: readonly JobContract[] = ["ALTERNANCE"];
 

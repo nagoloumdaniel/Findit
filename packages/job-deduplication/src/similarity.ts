@@ -1,6 +1,6 @@
 /**
- * Deux offres à comparer. Ce sont des formes déjà normalisées — le titre et le
- * nom d'entreprise réduits, le département, la date — plus le texte de la
+ * Deux offres à comparer. Ce sont des formes déjà normalisées - le titre et le
+ * nom d'entreprise réduits, le département, la date - plus le texte de la
  * description pour mesurer le recouvrement.
  */
 export interface ComparableOffer {

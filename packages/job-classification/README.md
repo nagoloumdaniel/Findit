@@ -7,7 +7,7 @@ Valider contrat, métier, localisation et risques avant publication.
 ## Deux voix, pas une
 
 Le contrat est lu deux fois : dans le titre, et dans le libellé que la source donne à côté. Lever le
-porte dans `categories.commitment`, et le relevé du 2026-07-17 justifie de s'en servir — sur les
+porte dans `categories.commitment`, et le relevé du 2026-07-17 justifie de s'en servir - sur les
 **dix alternances réelles** trouvées chez Qonto, BlaBlaCar et Malt, **les dix** portent
 « Apprenticeship » ou « FR Apprentice ». Le titre et le champ concordent à chaque fois.
 
@@ -22,7 +22,7 @@ Les deux voix décident ensemble :
 
 La confiance de l'offre est celle de son **maillon le plus faible** : une certitude sur le métier ne
 rachète pas un doute sur le contrat. Une quarantaine n'est possible que parce que le contrat et le
-métier sont connus — l'offre est stockable. Une offre illisible est rejetée, pas mise de côté.
+métier sont connus - l'offre est stockable. Une offre illisible est rejetée, pas mise de côté.
 
 Chaque décision cite ce qui l'a produite. Aucune n'est à croire sur parole.
 
@@ -45,7 +45,7 @@ Deux pièges relevés sur des titres réels :
 
 ## Ce que la vérification a établi, et qui compte plus que le code
 
-Passé sur **462 offres réelles** de six boards — Vercel, Doctolib, Spotify, Qonto, BlaBlaCar, Malt :
+Passé sur **462 offres réelles** de six boards - Vercel, Doctolib, Spotify, Qonto, BlaBlaCar, Malt :
 
 ```
 462 REJECTED
@@ -72,7 +72,7 @@ Le même titre réel, avec le métier remplacé par un métier de développement
 ```
 
 **Conséquence pour le projet : les sources autorisées aujourd'hui ne publient aucune alternance de
-développement.** La chaîne fonctionne ; c'est le gisement qui manque. Il faudra d'autres sources —
+développement.** La chaîne fonctionne ; c'est le gisement qui manque. Il faudra d'autres sources -
 c'est l'objet de la phase 16.
 
 ## État

@@ -21,7 +21,7 @@ export class ResumeNotStructuredForDocumentError extends Error {
 export interface CvPdfExport {
   /** Le document lui-même. */
   pdf: Buffer;
-  /** Nom de fichier proposé, dérivé du nom lu dans le CV — jamais inventé. */
+  /** Nom de fichier proposé, dérivé du nom lu dans le CV - jamais inventé. */
   fileName: string;
 }
 

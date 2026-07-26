@@ -48,7 +48,7 @@ Chaque ligne est vérifiée avant d'être écrite ici. La colonne « vérifié l
 | Accès                 | `GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs` |
 | Authentification      | Aucune                                                        |
 | `robots.txt`          | `User-agent: *` puis `Disallow: /embed/`                      |
-| Chemin utilisé        | `/v1/boards/…` — hors du chemin interdit                      |
+| Chemin utilisé        | `/v1/boards/…` - hors du chemin interdit                      |
 | Limite annoncée       | Aucune dans `robots.txt`                                      |
 | Cadence appliquée     | 1 requête/seconde, par prudence                               |
 | Données conservées    | Offre brute, empreinte du contenu, provenance                 |
@@ -78,9 +78,9 @@ Le `Crawl-delay` est une contrainte de la source, pas un réglage de confort. Le
 Lever déclare aussi un **content signal**, qui dit à quoi son contenu a le droit de servir. Il ne
 porte pas sur l'accès mais sur l'usage, et il engage tout le projet, pas seulement le connecteur :
 
-- `search=yes` — construire un index de recherche et rendre des résultats est **autorisé**. C'est
+- `search=yes` - construire un index de recherche et rendre des résultats est **autorisé**. C'est
   exactement l'usage de la liste publique de Findit.
-- `ai-train=no` — entraîner ou affiner un modèle sur ce contenu est **interdit**. Aucune offre venant
+- `ai-train=no` - entraîner ou affiner un modèle sur ce contenu est **interdit**. Aucune offre venant
   de Lever ne doit servir à entraîner un modèle, ni partir chez un fournisseur d'IA qui s'autorise à
   entraîner sur ce qu'il reçoit. La phase 6 devra choisir son fournisseur en conséquence, et le
   vérifier dans ses conditions plutôt que le supposer.
@@ -88,8 +88,8 @@ porte pas sur l'accès mais sur l'usage, et il engage tout le projet, pas seulem
   une offre à un modèle pour l'analyser demande une décision explicite, pas un silence interprété
   comme un oui.
 
-Les bots d'IA nommément désignés — `GPTBot`, `ClaudeBot`, `CCBot`, `Google-Extended`,
-`Applebot-Extended`, `Bytespider`, `meta-externalagent` — sont interdits sur `jobs.lever.co`.
+Les bots d'IA nommément désignés - `GPTBot`, `ClaudeBot`, `CCBot`, `Google-Extended`,
+`Applebot-Extended`, `Bytespider`, `meta-externalagent` - sont interdits sur `jobs.lever.co`.
 `FinditBot` n'en fait pas partie et relève de `User-agent: *`, qui l'autorise.
 
 ### Ashby
@@ -99,7 +99,7 @@ Les bots d'IA nommément désignés — `GPTBot`, `ClaudeBot`, `CCBot`, `Google-
 | Statut           | `DISABLED_PENDING_PERMISSION`                                      |
 | Accès            | `GET https://api.ashbyhq.com/posting-api/job-board/{name}`         |
 | Authentification | Aucune                                                             |
-| `robots.txt`     | **Renvoie `Unauthorized` — ce n'est pas un fichier robots valide** |
+| `robots.txt`     | **Renvoie `Unauthorized` - ce n'est pas un fichier robots valide** |
 | Vérifié le       | 2026-07-17                                                         |
 
 L'API répond `200` en JSON sans authentification, mais l'absence de `robots.txt` lisible ne vaut pas autorisation. Tant que les conditions d'utilisation n'ont pas été lues et que la position de l'éditeur n'est pas établie, le connecteur reste désactivé. Une réponse `200` n'est pas une permission.
@@ -115,11 +115,11 @@ L'API répond `200` en JSON sans authentification, mais l'absence de `robots.txt
 | Vérifié le            | 2026-07-17                                                                                    |
 
 **L'API n'est ouverte qu'à LinkedIn.** `FinditBot` relève de `User-agent: *`, et ce groupe interdit
-tout le chemin. L'API répondrait `200` sans authentification — mais une réponse n'est pas une
+tout le chemin. L'API répondrait `200` sans authentification - mais une réponse n'est pas une
 permission, et se faire passer pour `LinkedInBot` tomberait sous l'interdiction absolue de falsifier
 le user-agent. Le connecteur reste désactivé.
 
-Les pages carrières publiques de `www.smartrecruiters.com` sont, elles, permises — sauf pour les 73
+Les pages carrières publiques de `www.smartrecruiters.com` sont, elles, permises - sauf pour les 73
 entreprises que le fichier nomme. Cette voie reste ouverte si elle est un jour empruntée : elle
 imposerait de relire ce `robots.txt` à chaque collecte, la liste des interdits étant propre à chaque
 entreprise.
@@ -128,10 +128,10 @@ entreprise.
 
 | Élément                 | Valeur                                                                                                |
 | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| Statut                  | `PUBLIC_FEED` — **activable**                                                                         |
+| Statut                  | `PUBLIC_FEED` - **activable**                                                                         |
 | Accès                   | `GET https://jobs.workable.com/api/v1/jobs?query=…&location=…`                                        |
 | Authentification        | Aucune                                                                                                |
-| `robots.txt` (`apply.`) | `User-agent: *`, **`Disallow:` vide — rien n'est interdit**                                           |
+| `robots.txt` (`apply.`) | `User-agent: *`, **`Disallow:` vide - rien n'est interdit**                                           |
 | `robots.txt` (`jobs.`)  | `User-agent: *`, `Allow: /search/*`, interdits sur `/search…` et `/profile*` ; `/api/` n'est pas visé |
 | Content signal          | **`search=yes, ai-input=yes, ai-train=no`**                                                           |
 | Limite annoncée         | Aucun `Crawl-delay`                                                                                   |
@@ -143,7 +143,7 @@ un modèle pour l'analyser est donc permis, ce que Lever ne dit ni ne refuse. `a
 identique à Lever : aucune offre Workable ne doit servir à entraîner un modèle.
 
 L'API `jobs.workable.com/api/v1/jobs` cherche à travers tout le réseau Workable, pas une entreprise à
-la fois, et rend une localisation **structurée** — `{ city, subregion, countryName }`, où `subregion`
+la fois, et rend une localisation **structurée** - `{ city, subregion, countryName }`, où `subregion`
 vaut « Île-de-France ». Aucun des autres ATS vérifiés ne donne cette information.
 
 ### Teamtailor, Recruitee, Workday
@@ -173,7 +173,7 @@ En attendant, la seule voie envisageable est `SEARCH_ENGINE_DISCOVERY_ONLY` : un
 ## Le registre dynamique
 
 Décidé le 2026-07-17. **Findit a le droit de collecter un domaine qu'il découvre lui-même**, sans
-qu'il ait été inscrit à la main — mais seulement après avoir lu ce que ce domaine autorise.
+qu'il ait été inscrit à la main - mais seulement après avoir lu ce que ce domaine autorise.
 
 C'est un assouplissement réel de la règle précédente, où une source sans ligne écrite d'avance ne
 pouvait pas s'exécuter. Il n'affaiblit pas le principe, il le déplace : le contrôle passe d'une liste
@@ -183,14 +183,14 @@ sans permission constatée**.
 Les conditions sont cumulatives. Un domaine découvert n'est collectable que si :
 
 1. son `robots.txt` a été lu et **autorise explicitement** le chemin visé pour `FinditBot` ;
-2. le verdict est `ALLOWED`. Un `UNKNOWN` — aucun groupe ne vise `FinditBot`, pas même `*` — **n'est
+2. le verdict est `ALLOWED`. Un `UNKNOWN` - aucun groupe ne vise `FinditBot`, pas même `*` - **n'est
    pas un oui** : le domaine est laissé de côté ;
 3. un `robots.txt` illisible, absent ou répondant autre chose qu'un fichier vaut refus, comme pour
    Ashby ;
 4. le `Crawl-delay` annoncé est appliqué ; à défaut, une requête par seconde ;
 5. la décision est **écrite en base** avec sa date, sa preuve et son verdict, et relue comme n'importe
    quelle autre ligne du registre. Une source découverte n'a pas moins de traçabilité qu'une source
-   écrite à la main — elle en a autant.
+   écrite à la main - elle en a autant.
 
 Le lecteur de `robots.txt` est vérifié contre les cinq fichiers réels de ce document. Le cas décisif
 est SmartRecruiters : son groupe `LinkedInBot` ne doit **jamais** s'appliquer à `FinditBot`, qui tombe
@@ -224,12 +224,12 @@ La contrainte porteuse est la conservation. Les CGU disent :
 **Les résultats de Brave ne sont jamais écrits en base.** Ils vivent en mémoire le temps d'en extraire
 une URL, puis sont jetés. Cela tombe exactement sur le régime déjà retenu,
 `SEARCH_ENGINE_DISCOVERY_ONLY` : le moteur **signale** qu'une offre existe, Findit remonte à la source
-officielle pour la collecter — et c'est cette offre-là, venue de la source, qui est stockée, pas le
+officielle pour la collecter - et c'est cette offre-là, venue de la source, qui est stockée, pas le
 résultat de Brave.
 
 Conséquence sur le modèle de données : la table `WebSearchResult` prévue au §26 de l'extension **ne
-doit pas contenir les résultats de Brave**. Elle ne peut porter que ce qui est à nous — le texte de la
-requête, un décompte, un horodatage — jamais les titres, extraits ou classements rendus par Brave.
+doit pas contenir les résultats de Brave**. Elle ne peut porter que ce qui est à nous - le texte de la
+requête, un décompte, un horodatage - jamais les titres, extraits ou classements rendus par Brave.
 
 Les CGU rappellent aussi que Brave n'accorde aucun droit sur les pages tierces : « Customers who
 access URLs displayed in the Brave Search API must ensure their access to those webpages complies with
@@ -238,7 +238,7 @@ vérifie avant toute collecte d'une page découverte.
 
 **Un résultat de moteur ne suffit jamais à publier une offre.** C'est ce qui garde LinkedIn, Indeed,
 Glassdoor et Welcome to the Jungle hors de portée : le test réel du 2026-07-17 montre qu'une requête
-naïve les remonte en tête — ils peuvent apparaître dans les résultats, mais ne seront pas récupérés
+naïve les remonte en tête - ils peuvent apparaître dans les résultats, mais ne seront pas récupérés
 pour autant. Les requêtes utiles visent les sites carrières et les ATS ouverts (`site:`,
 `inurl:careers`), pas les agrégateurs fermés.
 
@@ -260,7 +260,7 @@ aucune donnée ne quitte le poste.
 
 Conséquence sur la conformité : la question `ai-train`/`ai-input` de Lever **disparaît**. Ces signaux
 encadrent ce qu'un tiers a le droit de faire d'un contenu qu'on lui **envoie** ; ici on n'envoie rien.
-`ai-train=no` est respecté trivialement — aucun contenu ne part vers un modèle tiers, donc rien ne peut
+`ai-train=no` est respecté trivialement - aucun contenu ne part vers un modèle tiers, donc rien ne peut
 servir à en entraîner un. La sous-décision `ai-input` (envoyer une offre à un modèle) n'a plus d'objet
 tant que l'IA reste locale ; elle ne renaîtrait que si un fournisseur distant était réintroduit.
 

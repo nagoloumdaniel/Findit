@@ -35,7 +35,7 @@ const slugify = (text: string): string =>
  * Enregistre une entreprise découverte, ou met à jour ce qu'on savait d'elle.
  *
  * L'opération est idempotente : la même entreprise redécouverte à chaque cycle
- * ne crée pas de doublon. Le nom conservé est le jeton de l'ATS — le seul
+ * ne crée pas de doublon. Le nom conservé est le jeton de l'ATS - le seul
  * identifiant fiable à ce stade ; un vrai nom d'affichage viendra de la
  * collecte.
  *
@@ -92,7 +92,7 @@ export const registerDiscoveredSource = async (
 /**
  * Liste les sources qu'on a le droit de collecter maintenant : celles dont le
  * connecteur est `ACTIVE` et dont le régime d'accès l'autorise. C'est le
- * registre relu à chaque cycle — fermer un connecteur en base retire ses
+ * registre relu à chaque cycle - fermer un connecteur en base retire ses
  * sources de cette liste sans toucher au code.
  */
 export const listCollectableSources = async (

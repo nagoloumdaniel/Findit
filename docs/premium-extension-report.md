@@ -1,4 +1,4 @@
-# Rapport d'analyse — extension premium
+# Rapport d'analyse - extension premium
 
 Rapport exigé par la demande d'extension avant toute modification. Il porte sur le dépôt tel qu'il est
 au 2026-07-17, après la phase 3 et les deux premières briques de la phase 4.
@@ -83,7 +83,7 @@ et changer d'avis reste un réglage.
 L'extension retire trois catégories, en ajoute deux, et renomme la notion (`JobCategory` contre
 `RoleCategory`). L'enum est utilisé par une contrainte, un index, l'API, les filtres et le seed.
 
-**Tranché : on ajoute sans retirer.** `RoleCategory` passe à huit — les six existantes plus
+**Tranché : on ajoute sans retirer.** `RoleCategory` passe à huit - les six existantes plus
 `SOFTWARE_ENGINEERING` et `OTHER_DEVELOPER`. La migration est purement additive : aucune valeur n'est
 retirée ni renommée, donc aucune offre déjà stockée ne devient invalide. `DEFAULT_ROLE_CATEGORIES` ne
 montre que les métiers du développement ; la data et le mobile restent à un filtre près. Le nom
@@ -92,14 +92,14 @@ montre que les métiers du développement ; la data et le mobile restent à un f
 ### 4.3 LinkedIn, Indeed, Glassdoor, Welcome to the Jungle
 
 Le registre les tient en `DISABLED_PENDING_PERMISSION` : aucun accès public autorisé pour cet usage.
-L'extension demande de les intégrer « lorsque l'accès est techniquement et juridiquement possible » —
-ce qui est compatible — mais propose aussi des requêtes `site:linkedin.com/jobs/view`.
+L'extension demande de les intégrer « lorsque l'accès est techniquement et juridiquement possible » -
+ce qui est compatible - mais propose aussi des requêtes `site:linkedin.com/jobs/view`.
 
 La position du registre est déjà écrite : `SEARCH_ENGINE_DISCOVERY_ONLY`. Un moteur autorisé peut
 signaler qu'une offre existe ; Findit remonte alors à la page carrière officielle de l'entreprise pour
 la collecter. **Le résultat du moteur ne suffit jamais à publier une offre, et récupérer la page
 LinkedIn elle-même reste non autorisé.** Le garde-fou refusera ces sources tant que leur ligne dit
-non — c'est le comportement voulu, pas un défaut.
+non - c'est le comportement voulu, pas un défaut.
 
 ### 4.4 L'IA et le signal de Lever
 
@@ -114,18 +114,18 @@ arroger le droit sur ce qu'il reçoit. Ce point est une décision à prendre, pa
 
 L'extension (§ 2.3) veut accepter une offre en télétravail si l'entreprise a un établissement en
 Île-de-France. Or `Job.departmentCode` est **NOT NULL** et une contrainte de contrôle le limite aux
-huit départements. Une offre « Remote — France » n'a pas de département : elle n'est pas stockable en
+huit départements. Une offre « Remote - France » n'a pas de département : elle n'est pas stockable en
 l'état. Il faudra soit rattacher l'offre au département de l'établissement, soit assouplir la
-contrainte — et l'assouplir affaiblit la garantie que le périmètre est tenu par la base.
+contrainte - et l'assouplir affaiblit la garantie que le périmètre est tenu par la base.
 
 ## 5. Composants à modifier
 
-- `packages/shared/src/job-scope.ts` — le périmètre, si 4.1 et 4.2 sont tranchés.
-- `packages/database` — enums, contraintes, migration, seed.
-- `apps/api` — filtres, validation, nouvelles routes.
-- `apps/web` — titre, filtres, navigation, écrans.
-- `apps/worker` — tout : la file est déclarée, rien ne la consomme.
-- `docs/legal-compliance.md` — les moteurs de recherche et le fournisseur IA.
+- `packages/shared/src/job-scope.ts` - le périmètre, si 4.1 et 4.2 sont tranchés.
+- `packages/database` - enums, contraintes, migration, seed.
+- `apps/api` - filtres, validation, nouvelles routes.
+- `apps/web` - titre, filtres, navigation, écrans.
+- `apps/worker` - tout : la file est déclarée, rien ne la consomme.
+- `docs/legal-compliance.md` - les moteurs de recherche et le fournisseur IA.
 
 ## 6. Nouvelles tables
 
@@ -156,7 +156,7 @@ offre, d'un CV, d'un README ou d'une page web est une donnée **non fiable** : e
 lue comme une instruction. Un dépôt privé ne doit jamais partir chez un fournisseur IA en clair.
 
 **Périmètre.** La demande couvre ce qui restait des phases 4 à 7, et davantage. La tenir en une fois
-reviendrait à empiler du code non vérifié — l'inverse de la méthode suivie jusqu'ici.
+reviendrait à empiler du code non vérifié - l'inverse de la méthode suivie jusqu'ici.
 
 ## 8. Plan proposé
 

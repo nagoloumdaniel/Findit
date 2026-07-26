@@ -3,7 +3,7 @@
  * tiret. Le résultat respecte le motif que l'API attend d'un slug
  * (`^[a-z0-9]+(?:-[a-z0-9]+)*$`) et ne dépasse pas `maxLength`.
  *
- * Rend une chaîne vide si le texte ne contenait rien de slugifiable — l'appelant
+ * Rend une chaîne vide si le texte ne contenait rien de slugifiable - l'appelant
  * doit alors se rabattre sur une valeur sûre plutôt que d'écrire un slug vide.
  */
 export const slugify = (text: string, maxLength = 120): string => {
@@ -26,8 +26,8 @@ export const slugify = (text: string, maxLength = 120): string => {
 
 /**
  * Slug d'une offre : titre normalisé, ville et identifiant de source. L'ajout de
- * l'identifiant garantit l'unicité — deux offres au même titre dans la même
- * ville restent distinctes — et la stabilité : la même offre recollectée retrouve
+ * l'identifiant garantit l'unicité - deux offres au même titre dans la même
+ * ville restent distinctes - et la stabilité : la même offre recollectée retrouve
  * son slug.
  */
 export const jobSlug = (normalizedTitle: string, city: string, externalId: string): string => {

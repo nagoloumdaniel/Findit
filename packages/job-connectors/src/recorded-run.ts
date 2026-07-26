@@ -46,7 +46,7 @@ export interface DecisionCounts {
 
 /**
  * Ce que l'exécution a besoin de lire et d'écrire. L'interface existe pour que
- * l'enchaînement — lire le registre, ouvrir, fermer, consigner — soit
+ * l'enchaînement - lire le registre, ouvrir, fermer, consigner - soit
  * vérifiable sans base, et que la base ne soit qu'une implémentation parmi
  * d'autres.
  */
@@ -158,7 +158,7 @@ export const runRecordedConnector = async <TTarget>(
   /*
    * `runConnector` refait ce contrôle : il reste la porte, et rien ne passe
    * derrière lui. Ici, il sert seulement à ne pas ouvrir d'exécution pour une
-   * source qui n'a pas le droit de tourner — un refus n'est pas une exécution.
+   * source qui n'a pas le droit de tourner - un refus n'est pas une exécution.
    * Il est consigné comme erreur, sans ligne d'exécution, ce que `runId`
    * facultatif permet exactement.
    */

@@ -16,23 +16,24 @@ servira à retrouver les sections d'une offre sans reparcourir le HTML.
 
 Rien n'est promu. Un `<p><strong>Missions</strong></p>` reste un paragraphe, même si l'employeur s'en
 sert visuellement comme d'un intertitre. Le bloc note seulement que **tout son contenu était en gras**
-— un fait que le balisage porte. Ce que ce gras signifie est décidé par l'extraction des sections, en
-aval : si cette lecture se trompe, elle abîme des sections, jamais la description.
+
+- un fait que le balisage porte. Ce que ce gras signifie est décidé par l'extraction des sections, en
+  aval : si cette lecture se trompe, elle abîme des sections, jamais la description.
 
 ## Les sections viennent des puces, pas des phrases
 
 `extractSections` range les puces sous la section que leur intertitre annonce : responsabilités,
 prérequis, avantages. Un intertitre est un vrai `<h1>`…`<h6>`, ou un paragraphe entièrement en gras
-**suivi d'une puce** — 189 sections de Doctolib sont écrites ainsi, dont 149 suivies d'une liste. Le
+**suivi d'une puce** - 189 sections de Doctolib sont écrites ainsi, dont 149 suivies d'une liste. Le
 gras seul ne suffit pas : c'est la liste qui prouve qu'il annonçait quelque chose.
 
 Seules les puces sont retenues. Une section rédigée en prose reste dans la description :
 `Job.responsibilities` est une liste, et découper un paragraphe en phrases pour en fabriquer une
 inventerait une structure que l'employeur n'a pas écrite. Un intertitre non reconnu ferme la section
-en cours sans en ouvrir d'autre — « À propos de Doctolib » ne parle pas du candidat.
+en cours sans en ouvrir d'autre - « À propos de Doctolib » ne parle pas du candidat.
 
 Le vocabulaire est français et anglais, tutoiement compris : Doctolib publie « Tes missions » à côté
-de « Vos missions ». L'allemand n'est pas reconnu — ces offres sont berlinoises, donc hors zone.
+de « Vos missions ». L'allemand n'est pas reconnu - ces offres sont berlinoises, donc hors zone.
 
 ## Le titre normalisé n'est pas le titre
 
@@ -40,7 +41,7 @@ de « Vos missions ». L'allemand n'est pas reconnu — ces offres sont berlinoi
 titre d'origine. Le nettoyage peut donc être franc : il produit une forme comparable à côté de
 l'originale, il ne détruit rien.
 
-En partent les accents, les mentions de genre (`H/F`, `m/w/d`), le contrat — qui est un champ à part —
+En partent les accents, les mentions de genre (`H/F`, `m/w/d`), le contrat - qui est un champ à part -
 et les codes de publication (`REF: 4821`, `#5156316004`). Restent les caractères qui portent du sens
 dans un nom de technologie : `c++` et `c#` ne sont pas `c`.
 
@@ -63,16 +64,16 @@ deviné :
 - **Quatre communes sont ambiguës.** Blandy, Marolles-en-Brie, Mondreville et Saint-Martin-des-Champs
   existent chacune dans deux départements d'Île-de-France. Le libellé ne dit pas laquelle : l'offre
   est refusée en `AMBIGUOUS_COMMUNE` plutôt que rangée au hasard.
-- **« France » ne donne aucun département** : `TOO_VAGUE`. Le cas est réel — une offre Doctolib est
+- **« France » ne donne aucun département** : `TOO_VAGUE`. Le cas est réel - une offre Doctolib est
   écrite ainsi.
 - Un libellé peut porter plusieurs lieux. « Berlin, Berlin, Germany; Paris, Paris, France » existe
   tel quel : il suffit qu'un seul soit en Île-de-France.
-- Le mode de travail est pris quand le libellé le porte devant la ville — « Hybrid - Paris » — et
+- Le mode de travail est pris quand le libellé le porte devant la ville - « Hybrid - Paris » - et
   conservé même quand le lieu est hors zone.
 
 Limite connue : un libellé qui nomme une subdivision étrangère sans son pays, « Paris, Texas »,
 passerait au travers. Le cas ne s'est pas présenté sur les 348 offres relevées, et exiger « France »
-dans le libellé rejetterait « Paris » seul — que les sources écrivent réellement.
+dans le libellé rejetterait « Paris » seul - que les sources écrivent réellement.
 
 ## Vérification
 
@@ -91,8 +92,8 @@ Les sections, mesurées sur ces mêmes offres :
 
 Les 17 % de Doctolib hors de France sont attendus : ce sont les offres berlinoises et milanaises, dont
 les intertitres sont allemands ou italiens, et qui seront écartées à l'étape de localisation. Les 0 %
-d'avantages chez Spotify le sont aussi : Spotify n'écrit que trois intertitres — « Who You Are »,
-« What You'll Do », « Where You'll Be » — et ne publie aucune section d'avantages. Il n'y a rien à
+d'avantages chez Spotify le sont aussi : Spotify n'écrit que trois intertitres - « Who You Are »,
+« What You'll Do », « Where You'll Be » - et ne publie aucune section d'avantages. Il n'y a rien à
 trouver, et rien n'est inventé.
 
 La localisation, sur les mêmes 348 offres :

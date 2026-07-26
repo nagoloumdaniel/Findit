@@ -66,7 +66,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
   const job = result.data;
   const salary =
     job.salaryMin !== null && job.salaryMax !== null
-      ? `${job.salaryMin} – ${job.salaryMax} € ${job.salaryPeriod ? (salaryPeriodLabels[job.salaryPeriod] ?? "") : ""}`
+      ? `${job.salaryMin} - ${job.salaryMax} € ${job.salaryPeriod ? (salaryPeriodLabels[job.salaryPeriod] ?? "") : ""}`
       : (job.salaryText ?? null);
 
   return (
@@ -87,7 +87,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
         </p>
         <h1 className="detail-title">{job.title}</h1>
         <p className="detail-company">
-          {job.companyName} — {job.city} ({job.departmentCode} ·{" "}
+          {job.companyName} - {job.city} ({job.departmentCode} ·{" "}
           {departmentLabels[job.departmentCode] ?? "Île-de-France"})
         </p>
         <p className="detail-date">

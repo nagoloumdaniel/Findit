@@ -28,7 +28,7 @@ export interface RobotsFile {
 /**
  * Découpe un `robots.txt` en groupes.
  *
- * Des `User-agent` consécutifs partagent le groupe qui les suit — c'est le cas
+ * Des `User-agent` consécutifs partagent le groupe qui les suit - c'est le cas
  * réel de Greenhouse et de Workable. Une règle rencontrée après une règle
  * ouvre au contraire un groupe neuf.
  */
@@ -199,7 +199,7 @@ export interface RobotsDecision {
  * Ce robot a-t-il le droit de demander ce chemin ?
  *
  * `UNKNOWN` quand aucun groupe ne vise ce robot : le fichier ne dit rien de lui.
- * Ce n'est pas un oui — c'est l'appelant qui tranche, et la position du projet
+ * Ce n'est pas un oui - c'est l'appelant qui tranche, et la position du projet
  * est de ne pas collecter ce qui n'est pas explicitement permis.
  */
 export const decideRobots = (file: RobotsFile, userAgent: string, path: string): RobotsDecision => {
@@ -256,7 +256,7 @@ export const decideRobots = (file: RobotsFile, userAgent: string, path: string):
  *
  * `search=yes,ai-train=no,use=reference` chez Lever, `search=yes, ai-input=yes,
  * ai-train=no` chez Workable : les deux formes existent, avec et sans espace.
- * Une clé absente n'est ni un oui ni un non — la valeur rendue est `undefined`,
+ * Une clé absente n'est ni un oui ni un non - la valeur rendue est `undefined`,
  * et le projet exige une décision explicite plutôt qu'un silence interprété.
  */
 export const parseContentSignal = (signal: string | null): ReadonlyMap<string, string> => {

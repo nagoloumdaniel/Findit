@@ -4,7 +4,7 @@ import type { WebSearchQuery } from "./web-search.js";
  * Requêtes de découverte.
  *
  * Le test réel du 2026-07-17 a tranché : une requête libre remonte les
- * agrégateurs fermés — Indeed, Welcome to the Jungle — que Findit ne peut pas
+ * agrégateurs fermés - Indeed, Welcome to the Jungle - que Findit ne peut pas
  * collecter. Une requête `site:` sur un ATS autorisé remonte, elle, les
  * entreprises de cet ATS qui publient ce qu'on cherche. La découverte ne
  * ratisse donc pas le web au hasard : elle interroge les ATS qu'on sait déjà
@@ -32,7 +32,7 @@ const CONTRACT_TERMS = ["alternance", "apprentissage", "apprentice"] as const;
 /**
  * Croise ATS × métier × contrat en requêtes `site:`. Le pays et la langue sont
  * ceux du périmètre. Le résultat est déterministe : mêmes entrées, mêmes
- * requêtes, dans le même ordre — ce qui rend une rotation ou un plafond
+ * requêtes, dans le même ordre - ce qui rend une rotation ou un plafond
  * reproductibles.
  */
 export const buildDiscoveryQueries = (resultsPerQuery = 15): readonly WebSearchQuery[] => {

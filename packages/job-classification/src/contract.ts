@@ -10,8 +10,8 @@ export type ContractSignal = {
 
 /*
  * Vocabulaire relevé sur les offres réelles de Greenhouse et Lever, français et
- * anglais. Le tutoiement et les variantes régionales de Lever — « FR Apprentice »,
- * « FR Intern » — en font partie : ce sont les valeurs que la source écrit
+ * anglais. Le tutoiement et les variantes régionales de Lever - « FR Apprentice »,
+ * « FR Intern » - en font partie : ce sont les valeurs que la source écrit
  * vraiment, pas celles qu'elle devrait écrire.
  */
 const ALTERNANCE = [
@@ -31,7 +31,7 @@ const ALTERNANCE = [
 const INTERNSHIP = ["stage", "stagiaire", "internship", "intern"];
 
 /**
- * Contrats hors périmètre. Ils ne servent pas à classer une offre — ils servent
+ * Contrats hors périmètre. Ils ne servent pas à classer une offre - ils servent
  * à la rejeter, et à repérer qu'un libellé de contrat contredit son titre.
  */
 const OUT_OF_SCOPE = [

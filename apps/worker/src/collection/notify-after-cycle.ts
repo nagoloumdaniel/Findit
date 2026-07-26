@@ -38,8 +38,8 @@ const ageLabel = (publishedAt: Date, now: Date): string => {
  *
  * « Nouvelle » veut dire première vue depuis le début du cycle : une offre
  * recollectée n'est pas neuve, et la clé d'idempotence l'écarterait de toute
- * façon. On ne notifie que ce que le flux montre — les alternances de
- * développement — pour que l'alerte corresponde à ce que l'utilisateur suit.
+ * façon. On ne notifie que ce que le flux montre - les alternances de
+ * développement - pour que l'alerte corresponde à ce que l'utilisateur suit.
  */
 export const notifyAfterCycle = async (deps: NotifyAfterCycleDeps): Promise<NotifySummary> => {
   const rows = await deps.prisma.job.findMany({
