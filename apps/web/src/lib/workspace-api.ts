@@ -51,16 +51,20 @@ export type WorkspaceResult<T> =
 
 const baseUrl = (): string => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+/*
+ * Les appels privés passent par le proxy serveur `/api/ws/*` : la clé vit
+ * côté serveur Next, jamais dans le navigateur. Le paramètre `key` des
+ * fonctions est conservé pour la forme mais n'est plus envoyé.
+ */
+const toProxyPath = (path: string): string => path.replace(/^\/api\//, "/api/ws/");
+
 const request = async <T>(
-  key: string,
+  _key: string,
   path: string,
   init?: RequestInit,
 ): Promise<WorkspaceResult<T>> => {
   try {
-    const response = await fetch(new URL(path, baseUrl()), {
-      ...init,
-      headers: { ...(init?.headers ?? {}), "x-workspace-key": key },
-    });
+    const response = await fetch(toProxyPath(path), { ...init });
 
     if (!response.ok) {
       let message = `L'API a répondu ${String(response.status)}.`;
@@ -255,14 +259,12 @@ export const deleteApplication = (key: string, id: string): Promise<WorkspaceRes
  * fetch, puis un lien temporaire vers le blob déclenche l'enregistrement.
  */
 export const downloadPdf = async (
-  key: string,
+  _key: string,
   path: string,
   fallbackName: string,
 ): Promise<WorkspaceResult<undefined>> => {
   try {
-    const response = await fetch(new URL(path, baseUrl()), {
-      headers: { "x-workspace-key": key },
-    });
+    const response = await fetch(toProxyPath(path));
     if (!response.ok) {
       let message = `L'API a répondu ${String(response.status)}.`;
       try {

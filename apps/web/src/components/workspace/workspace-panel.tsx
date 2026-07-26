@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  checkWorkspaceKey,
   downloadPdf,
   fetchResumeDetail,
   listResumes,
@@ -18,14 +17,12 @@ import { ApplicationsPanel } from "./applications-panel";
 import { ResumeCard } from "./resume-card";
 
 /*
- * La clé est mémorisée par le navigateur (demande du propriétaire : pas de
- * saisie à chaque visite). Elle n'apparaît ni dans une adresse ni dans le
- * code de la page ; « Verrouiller » l'oublie. Machine partagée = verrouiller.
+ * Plus de clé côté navigateur : les appels privés passent par le proxy
+ * serveur qui la porte lui-même. Le poste est de confiance, pas la page.
  */
-const KEY_STORAGE = "findit-workspace-key";
+const key = "proxy";
 
 export const WorkspacePanel = () => {
-  const [key, setKey] = useState<string | null>(null);
   const [resumes, setResumes] = useState<ResumeSummary[]>([]);
   const [details, setDetails] = useState<Record<string, ResumeDetail>>({});
   const [busy, setBusy] = useState<Record<string, string>>({});
@@ -34,7 +31,6 @@ export const WorkspacePanel = () => {
   const [pickedName, setPickedName] = useState<string | null>(null);
   const [trackRefresh, setTrackRefresh] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
-  const [gateError, setGateError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async (activeKey: string) => {
@@ -46,42 +42,9 @@ export const WorkspacePanel = () => {
     }
   }, []);
 
-  // Reprend la clé de la session si elle y est déjà, et la revérifie :
-  // une clé périmée ne doit pas laisser croire que l'espace est ouvert.
   useEffect(() => {
-    const stored = localStorage.getItem(KEY_STORAGE);
-    if (stored === null) {
-      return;
-    }
-    void checkWorkspaceKey(stored).then((result) => {
-      if (result.ok) {
-        setKey(stored);
-        setResumes(result.data);
-      } else {
-        localStorage.removeItem(KEY_STORAGE);
-      }
-    });
-  }, []);
-
-  const unlock = async (candidate: string) => {
-    setGateError(null);
-    const result = await checkWorkspaceKey(candidate);
-    if (!result.ok) {
-      setGateError(result.status === 401 ? "Clé refusée." : result.message);
-      return;
-    }
-    localStorage.setItem(KEY_STORAGE, candidate);
-    setKey(candidate);
-    setResumes(result.data);
-  };
-
-  const lock = () => {
-    localStorage.removeItem(KEY_STORAGE);
-    setKey(null);
-    setResumes([]);
-    setDetails({});
-    setMessage(null);
-  };
+    void refresh(key);
+  }, [refresh]);
 
   const withBusy = async (id: string, kind: string, action: () => Promise<void>) => {
     setBusy((current) => ({ ...current, [id]: kind }));
@@ -96,43 +59,6 @@ export const WorkspacePanel = () => {
       });
     }
   };
-
-  if (key === null) {
-    return (
-      <form
-        className="workspace-gate"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const input = new FormData(event.currentTarget).get("key");
-          if (typeof input === "string" && input.trim() !== "") {
-            void unlock(input.trim());
-          }
-        }}
-      >
-        <label className="job-search-label" htmlFor="workspace-key">
-          Clé de l&apos;espace privé
-        </label>
-        <div className="job-search-row">
-          <input
-            id="workspace-key"
-            className="job-search-input"
-            type="password"
-            name="key"
-            autoComplete="off"
-            placeholder="Coller la clé"
-          />
-          <button className="job-search-submit" type="submit">
-            Ouvrir
-          </button>
-        </div>
-        {gateError !== null && (
-          <p className="workspace-error" role="alert">
-            {gateError}
-          </p>
-        )}
-      </form>
-    );
-  }
 
   return (
     <div className="workspace">
@@ -200,9 +126,6 @@ export const WorkspacePanel = () => {
             </button>
           </div>
         </form>
-        <button type="button" className="workspace-button" onClick={lock}>
-          Verrouiller
-        </button>
       </div>
 
       {message !== null && (
