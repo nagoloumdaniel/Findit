@@ -115,6 +115,10 @@ export default async function HomePage({ searchParams }: PageProps) {
           </>
         )}
       </section>
+
+      <footer className="footer-private-link">
+        <a href="/espace">Espace privé</a>
+      </footer>
     </PageShell>
   );
 }

@@ -103,7 +103,7 @@
   --accent-border: var(--color-gold-300);
 }
 
-/* Thème sombre — suit le système, sauf choix explicite */
+/* Thème sombre - suit le système, sauf choix explicite */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -126,7 +126,7 @@
   }
 }
 
-/* Thème sombre — choix explicite de l'utilisateur */
+/* Thème sombre - choix explicite de l'utilisateur */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
@@ -178,7 +178,7 @@ body {
 
 /*
  * Marque : le glyphe du logo et « indit » forment le mot « Findit ». Ils sont
- * alignés sur la ligne de base — le bas du « f » la rejoint — parce qu'un
+ * alignés sur la ligne de base - le bas du « f » la rejoint - parce qu'un
  * mot-symbole où le logo flotte au-dessus des lettres se lit comme deux objets,
  * pas comme un mot.
  */
@@ -838,4 +838,253 @@ h1 {
   .job-search-submit:active {
     transform: none;
   }
+}
+
+/*
+ * Espace privé : mêmes tokens que le reste du site. Les cartes de CV sont des
+ * surfaces sobres ; l'état « structuré » emprunte l'or des accents, l'erreur
+ * reste du texte lisible, jamais un panneau criard.
+ */
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.workspace-gate {
+  margin-top: 1.5rem;
+  max-width: 34rem;
+}
+
+.workspace-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace-file {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  max-width: 18rem;
+}
+
+.workspace-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-wash);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.9rem;
+}
+
+.workspace-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.resume-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.resume-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.resume-card-header h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+
+.resume-badge {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.65rem;
+  white-space: nowrap;
+}
+
+.resume-badge-ok {
+  color: var(--accent);
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+}
+
+.resume-meta {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.resume-facts {
+  border-top: 1px solid var(--border);
+  padding-top: 0.6rem;
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--text-sm);
+}
+
+.resume-facts p {
+  margin: 0;
+}
+
+.resume-warnings {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.workspace-button {
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.workspace-button:hover:not(:disabled) {
+  border-color: var(--accent-ui);
+}
+
+.workspace-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.workspace-button-danger:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--accent);
+}
+
+.footer-private-link {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: var(--text-xs);
+}
+
+.footer-private-link a {
+  color: var(--fg-subtle);
+  text-decoration: none;
+}
+
+.footer-private-link a:hover {
+  color: var(--accent);
+}
+
+/* Barre de progression de la structuration : une estimation assumée. */
+.workspace-progress-block {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.workspace-progress {
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+.workspace-progress-fill {
+  height: 100%;
+  background: var(--accent-ui);
+  border-radius: var(--radius-pill);
+  transition: width 400ms var(--ease-out);
+}
+
+.workspace-progress-label {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+/*
+ * Import de CV : l'input natif est masque, une etiquette stylee le pilote.
+ * Bordure en pointilles tant qu'aucun fichier n'est choisi, pleine ensuite.
+ */
+.workspace-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.workspace-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.workspace-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1.1rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.workspace-file-label:hover {
+  border-color: var(--accent-ui);
+  color: var(--fg);
+}
+
+.workspace-file-input:focus-visible + .workspace-file-label {
+  outline: 2px solid var(--accent-ui);
+  outline-offset: 2px;
+}
+
+.workspace-file-label-picked {
+  border-style: solid;
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+  color: var(--fg);
+}
+
+.workspace-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+  font-size: var(--text-sm);
+  line-height: 1;
 }
