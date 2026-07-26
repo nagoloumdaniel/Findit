@@ -55,7 +55,12 @@ const RESUME_STRUCTURE_SYSTEM = [
   // Constaté sur le modèle réel : sans ces deux consignes, il transforme
   // l'e-mail en « lien » invalide et omet parfois l'identité pourtant lisible.
   "Recopie tels quels le nom complet, le titre, l'e-mail et le telephone quand ils sont visibles.",
-  "N'inclus un element dans links que si le CV contient une URL complete commencant par http:// ou https:// ; un e-mail ou un telephone n'est jamais un lien.",
+  "N'inclus un element dans links que si le CV affiche une adresse web (du type github.com/x ou https://…) ; un e-mail ou un telephone n'est jamais un lien.",
+  "Les dates restent courtes et telles que lues dans le CV.",
+  // Constaté sur un CV réel : sans ces consignes, le modèle prenait les
+  // intitulés de rubriques pour des compétences et perdait les noms propres.
+  "Dans skills, liste chaque technologie individuellement (JavaScript, React, PostgreSQL…), avec sa categorie ; jamais un intitule de groupe comme « Langages », « Front-End » ou « Bases de donnees ».",
+  "Chaque projet garde son nom propre exact (ex. « Allibuy ») dans name, et chaque experience garde son intitule de poste dans title.",
 ].join(" ");
 
 const buildResumeStructurePrompt = (text: string): string =>

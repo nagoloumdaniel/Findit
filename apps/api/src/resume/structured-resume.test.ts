@@ -65,6 +65,53 @@ describe("structuredResumeSchema", () => {
     expect(parsed.confidence).toBe(82);
   });
 
+  it("accepts links and dates exactly as real resumes write them", () => {
+    // Cas payé sur un vrai CV : liens sans protocole et « date » en phrase.
+    const parsed = structuredResumeSchema.parse({
+      facts: {
+        identity: { fullName: "Daniel Test" },
+        education: [
+          {
+            school: "INGETIS",
+            degree: "Mastère Développement Full-Stack",
+            endDate: "admission prévue, rentrée 2026 - alternance 24 mois",
+          },
+        ],
+        experiences: [],
+        projects: [
+          { name: "Thebarber", url: "github.com/Nagoloum/Thebarber", skills: [] },
+          { name: "Portfolio", url: "https://nagoloum.vercel.app", skills: [] },
+        ],
+        skills: [],
+        languages: [],
+        certifications: [],
+        links: [{ label: "LinkedIn", url: "linkedin.com/in/nagoloum" }],
+      },
+      warnings: [],
+      confidence: 90,
+    });
+
+    expect(parsed.facts.projects[0]?.url).toBe("github.com/Nagoloum/Thebarber");
+
+    // Une non-adresse reste refusée : la tolérance ne devient pas du laisser-passer.
+    expect(() =>
+      structuredResumeSchema.parse({
+        facts: {
+          identity: {},
+          education: [],
+          experiences: [],
+          projects: [{ name: "X", url: "pas une adresse du tout", skills: [] }],
+          skills: [],
+          languages: [],
+          certifications: [],
+          links: [],
+        },
+        warnings: [],
+        confidence: 90,
+      }),
+    ).toThrow();
+  });
+
   it("rejects unknown fields instead of storing model inventions", () => {
     expect(() =>
       structuredResumeSchema.parse({

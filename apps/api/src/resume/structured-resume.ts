@@ -3,7 +3,23 @@ import { z } from "zod";
 const shortText = z.string().trim().min(1).max(200);
 const mediumText = z.string().trim().min(1).max(1000);
 const longText = z.string().trim().min(1).max(4000);
-const dateText = z.string().trim().min(1).max(40);
+/*
+ * Une « date » de CV est parfois une phrase lue telle quelle - « admission
+ * prévue, rentrée 2026 » - et la recopier est plus fidèle que la refuser.
+ * Constaté sur un CV réel : 40 caractères rejetaient toute l'extraction.
+ */
+const dateText = z.string().trim().min(1).max(120);
+/*
+ * Les CV écrivent leurs liens sans protocole (« github.com/x/y ») : exiger
+ * une URL complète rejetait des faits exacts. On accepte la forme écrite dans
+ * le document - domaine plausible, sans espace - sans la réécrire.
+ */
+const urlText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .regex(/^(https?:\/\/)?[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i, "URL invalide");
 
 const skillCategorySchema = z.enum([
   "programming_language",
@@ -56,7 +72,7 @@ const projectSchema = z
   .object({
     name: shortText.optional(),
     description: longText.optional(),
-    url: z.string().trim().url().max(500).optional(),
+    url: urlText.optional(),
     skills: z.array(shortText).max(40).default([]),
   })
   .strict();
@@ -87,7 +103,7 @@ const certificationSchema = z
 const linkSchema = z
   .object({
     label: shortText,
-    url: z.string().trim().url().max(500),
+    url: urlText,
   })
   .strict();
 
