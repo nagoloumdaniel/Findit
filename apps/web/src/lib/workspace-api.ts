@@ -109,6 +109,89 @@ export const structureResume = (key: string, id: string): Promise<WorkspaceResul
 export const removeResume = (key: string, id: string): Promise<WorkspaceResult<undefined>> =>
   request<undefined>(key, `/api/resumes/${id}`, { method: "DELETE" });
 
+export type OfferSummary = {
+  slug: string;
+  title: string;
+  companyName: string;
+  city: string;
+  contractType: string;
+  isDemo: boolean;
+};
+
+export type MatchCriterion = {
+  criterion: string;
+  weight: number;
+  rawScore: number;
+  points: number;
+  details: string[];
+};
+
+export type MatchView = {
+  job: { slug: string; title: string; companyName: string };
+  score: number;
+  scoreBreakdown: MatchCriterion[];
+  matchedSkills: string[];
+  missingSkills: string[];
+  missingKeywords: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  confidence: number;
+  insufficientDataWarning: string | null;
+  computedAt: string;
+};
+
+export type LetterView = {
+  job: { slug: string; title: string; companyName: string };
+  subject: string;
+  paragraphs: string[];
+  usedFacts: string[];
+  warnings: string[];
+  generatedAt: string;
+};
+
+/** Les offres publiées sont publiques : pas de clé, mêmes états d'erreur. */
+export const fetchPublishedOffers = async (): Promise<WorkspaceResult<OfferSummary[]>> => {
+  try {
+    const response = await fetch(new URL("/api/jobs?freshness=LAST_72H", baseUrl()));
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        message: "La liste des offres est indisponible.",
+      };
+    }
+    const data = (await response.json()) as { items: OfferSummary[] };
+    return { ok: true, data: data.items };
+  } catch {
+    return { ok: false, status: 0, message: "L'API est injoignable." };
+  }
+};
+
+export const computeMatch = (
+  key: string,
+  resumeId: string,
+  slug: string,
+): Promise<WorkspaceResult<MatchView>> =>
+  request<MatchView>(key, `/api/resumes/${resumeId}/matches/${slug}`, { method: "POST" });
+
+export const listMatches = (key: string, resumeId: string): Promise<WorkspaceResult<MatchView[]>> =>
+  request<MatchView[]>(key, `/api/resumes/${resumeId}/matches`);
+
+/** Long : le modèle local rédige en 30 à 60 s. Pas de délai imposé ici. */
+export const generateLetter = (
+  key: string,
+  resumeId: string,
+  slug: string,
+): Promise<WorkspaceResult<LetterView>> =>
+  request<LetterView>(key, `/api/resumes/${resumeId}/letters/${slug}`, { method: "POST" });
+
+export const listLetters = (
+  key: string,
+  resumeId: string,
+): Promise<WorkspaceResult<LetterView[]>> =>
+  request<LetterView[]>(key, `/api/resumes/${resumeId}/letters`);
+
 /*
  * Un lien ne peut pas porter l'en-tête de clé : le PDF se télécharge donc par
  * fetch, puis un lien temporaire vers le blob déclenche l'enregistrement.

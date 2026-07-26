@@ -13,6 +13,7 @@ import {
   type ResumeDetail,
   type ResumeSummary,
 } from "../../lib/workspace-api";
+import { ApplicationPanel } from "./application-panel";
 import { ResumeCard } from "./resume-card";
 
 /*
@@ -316,6 +317,15 @@ export const WorkspacePanel = () => {
           ))}
         </div>
       )}
+
+      {/* La candidature s'appuie sur le CV structuré le plus récent : les
+          scores se calculent et les lettres se relisent depuis la même page. */}
+      {(() => {
+        const structured = resumes.find((resume) => resume.structuredAt !== null);
+        return structured === undefined ? null : (
+          <ApplicationPanel workspaceKey={key} resume={structured} />
+        );
+      })()}
     </div>
   );
 };
