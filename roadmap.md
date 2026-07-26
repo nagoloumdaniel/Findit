@@ -178,7 +178,7 @@ Espace prive
 | Matching CV/offre    | Absent            | Moteur + routes gardees       | `SourceResumeMatch`  | Oui   | Backend fonctionnel         | P1       |
 | GitHub               | Absent            | Absent                        | Absent               | Non   | Absent                      | P2       |
 | Generation documents | Absent            | PDF CV + lettre generee       | `SourceCoverLetter`  | Oui   | Partiel, DOCX absent        | P1       |
-| Suivi candidatures   | Absent            | Absent                        | Absent               | Non   | Absent                      | P1       |
+| Suivi candidatures   | Absent            | CRUD + historique             | `Application*`       | Oui   | Backend fonctionnel         | P1       |
 | Admin                | Absent            | Absent                        | Partiel via logs     | Non   | Absent                      | P3       |
 | CI/CD                | Absent            | N/A                           | N/A                  | Non   | Absent                      | P2       |
 
@@ -476,7 +476,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 
 ### Phase 10 - Suivi des candidatures
 
-- [ ] Creer le dossier de candidature
+- [x] Creer le dossier de candidature
   - Priorite : P1
   - Complexite : M
   - Criteres d'acceptation :
@@ -484,7 +484,7 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
     - Les statuts ont un historique.
     - Les offres expirees restent consultables dans le dossier.
   - Tests : API + base
-  - Resultat :
+  - Resultat : `Application` (instantanes offre/CV/score/lettre, lien vivant en SetNull) + `ApplicationEvent` (historique date, jamais reecrit), migration `20260726210000_application_tracking` sans derive ; routes gardees POST/GET/PATCH/DELETE `/api/applications`, `appliedAt` fixe une seule fois au passage a APPLIED ; prouve sur le reel avec le vrai CV du proprietaire le 2026-07-26 ; valide par ordre utilisateur du 2026-07-26. UI de suivi dans /espace en brique suivante.
 
 - [ ] Ajouter rappels et statistiques personnelles
   - Priorite : P2
@@ -637,6 +637,13 @@ Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnp
 | 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
 
 ## 13. Journal d'avancement
+
+### 2026-07-26 (suite 4) - socle du suivi des candidatures
+
+- Taches terminees et validees : modeles `Application` (instantanes offre/CV/score/lettre) et `ApplicationEvent` (historique date), migration additive sans derive, routes gardees POST/GET/PATCH/DELETE `/api/applications`, `appliedAt` fixe une seule fois au passage a APPLIED. Ordre utilisateur du 2026-07-26.
+- Preuve sur le reel : 401 sans cle ; dossier cree depuis l'offre demo avec les instantanes du vrai CV du proprietaire (nom de fichier, score 34) ; passage a APPLIED avec note et historique TO_APPLY > APPLIED ; 204 puis 404 a la suppression ; base laissee propre.
+- Controles : format, lint 29/29, typecheck 29/29, test 29/29 (88 tests API), build 17/17.
+- Brique suivante ordonnee : UI de suivi dans /espace.
 
 ### 2026-07-26 (suite 3) - candidature dans le navigateur
 

@@ -4,8 +4,7 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-26, après la candidature complète dans le navigateur :
-scores expliqués et lettres relisibles dans /espace.
+À jour au 2026-07-26, après le socle du suivi des candidatures (base + API).
 
 ---
 
@@ -225,6 +224,15 @@ le code et les commits tranchent.
   stockés rechargés à l'ouverture. Validé par le propriétaire dans le
   navigateur. Le parcours complet vit désormais dans la page : importer,
   structurer, scorer, lettre, PDF, supprimer.
+- **Suivi des candidatures, socle** (2026-07-26) : `Application` photographie
+  l'offre, le nom du CV, le score et la lettre au moment de candidater - le
+  dossier survit à l'expiration de l'offre et à la purge du CV.
+  `ApplicationEvent` historise chaque changement de statut (à postuler,
+  envoyée, entretien, offre reçue, refusée, abandonnée) ; le passage à
+  « envoyée » fixe `appliedAt` une seule fois. Routes gardées
+  POST/GET/PATCH/DELETE `/api/applications`. Prouvé sur le réel avec le vrai
+  CV du propriétaire (instantanés constatés, historique daté, base laissée
+  propre). L'UI de suivi dans /espace est la brique suivante.
 
 ### Pas encore fait
 
