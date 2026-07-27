@@ -93,6 +93,9 @@ export type {
 export { collectDiscoveries, recognizeTarget } from "./discovery.js";
 export type { DiscoveredTarget, DiscoveryOutcome } from "./discovery.js";
 
+export { CAREER_SCAN_ATS, extractAtsReferences } from "./career-scan.js";
+export type { CareerScanFinding } from "./career-scan.js";
+
 export { listCollectableSources, registerDiscoveredSource } from "./discovered-sources.js";
 export type { CollectableSource, DiscoveredSource } from "./discovered-sources.js";
 

@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint src sync-registry.ts --max-warnings=0",
+    "careers:scan": "tsx scan-career-sites.ts",
+    "lint": "eslint src sync-registry.ts scan-career-sites.ts --max-warnings=0",
     "registry:sync": "tsx sync-registry.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
