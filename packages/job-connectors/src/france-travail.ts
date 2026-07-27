@@ -8,8 +8,9 @@ import type { CollectionPermit } from "./permit.js";
 export const FRANCE_TRAVAIL_CONNECTOR_NAME = "france-travail";
 
 /**
- * France Travail plafonne ses API à quelques appels par seconde et par clé.
- * Une requête par seconde reste loin du plafond, par prudence.
+ * France Travail annonce jusqu'à 10 requêtes par seconde et par clé
+ * (précision du propriétaire, 2026-07-27). Une requête par seconde suffit
+ * largement - un cycle tient en quelques pages - et reste loin du plafond.
  */
 export const FRANCE_TRAVAIL_REQUEST_INTERVAL_MS = 1000;
 
@@ -30,6 +31,17 @@ const SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/off
 
 /** Périmètre du jeton demandé : l'API Offres d'emploi v2, rien d'autre. */
 const TOKEN_SCOPE = "api_offresdemploiv2 o2dsoffre";
+
+/**
+ * France Travail publie beaucoup d'offres sans employeur structuré - dépôts
+ * anonymes ou via partenaires, où `entreprise.nom` manque (constaté le
+ * 2026-07-26 : 12 offres sur 21 en un mois). Le nom réel traîne parfois dans
+ * la prose de `entreprise.description`, mais l'en extraire serait deviner.
+ * Ce libellé dit exactement ce que la source dit : l'employeur est inconnu.
+ * Ce n'est pas un nom inventé, c'est une absence nommée - le mot est celui
+ * choisi par le propriétaire (2026-07-27).
+ */
+export const FRANCE_TRAVAIL_ANONYMOUS_EMPLOYER = "Inconnu";
 
 /**
  * Codes du référentiel `naturesContrats` de l'API : E2 = contrat
@@ -134,8 +146,10 @@ const toRawJob = (raw: unknown, position: number): RawJob => {
     descriptionHtml: offre.description ?? null,
     publishedAt: parsePublishedAt(offre.dateCreation),
     // L'API traverse toutes les entreprises : l'employeur est celui que
-    // l'offre porte, jamais un libellé de requête.
-    companyName: offre.entreprise?.nom ?? null,
+    // l'offre porte, jamais un libellé de requête. Quand la source ne le
+    // communique pas, le libellé le dit - sans lui, l'orchestrateur
+    // rejetterait plus de la moitié d'un flux déjà maigre.
+    companyName: offre.entreprise?.nom ?? FRANCE_TRAVAIL_ANONYMOUS_EMPLOYER,
     rawContent: JSON.stringify(raw),
     contentType: "application/json",
   };

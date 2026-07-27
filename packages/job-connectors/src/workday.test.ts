@@ -203,6 +203,30 @@ describe("workdayConnector", () => {
     expect(detailCalls).toEqual([]);
   });
 
+  it("reads the French labels the same source serves to Node", async () => {
+    // Relevé sur bdf.wd103.myworkdayjobs.com le 2026-07-26 : même flux, autre
+    // langue selon le client. Vieux certain écarté, « hier » lu comme frais.
+    const fetchStub = respondWith({
+      listings: [
+        { ...staleListing, postedOn: "Offre publiée il y a 30 jours ou plus" },
+        {
+          ...staleListing,
+          externalPath: "/job/x/Vieille_JR-2",
+          postedOn: "Offre publiée il y a 16 jours",
+        },
+        { ...freshListing, postedOn: "Offre publiée hier" },
+      ],
+    });
+
+    const outcome = await runConnector(workdayConnector, registration, target, deps(fetchStub));
+
+    expect(outcome.jobs).toHaveLength(1);
+    const detailCalls = fetchStub.mock.calls.filter((call) =>
+      urlOf(call).includes("/wday/cxs/workday/Workday/job/"),
+    );
+    expect(detailCalls).toHaveLength(1);
+  });
+
   it("asks the same posting's detail once even when both searches return it", async () => {
     const fetchStub = respondWith({ listings: [freshListing] });
 

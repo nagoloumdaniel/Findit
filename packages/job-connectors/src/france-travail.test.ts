@@ -155,6 +155,21 @@ describe("createFranceTravailConnector", () => {
     });
   });
 
+  it("names the absence when the source withholds the employer", async () => {
+    // Constaté le 2026-07-26 : les dépôts anonymes ou via partenaires n'ont
+    // pas de `entreprise.nom` - seulement une prose dans `description`, d'où
+    // rien ne doit être extrait.
+    const offre = {
+      ...realOffre,
+      entreprise: { description: "Sopra Steria, acteur majeur de la Tech en Europe..." },
+    };
+    const fetchStub = respondWith([{ status: 200, payload: { resultats: [offre] } }]);
+
+    const outcome = await runConnector(connector, registration, target, deps(fetchStub));
+
+    expect(outcome.jobs[0]?.companyName).toBe("Inconnu");
+  });
+
   it("keeps a plain commune label untouched", async () => {
     const offre = { ...realOffre, lieuTravail: { libelle: "92 - Courbevoie" } };
     const fetchStub = respondWith([{ status: 200, payload: { resultats: [offre] } }]);

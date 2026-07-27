@@ -53,8 +53,14 @@ const MAX_PAGES_PER_SEARCH = 10;
  * Plafond de fiches détaillées par collecte. Le détail est indispensable - lui
  * seul porte la date absolue et la description - mais une requête par offre se
  * paie : au-delà, la collecte lève plutôt que de rendre une liste amputée.
+ *
+ * 150 parce qu'Eiffage existe : constaté le 2026-07-26, ses listes ne portent
+ * aucun `postedOn`, donc ses ~80 offres méritent toutes le détail. À une
+ * requête par seconde, 150 fiches restent une visite de deux minutes et
+ * demie ; un locataire qui en demande plus mérite un refus explicite, pas une
+ * liste silencieusement tronquée.
  */
-const MAX_DETAILS = 60;
+const MAX_DETAILS = 150;
 
 /*
  * Forme relevée sur workday.wd5.myworkdayjobs.com/wday/cxs/workday/Workday/jobs
@@ -132,29 +138,42 @@ const parseSite = (atsIdentifier: string): WorkdaySite => {
 };
 
 /**
- * Le libellé relatif dit-il que l'offre est encore fraîche ? « Posted
- * Today », « Posted Yesterday » et « Posted N Days Ago » (N ≤ 4) méritent le
- * détail - la fenêtre de publication du projet est de 72 h, un jour de marge
- * absorbe les fuseaux. Un libellé illisible mérite aussi le détail : dans le
- * doute, on lit la vraie date plutôt que de deviner. Seul le vieux certain
- * (« 30+ Days Ago », N > 4) est écarté sans requête.
+ * Le libellé relatif dit-il que l'offre est encore fraîche ? « aujourd'hui »,
+ * « hier » et « il y a N jours » (N ≤ 4) méritent le détail - la fenêtre de
+ * publication du projet est de 72 h, un jour de marge absorbe les fuseaux. Un
+ * libellé illisible mérite aussi le détail : dans le doute, on lit la vraie
+ * date plutôt que de deviner. Seul le vieux certain est écarté sans requête.
+ *
+ * La même source parle deux langues selon le client - constaté le 2026-07-26
+ * sur bdf.wd103 : « Posted 30+ Days Ago » à curl, « Offre publiée il y a 30
+ * jours ou plus » au fetch de Node. Le lecteur doit comprendre les deux,
+ * sinon tout paraît frais et le plafond de fiches saute.
  */
+const FRESH_HINTS = /today|aujourd|yesterday|\bhier\b/u;
+
+const AGE_PATTERNS = [
+  /posted\s+(?<count>\d+)\+?\s+days?\s+ago/u,
+  /il\s+y\s+a\s+(?<count>\d+)\s+jours?/u,
+] as const;
+
 const deservesDetail = (postedOn: string | null | undefined): boolean => {
   if (postedOn === null || postedOn === undefined) {
     return true;
   }
 
   const label = postedOn.toLowerCase();
-  if (label.includes("today") || label.includes("yesterday")) {
+  if (FRESH_HINTS.test(label)) {
     return true;
   }
 
-  const days = /posted\s+(?<count>\d+)\+?\s+days?\s+ago/u.exec(label);
-  if (days?.groups?.["count"] === undefined) {
-    return true;
+  for (const pattern of AGE_PATTERNS) {
+    const count = pattern.exec(label)?.groups?.["count"];
+    if (count !== undefined) {
+      return Number(count) <= 4;
+    }
   }
 
-  return Number(days.groups["count"]) <= 4;
+  return true;
 };
 
 const parseStartDate = (startDate: string | null | undefined): Date | null => {
