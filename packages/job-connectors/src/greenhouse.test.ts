@@ -166,6 +166,16 @@ describe("greenhouseConnector", () => {
     expect(outcome.jobs[0]).toMatchObject({ descriptionHtml: null, locationLabel: null });
   });
 
+  it("accepts a location whose name is null, as a real board writes it", async () => {
+    // Constaté le 2026-07-27 : une seule offre ainsi faite faisait échouer la
+    // collecte du board entier.
+    const fetchStub = respondWith(boardPayload([{ ...realJob, location: { name: null } }]));
+
+    const outcome = await runConnector(greenhouseConnector, registration, target, deps(fetchStub));
+
+    expect(outcome.jobs[0]).toMatchObject({ locationLabel: null });
+  });
+
   it("raises when the envelope changed shape instead of reporting an empty board", async () => {
     const fetchStub = respondWith({ postings: [] });
 

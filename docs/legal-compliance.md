@@ -251,6 +251,19 @@ Le lecteur de `robots.txt` est vérifié contre les cinq fichiers réels de ce d
 est SmartRecruiters : son groupe `LinkedInBot` ne doit **jamais** s'appliquer à `FinditBot`, qui tombe
 sous le `Disallow: /` de `User-agent: *`.
 
+### Le scan des sites carrières
+
+Décidé le 2026-07-27 (ordre du propriétaire : chercher aussi sur les sites carrières de son
+annuaire). `pnpm careers:scan` visite le site carrière des entreprises du registre qui n'ont pas
+encore de source collectable, sous les mêmes règles que tout le reste : `robots.txt` du domaine lu
+d'abord, verdict `ALLOWED` exigé pour le chemin visé (silence, absence ou refus = on ne visite
+pas), identité FinditBot annoncée, une requête par seconde, une seule lecture par site.
+
+La page n'est PAS une source d'offres : elle n'est lue que pour y trouver un lien Greenhouse,
+Lever ou Workday, qui devient une source collectable rattachée à l'entreprise. Le texte de la
+page n'est jamais conservé. Premier passage réel le 2026-07-27 : 392 sites visés, 188 lus, 137
+refusés par leur robots.txt - et respectés -, 26 sources enregistrées.
+
 Ce que le registre dynamique ne permet toujours pas :
 
 - collecter une source dont le `robots.txt` interdit le chemin, même si elle répond `200` ;

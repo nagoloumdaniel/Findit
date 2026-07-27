@@ -646,6 +646,10 @@ Vision : plus d'offres reelles sans attendre la seule saison Greenhouse/Lever/Wo
 - [x] Cycle complet reel avec les nouvelles sources : 4 622 offres vues, 2 acceptees (les FT), 11 locataires Workday decouverts et enregistres par Brave (Banque de France, Chanel, Eiffage, Pernod Ricard, Pierre Fabre, Ipsen, Ardian, Dentsu, 3 ecoles Galileo)
 - [x] Workday : libelles relatifs bilingues (meme flux : « Posted 30+ Days Ago » a curl, « Offre publiee il y a 30 jours ou plus » a Node - constate sur bdf.wd103) et plafond de fiches a 150 (Eiffage n'envoie aucun postedOn, ses 80 offres meritent toutes le detail). Contre-epreuve reelle : BDF 2 offres datees, Eiffage 80 offres datees
 - [x] Donnees demo supprimees sur ordre du proprietaire (2026-07-27) : la base publique ne porte plus que de vraies offres
+- [x] Fenetre par defaut passee a 3 jours et tri du plus recent au plus ancien (ordre du proprietaire, 2026-07-27) - corrige aussi la page detail qui disait « offre plus disponible » a une offre de 45 h (le defaut 24 h la masquait)
+- [x] Scan des sites carrieres de l'annuaire (pnpm careers:scan) : robots.txt lu par domaine (ALLOWED exige), page lue une fois, liens Greenhouse/Lever/Workday extraits et rattaches a l'entreprise deja connue. Premier passage reel 2026-07-27 : 392 vises, 188 pages lues, 137 refus robots respectes, 67 injoignables, 26 sources collectables enregistrees (Accenture, Airbus, Canonical, Palantir, Mastercard, Valeo, Onepoint, MBDA, Aircall...). Rejouable a volonte, idempotent
+- [!] LinkedIn (posts et emplois) : REFUS de conformite maintenu - les conditions LinkedIn interdisent la collecte automatisee, aucune API publique pour cet usage (registre, verifie 2026-07-17). La voie legale equivalente est en place : les offres LinkedIn pointent presque toujours vers l'ATS de l'entreprise, que Findit collecte a la source
+- [x] « Google sites carrieres » : la voie legale est la recherche Brave (site: sur les ATS autorises, tous couverts a chaque cycle) + le scan direct des sites carrieres de l'annuaire - scraper Google directement est interdit par ses conditions, comme LinkedIn
 
 ## 11. Bugs connus
 

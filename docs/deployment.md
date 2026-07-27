@@ -64,6 +64,7 @@ pnpm infra:up                 # postgres + redis
 pnpm db:migrate               # migrations, additives uniquement
 pnpm registry:sync            # registre de conformité des connecteurs
 pnpm db:import-companies      # annuaire d'entreprises (packages/database/data)
+pnpm careers:scan             # trouve les ATS des sites carrières (robots.txt respecté)
 ollama pull qwen2.5:7b
 ```
 

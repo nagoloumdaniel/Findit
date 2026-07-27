@@ -33,7 +33,9 @@ const jobSchema = z.object({
   id: z.number(),
   absolute_url: z.string(),
   title: z.string(),
-  location: z.object({ name: z.string() }).nullish(),
+  // `name` peut être nul : constaté le 2026-07-27 sur un board réel, où une
+  // seule offre sans lieu faisait échouer toute la collecte du board.
+  location: z.object({ name: z.string().nullish() }).nullish(),
   content: z.string().nullish(),
   /** Date de première publication. C'est elle qui fait foi, pas `updated_at`. */
   first_published: z.string().nullish(),

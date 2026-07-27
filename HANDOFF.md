@@ -281,6 +281,14 @@ le code et les commits tranchent.
   URLs `myworkdayjobs.com` et les requêtes couvrent désormais tous les ATS à
   chaque cycle. SuccessFactors vérifié le 2026-07-26 : pas de flux stable,
   reste fermé au registre.
+- **Scan des sites carrières (2026-07-27)** : `pnpm careers:scan` visite les
+  sites carrières de l'annuaire sans source collectable, robots.txt lu
+  d'abord (refus respecté), et en extrait les liens Greenhouse/Lever/Workday
+  rattachés à l'entreprise déjà connue. Premier passage réel : 26 sources
+  enregistrées (Accenture, Airbus, Canonical, Palantir, Mastercard, Valeo,
+  Onepoint...). LinkedIn reste REFUSÉ - conditions d'utilisation, aucune API
+  publique (registre) ; la fenêtre publique par défaut est passée à 3 jours,
+  tri du plus récent au plus ancien (ordre du propriétaire).
 
 ### Pas encore fait
 
