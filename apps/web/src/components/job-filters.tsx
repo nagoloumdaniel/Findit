@@ -72,7 +72,8 @@ const FilterGroup = ({ title, paramKey, current, allLabel, options, labels }: Gr
 };
 
 export const JobFilters = ({ options, current }: JobFiltersProps) => {
-  const freshness = current.get("freshness") ?? "LAST_24H";
+  // 3 jours est le défaut (choix du propriétaire) ; 24 heures resserre.
+  const freshness = current.get("freshness") ?? "LAST_72H";
 
   return (
     <section className="filters" aria-label="Filtres">
@@ -82,19 +83,19 @@ export const JobFilters = ({ options, current }: JobFiltersProps) => {
           <li>
             <Link
               href={linkFor(current, "freshness", null)}
-              aria-current={freshness === "LAST_24H" ? "true" : undefined}
-              className="filter-chip"
-            >
-              Dernières 24 heures
-            </Link>
-          </li>
-          <li>
-            <Link
-              href={linkFor(current, "freshness", "LAST_72H")}
               aria-current={freshness === "LAST_72H" ? "true" : undefined}
               className="filter-chip"
             >
               3 derniers jours
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={linkFor(current, "freshness", "LAST_24H")}
+              aria-current={freshness === "LAST_24H" ? "true" : undefined}
+              className="filter-chip"
+            >
+              Dernières 24 heures
             </Link>
           </li>
         </ul>

@@ -58,16 +58,16 @@ export default async function HomePage({ searchParams }: PageProps) {
         </nav>
         <h1>Alternances développeur en Île-de-France</h1>
         <p className="intro">
-          Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des
-          dernières 24 heures. Les stages, le mobile et les métiers de la data restent à un filtre
-          près.
+          Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des 3
+          derniers jours, de la plus récente à la plus ancienne. Les stages, le mobile et les
+          métiers de la data restent à un filtre près.
         </p>
 
         {stats.ok ? (
           <p className="hero-note">
-            {stats.data.publishedLast24h === 0
-              ? "Aucune offre publiée durant les dernières 24 heures."
-              : `${stats.data.publishedLast24h} offre${stats.data.publishedLast24h > 1 ? "s" : ""} publiée${stats.data.publishedLast24h > 1 ? "s" : ""} durant les dernières 24 heures.`}
+            {stats.data.publishedLast72h === 0
+              ? "Aucune offre publiée durant les 3 derniers jours."
+              : `${stats.data.publishedLast72h} offre${stats.data.publishedLast72h > 1 ? "s" : ""} publiée${stats.data.publishedLast72h > 1 ? "s" : ""} durant les 3 derniers jours.`}
             {stats.data.lastPublishedAt
               ? ` Dernière publication le ${exactDateTime(stats.data.lastPublishedAt)}.`
               : null}

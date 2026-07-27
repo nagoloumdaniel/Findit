@@ -10,11 +10,13 @@ import { z } from "zod";
  * Les valeurs acceptées viennent toutes de `@findit/shared` : le périmètre est
  * défini une seule fois et l'API ne peut pas s'en écarter silencieusement.
  *
- * La fenêtre par défaut est de 24 heures. Aucune valeur ne permet d'aller
- * au-delà de 72 heures : une offre plus ancienne n'est jamais exposée.
+ * La fenêtre par défaut est de 3 jours (choix du propriétaire, 2026-07-27) -
+ * toute la fenêtre de publication. « 24 heures » reste un resserrement
+ * possible. Aucune valeur ne permet d'aller au-delà de 72 heures : une offre
+ * plus ancienne n'est jamais exposée.
  */
 export const jobQuerySchema = z.object({
-  freshness: z.enum(["LAST_24H", "LAST_72H"]).default("LAST_24H"),
+  freshness: z.enum(["LAST_24H", "LAST_72H"]).default("LAST_72H"),
   /*
    * Sans filtre, le flux s'en tient au défaut de `@findit/shared` : les
    * alternances des métiers du développement. `role=DATA_ANALYST` ou
