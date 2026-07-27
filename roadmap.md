@@ -620,7 +620,7 @@ Vision : une page principale unique, sans cle a saisir, ou la recherche se fait 
   - Priorite : P1
   - Attente : la liste (≈400 entreprises + sites carrieres) doit etre fournie en texte/CSV - une image ne suffit pas pour recopier des URL sans risque d'invention.
   - Regle maintenue : seuls les sites sur Greenhouse/Lever/Workable ou dont robots.txt autorise FinditBot deviennent collectables ; les autres sont enregistres mais non collectes (registre de conformite).
-- [ ] Supprimer les donnees de demonstration une fois de vraies offres presentes
+- [x] Supprimer les donnees de demonstration une fois de vraies offres presentes (fait le 2026-07-27 : 6 offres isDemo et 2 entreprises demo supprimees, il ne reste que du reel ; le seed demeure un outil de dev manuel, aucun chemin de production ne l'appelle)
 - [x] Cle privee memorisee : plus de saisie a chaque visite (localStorage, bouton Verrouiller pour l'oublier)
 - [ ] Page unique avec bouton Filtres (dates, metiers, contrats, departements, presence) repliables
 - [ ] Cartes d'offres : lien externe seul quand l'extraction a echoue, page detail quand elle a reussi
@@ -642,7 +642,10 @@ Vision : plus d'offres reelles sans attendre la seule saison Greenhouse/Lever/Wo
 - [x] Connecteur Workday (flux CXS par locataire) : robots.txt du locataire relu AVANT CHAQUE collecte (ALLOWED exige, Crawl-delay intenable = refus), listes en POST, detail par offre fraiche (date absolue startDate, description, URL officielle). Preuve reelle 2026-07-26 : Thales refuse (Disallow), Workday collecte (Allow)
 - [x] Decouverte web elargie : URLs myworkdayjobs.com reconnues (cible hote/site), requetes site: reordonnees pour que chaque cycle couvre TOUS les ATS autorises au lieu d'epuiser le premier
 - [x] SuccessFactors verifie le 2026-07-26 et reste ferme : aucun flux public stable, verification par locataire requise - constat au registre
-- [ ] Inscription francetravail.io par le proprietaire, puis premiere collecte reelle France Travail a constater
+- [x] Premiere collecte reelle France Travail (2026-07-26, identifiants du proprietaire) : 2 offres fraiches d'alternance developpeur en Ile-de-France, ACCEPTEES et PUBLIEES en base - les deux premieres vraies offres du site. Ajustement constate : beaucoup d'offres FT n'ont pas d'employeur structure (depots anonymes/partenaires) - libelle « Inconnu » (mot choisi par le proprietaire), jamais un nom extrait de la prose ; limite officielle 10 req/s par cle, cadence gardee a 1 req/s
+- [x] Cycle complet reel avec les nouvelles sources : 4 622 offres vues, 2 acceptees (les FT), 11 locataires Workday decouverts et enregistres par Brave (Banque de France, Chanel, Eiffage, Pernod Ricard, Pierre Fabre, Ipsen, Ardian, Dentsu, 3 ecoles Galileo)
+- [x] Workday : libelles relatifs bilingues (meme flux : « Posted 30+ Days Ago » a curl, « Offre publiee il y a 30 jours ou plus » a Node - constate sur bdf.wd103) et plafond de fiches a 150 (Eiffage n'envoie aucun postedOn, ses 80 offres meritent toutes le detail). Contre-epreuve reelle : BDF 2 offres datees, Eiffage 80 offres datees
+- [x] Donnees demo supprimees sur ordre du proprietaire (2026-07-27) : la base publique ne porte plus que de vraies offres
 
 ## 11. Bugs connus
 

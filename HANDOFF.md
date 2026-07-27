@@ -14,8 +14,9 @@ Sources élargies (ordre du propriétaire) : connecteur France Travail écrit
 inscription gratuite sur francetravail.io à faire par le propriétaire) et
 connecteur Workday actif (robots.txt du locataire relu avant chaque collecte ;
 prouvé en réel : Thales refusé, Workday collecté). SuccessFactors vérifié et
-resté fermé. En attente : suppression des données démo dès les premières
-vraies offres collectées (en saison).
+resté fermé. Première collecte réelle France Travail (2026-07-26) : les deux
+premières vraies offres du site sont publiées, et les données démo ont été
+supprimées (2026-07-27) - la base publique ne porte plus que du réel.
 
 ---
 
@@ -294,9 +295,18 @@ le code et les commits tranchent.
 ### Un résultat à connaître avant de crier au bug
 
 En juillet, **hors saison**, aucune alternance développeur en Île-de-France
-n'existe sur les ATS autorisés. Vérifié sur 462 offres réelles et par recherche
-web. Une collecte qui remonte zéro offre exploitable **n'est pas forcément
-cassée** - vérifier la saison avant de suspecter la chaîne.
+n'existe sur les ATS d'entreprise autorisés (Greenhouse, Lever, Workable).
+Vérifié sur 462 offres réelles et par recherche web. Une collecte qui remonte
+zéro offre exploitable de ces sources **n'est pas forcément cassée** -
+vérifier la saison avant de suspecter la chaîne.
+
+Nuance depuis le 2026-07-26 : **France Travail rend des offres même en
+juillet**. La première collecte réelle a publié les deux premières vraies
+offres du site (alternance développeur, Nanterre et Chatou, fraîches de la
+veille). Les données démo ont été supprimées le 2026-07-27 sur ordre du
+propriétaire : la base publique ne porte plus que du réel. `pnpm db:seed`
+reste un outil de développement manuel - aucun chemin de production ne
+l'appelle.
 
 ---
 

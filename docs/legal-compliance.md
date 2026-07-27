@@ -153,16 +153,18 @@ vaut « Île-de-France ». Aucun des autres ATS vérifiés ne donne cette inform
 | Statut              | `OFFICIAL_API` - **activable**                                                                           |
 | Accès               | `GET https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search`                             |
 | Authentification    | OAuth2 « client credentials » (`entreprise.francetravail.fr`), inscription gratuite sur francetravail.io |
-| Limite annoncée     | Quelques appels/seconde par clé                                                                          |
-| Cadence à appliquer | 1 requête/seconde, par prudence                                                                          |
+| Limite annoncée     | 10 requêtes/seconde par clé                                                                              |
+| Cadence à appliquer | 1 requête/seconde - largement suffisant, loin du plafond                                                 |
 | Vérifié le          | 2026-07-26                                                                                               |
 
 C'est l'API officielle de l'État, conçue exactement pour cet usage : le régime d'accès le plus
 clair du registre. L'accès exige un compte partenaire (gratuit) et ses identifiants ; sans eux, le
 connecteur n'est pas monté dans le cycle. Le filtre serveur porte l'alternance (`natureContrat`),
 la région (`region=11`) et la fraîcheur (`publieeDepuis=3`). Les identifiants restent côté
-serveur - jamais dans le navigateur, un log ou la base. La forme exacte des réponses sera
-confirmée à la première collecte réelle, les identifiants n'existant pas encore.
+serveur - jamais dans le navigateur, un log ou la base. Forme confirmée à la première collecte
+réelle le 2026-07-26 : 2 offres fraîches d'alternance développeur en Île-de-France, acceptées et
+publiées. Beaucoup d'offres n'ont pas d'employeur structuré (dépôts anonymes ou partenaires) :
+elles portent le libellé « Inconnu » - l'absence est nommée, jamais un nom extrait de la prose.
 
 ### Workday
 
