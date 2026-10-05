@@ -68,4 +68,33 @@ describe("parseDatabaseEnv", () => {
     expect(() => parseDatabaseEnv({})).toThrow();
     expect(() => parseDatabaseEnv({ DATABASE_URL: "not-a-url" })).toThrow();
   });
+
+  it("accepts a remote database URL that requires TLS", () => {
+    const url = "postgresql://u:p@ep-x.neon.tech/neondb?sslmode=require";
+    expect(parseDatabaseEnv({ DATABASE_URL: url }).DATABASE_URL).toContain("sslmode=require");
+  });
+
+  it("refuses a remote database URL without TLS, without echoing the URL", () => {
+    const url = "postgresql://u:supersecret@ep-x.neon.tech/neondb";
+    let message = "";
+    try {
+      parseDatabaseEnv({ DATABASE_URL: url });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toContain("sslmode=require");
+    expect(message).not.toContain("supersecret");
+  });
+
+  it("keeps a local database URL usable without TLS", () => {
+    expect(parseDatabaseEnv({ DATABASE_URL: required.DATABASE_URL }).DATABASE_URL).toBe(
+      required.DATABASE_URL,
+    );
+  });
+
+  it("applies the TLS rule to the API and worker too", () => {
+    const remote = "postgresql://u:p@ep-x.neon.tech/neondb";
+    expect(() => parseApiEnv({ ...required, DATABASE_URL: remote })).toThrow();
+    expect(() => parseWorkerEnv({ REDIS_URL: required.REDIS_URL, DATABASE_URL: remote })).toThrow();
+  });
 });
