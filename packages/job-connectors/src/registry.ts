@@ -72,7 +72,8 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_07_26,
     notes:
       "robots.txt des locataires releve le 2026-07-26 : User-agent * avec Allow sur les sites carriere. Le connecteur relit le robots.txt de CHAQUE locataire avant CHAQUE collecte et refuse sans Allow explicite.",
-  },];
+  },
+];
 
 /**
  * Reporte le registre en base. L'opération est rejouable : elle met à jour les
