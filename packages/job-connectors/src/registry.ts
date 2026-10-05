@@ -56,46 +56,6 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
       "Flux public. robots.txt n'interdit rien. Content signal : search=yes, ai-input=yes, ai-train=no.",
   },
   {
-    name: "smartrecruiters-www",
-    atsKind: AtsKind.SMARTRECRUITERS,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "Pages publiques permises sauf 73 entreprises nommées. Voie non empruntée à ce jour.",
-  },
-  {
-    name: "ashby",
-    atsKind: AtsKind.ASHBY,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "L'API répond 200 sans authentification, mais robots.txt renvoie Unauthorized.",
-  },
-  {
-    name: "smartrecruiters",
-    atsKind: AtsKind.SMARTRECRUITERS,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "robots.txt n'ouvre /v1/companies/ qu'à LinkedInBot et interdit tout à User-agent: *.",
-  },
-  {
-    name: "teamtailor",
-    atsKind: AtsKind.TEAMTAILOR,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: null,
-    notes: "Aucun accès contrôlé à ce jour.",
-  },
-  {
-    name: "recruitee",
-    atsKind: AtsKind.RECRUITEE,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: null,
-    notes: "Aucun accès contrôlé à ce jour.",
-  },
-  {
     name: FRANCE_TRAVAIL_CONNECTOR_NAME,
     atsKind: AtsKind.FRANCE_TRAVAIL,
     accessStatus: SourceAccessStatus.OFFICIAL_API,
@@ -112,49 +72,7 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_07_26,
     notes:
       "robots.txt des locataires releve le 2026-07-26 : User-agent * avec Allow sur les sites carriere. Le connecteur relit le robots.txt de CHAQUE locataire avant CHAQUE collecte et refuse sans Allow explicite.",
-  },
-  {
-    name: "successfactors",
-    atsKind: AtsKind.SAP_SUCCESSFACTORS,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_26,
-    notes:
-      "Verifie le 2026-07-26 : aucun flux JSON public stable, chaque locataire differe (jobs.sap.com n'interdit que candidature et services). Un connecteur exigerait une verification par locataire, non faite.",
-  },
-  {
-    name: "linkedin",
-    atsKind: AtsKind.OTHER,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "Aucun accès public autorisé pour cet usage.",
-  },
-  {
-    name: "indeed",
-    atsKind: AtsKind.OTHER,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "Aucun accès public autorisé pour cet usage.",
-  },
-  {
-    name: "glassdoor",
-    atsKind: AtsKind.OTHER,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "Aucun accès public autorisé pour cet usage.",
-  },
-  {
-    name: "welcome-to-the-jungle",
-    atsKind: AtsKind.WELCOMEKIT,
-    accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-    status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    termsCheckedAt: VERIFIED_2026_07_17,
-    notes: "Aucun accès public autorisé pour cet usage.",
-  },
-];
+  },];
 
 /**
  * Reporte le registre en base. L'opération est rejouable : elle met à jour les

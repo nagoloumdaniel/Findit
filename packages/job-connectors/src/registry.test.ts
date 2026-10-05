@@ -63,9 +63,9 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
     }
   });
 
-  it("keeps the sources the register found closed, closed", () => {
-    // Workday a quitté cette liste le 2026-07-26 : robots.txt des locataires
-    // relevé, User-agent * avec Allow sur les sites carrière.
+  it("holds no line for the sources the register found closed", () => {
+    // Ces sources ont été retirées du registre : aucune ligne, donc aucune
+    // exécution possible.
     for (const name of [
       "ashby",
       "linkedin",
@@ -73,39 +73,13 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
       "glassdoor",
       "welcome-to-the-jungle",
       "smartrecruiters",
+      "smartrecruiters-www",
       "teamtailor",
       "recruitee",
       "successfactors",
     ]) {
-      expect(entryFor(name)).toMatchObject({
-        accessStatus: SourceAccessStatus.DISABLED_PENDING_PERMISSION,
-        status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-      });
+      expect(entryFor(name)).toBeUndefined();
     }
-  });
-
-  it("leaves unverified sources without a check date rather than inventing one", () => {
-    // SmartRecruiters a quitté cette liste le 2026-07-17, Workday le
-    // 2026-07-26 : vérifiés, l'un fermé, l'autre ouvert.
-    for (const name of ["teamtailor", "recruitee"]) {
-      expect(entryFor(name)?.termsCheckedAt).toBeNull();
-    }
-  });
-
-  it("records that SuccessFactors was checked and stays closed for lack of a stable feed", () => {
-    expect(entryFor("successfactors")).toMatchObject({
-      status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    });
-    expect(entryFor("successfactors")?.termsCheckedAt).not.toBeNull();
-    expect(entryFor("successfactors")?.notes).toContain("locataire");
-  });
-
-  it("records that a verified source can be verified as closed", () => {
-    expect(entryFor("smartrecruiters")).toMatchObject({
-      status: ConnectorStatus.DISABLED_PENDING_PERMISSION,
-    });
-    expect(entryFor("smartrecruiters")?.termsCheckedAt).not.toBeNull();
-    expect(entryFor("smartrecruiters")?.notes).toContain("LinkedInBot");
   });
 
   it("holds a line for Workable, the source that grants ai-input", () => {
