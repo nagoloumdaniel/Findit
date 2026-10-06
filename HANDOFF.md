@@ -42,6 +42,13 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Découverte ciblée sur les pages d'offre** : la racine d'un board d'ATS
+  (`isAtsBoardListing`, `packages/agent/src/scoring.ts`) est traversée mais pas
+  extraite — ses pages d'offre le sont. Mesure sur un run borné de 8 pages :
+  coût **782 µ$ au lieu de 5 419**, mais **1 offre extraite et 0 insérée** : les
+  pages d'offre atteintes étaient des CDI, écartées par la porte de contrat. Le
+  coût est réglé, le rendement dépend maintenant de la qualité des sources et des
+  requêtes.
 - **« 0 insérée » n'est pas une panne, c'est mesuré** : sur un run à 178 rejets,
   **156 étaient des CDI hors périmètre**, 12 des métiers hors périmètre (Bras
   droit CEO, communication…), 6 des dates absentes, 2 des freelances, 1 une date

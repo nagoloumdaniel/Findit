@@ -108,10 +108,13 @@ AgentRun / AgentAction / AgentError en base
   page d'offres. Le statut 0 reste traité par la relecture, puisque « jamais lue » n'est pas « erreur ».
 - Avant l'extraction, une **porte déterministe** lit le même contenu que le modèle recevrait : si la
   page ne nomme aucun contrat du périmètre (alternance, apprentissage, stage…), le modèle n'est pas
-  appelé. Mesuré avant la porte : 127 offres extraites d'un board hors périmètre, 101 rejetées faute
-  de contrat, zéro insérée — chaque page payait un appel pour rien. La porte se remplace via
-  `pageGate`. C'est un garde-fou de coût, pas un classifieur : un faux positif coûte un appel, un
-  faux négatif ferait perdre une offre, donc le vocabulaire est volontairement large.
+  appelé. La **racine d'un board d'ATS** est écartée de la même façon (`isAtsBoardListing`) : elle
+  liste tous les contrats d'une entreprise, on la traverse pour trouver ses pages d'offre, on ne la
+  prend pas pour une offre. Mesuré avant ces règles : 226 offres extraites d'un board, 156 en CDI,
+  zéro insérée — chaque page payait un appel pour rien. Après : 8 pages traversées, aucune racine
+  extraite, coût du run 782 µ$ au lieu de 5 419. La porte se remplace via `pageGate`. C'est un
+  garde-fou de coût, pas un classifieur : un faux positif coûte un appel, un faux négatif ferait
+  perdre une offre, donc le vocabulaire est volontairement large.
 - L'usage du modèle est relevé à chaque appel par `@findit/ai` (`usage.input_tokens` /
   `usage.output_tokens`), cumulé sur le client, et attribué par différence à l'action `EXTRACT` de la
   page, tentatives refusées comprises. Les tokens apparaissent dans le détail de l'action ; le coût
