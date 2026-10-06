@@ -1,7 +1,7 @@
 # Cahier des charges - Findit
 
 > Written for: le propriétaire du projet et tout agent IA qui reprend le travail.
-> Date : 2026-10-05. Branche de référence : `main` (dernier commit `d3f09b1`).
+> Date : 2026-10-06. Branche de référence : `main`.
 > Ce document formalise le besoin, le périmètre et les règles. L'état d'avancement et
 > l'ordre d'exécution sont dans [roadmap.md](roadmap.md). Les détails opérationnels
 > (API, tables, commandes) ne sont pas recopiés ici : voir les renvois.
@@ -25,16 +25,20 @@ publiques autorisées, et les affiche sur un site public. Pour le propriétaire,
 analyse son CV, calcule la correspondance avec chaque offre, génère une lettre factuelle et suit ses
 candidatures. [CONFIRMÉ]
 
-Le socle est en place : monorepo, API, worker, connecteurs ATS et France Travail, déduplication, Telegram,
-espace candidat et suivi. Trois chantiers sont demandés à ce stade :
+Le socle est en place : monorepo, API, worker, connecteurs ATS, France Travail et Workday, déduplication
+persistée, Telegram, espace candidat, score explicable, lettres, PDF et suivi des candidatures. Trois
+chantiers avaient été demandés à ce stade :
 
-1. **Mettre la base de données en ligne** au lieu de PostgreSQL local. [CONFIRMÉ]
-2. **Utiliser Apify** comme outil de scraping pour la recherche d'offres. [CONFIRMÉ]
-3. **Mettre à jour** la documentation de cadrage (le présent document et la roadmap). [CONFIRMÉ]
+1. **Mettre la base de données en ligne** au lieu de PostgreSQL local. [FAIT - Neon, TLS obligatoire]
+2. **Utiliser Apify** comme outil de scraping pour la recherche d'offres. [LIVRÉ - moteur, garde de
+   budget et premier job board, en attente de validation du propriétaire]
+3. **Mettre à jour** la documentation de cadrage (le présent document et la roadmap). [FAIT]
 
-Ces deux premiers chantiers touchent deux contraintes fortes du projet : le **registre de conformité**
-(aucune collecte sans permission constatée) et la règle « rien ne sort du poste ». Elles sont traitées
-dans la section 26 (contradictions) et ne peuvent pas être réalisées sans les décisions de la section 25.
+Le chantier de scraping touche deux contraintes fortes du projet : le **registre de conformité** (aucune
+collecte sans permission constatée) et la règle « rien ne sort du poste ». La première a été traitée par
+un nouveau régime de registre (section 26, C-1). La seconde est **contredite par l'état réel** : l'API
+lit `DATABASE_URL`, qui pointe sur la base en ligne, donc tout ce que l'application écrit - profil, texte
+du CV, lettres, candidatures - part sur cette base. Voir C-4 et Q-1.
 
 ---
 
@@ -76,17 +80,20 @@ dans la section 26 (contradictions) et ne peuvent pas être réalisées sans les
 ### 4.2 Hors périmètre
 
 - Candidature automatique, envoi de messages recruteurs. [CONFIRMÉ, « ne postule jamais à la place de l'utilisateur »]
-- Collecte de LinkedIn, Indeed, Glassdoor, Welcome to the Jungle, ou scraping direct de Google. [CONTRAINTE, registre]
+- Collecte des job boards (LinkedIn, Indeed, Glassdoor, Welcome to the Jungle, HelloWork) : **entrée dans
+  le périmètre le 2026-10-05**, sous le régime toléré `OWNER_ACCEPTED_SCRAPING` et les garde-fous de
+  `docs/legal-compliance.md`. [CONFIRMÉ, propriétaire]
+- Scraping direct de Google, contournement d'anti-bot ou de CAPTCHA, comptes et cookies. [CONTRAINTE]
 - Authentification multi-utilisateurs. L'espace privé reste mono-propriétaire. [DÉDUIT]
 - Analyse GitHub : hors MVP, prévue en V2 (roadmap, phase 8).
 
 ### 4.3 Découpage
 
-| Version | Contenu                                                                                                 | État                                                       |
-| ------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **MVP** | Offres publiques, collecte sources autorisées, CV privé, score, lettre, PDF, suivi, Telegram.           | Quasi complet. Reste la mise en ligne (base, hébergement). |
-| **V1**  | Base en ligne, hébergement public, Apify sur sources autorisées, DOCX, rappels, tests E2E.              | À construire (roadmap phases 20 à 21 et 15 à 16).          |
-| **V2**  | Analyse GitHub et sélection de projets, versions du CV, binaire chiffré, administration, observabilité. | Non commencé.                                              |
+| Version | Contenu                                                                                                 | État                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **MVP** | Offres publiques, collecte sources autorisées, CV privé, score, lettre, PDF, suivi, Telegram.           | Complet.                                                                                    |
+| **V1**  | Base en ligne, hébergement public, Apify, job boards, DOCX, rappels, tests E2E.                         | Base en ligne faite, moteur Apify livré ; restent l'hébergement et les job boards suivants. |
+| **V2**  | Analyse GitHub et sélection de projets, versions du CV, binaire chiffré, administration, observabilité. | Non commencé.                                                                               |
 
 ---
 
@@ -528,16 +535,16 @@ Porte qualité (commande réelle, roadmap §11) : `pnpm format:check`, `pnpm lin
 
 ## 25. Questions ouvertes
 
-| ID  | Question                                                                                                   | Pourquoi c'est important                                           | Défaut proposé                                                                             | Modifiable plus tard ?  |
-| --- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ----------------------- |
-| Q-1 | Les données privées (profil, CV, lettres, candidatures) peuvent-elles être écrites sur une base en ligne ? | Conditionne la conformité et la confidentialité du CV              | Publier d'abord les offres publiques ; garder le privé en local jusqu'à chiffrement validé | Oui                     |
-| Q-2 | L'IA reste-t-elle locale même si le site est public ?                                                      | Ollama ne sort pas du poste ; le site public ne peut pas l'appeler | Oui : IA locale, fonctions IA réservées au propriétaire                                    | Oui                     |
-| Q-3 | Quel fournisseur de base en ligne ?                                                                        | Coût, pgvector, outils disponibles                                 | Neon (PostgreSQL géré, outils MCP déjà connectés)                                          | Oui, par `DATABASE_URL` |
-| Q-4 | Quelles sources Apify sont autorisées ?                                                                    | Évite la collecte interdite                                        | Seulement les sources déjà au registre comme autorisées (voir §26, C-1)                    | Oui                     |
-| Q-5 | Redis reste-t-il local ou devient-il géré ?                                                                | Le worker en a besoin en permanence                                | Géré si le worker est hébergé ; local sinon                                                | Oui                     |
-| Q-6 | Où héberger web, API et worker ?                                                                           | Le cron de 4 h doit tourner sans le poste                          | Hébergeur à choisir ; pas de choix imposé ici                                              | Oui                     |
-| Q-7 | Fenêtre de fraîcheur : 24 h, 72 h, ou les deux offerts ?                                                   | Voir C-3                                                           | 3 jours par défaut, filtre 24 h conservé                                                   | Oui                     |
-| Q-8 | Durée de conservation des candidatures et de leur historique                                               | Obligation de suppression (RM-008)                                 | Tant que l'utilisateur ne supprime pas, avec revue annuelle                                | Oui                     |
+| ID  | Question                                                                                                   | Pourquoi c'est important                                           | Défaut proposé                                                                                                            | Modifiable plus tard ?  |
+| --- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Q-1 | Les données privées (profil, CV, lettres, candidatures) peuvent-elles être écrites sur une base en ligne ? | Conditionne la conformité et la confidentialité du CV              | Publier d'abord les offres publiques ; garder le privé en local jusqu'à chiffrement validé                                | Oui                     |
+| Q-2 | L'IA reste-t-elle locale même si le site est public ?                                                      | Ollama ne sort pas du poste ; le site public ne peut pas l'appeler | Oui : IA locale, fonctions IA réservées au propriétaire                                                                   | Oui                     |
+| Q-3 | Quel fournisseur de base en ligne ?                                                                        | Coût, pgvector, outils disponibles                                 | Neon (PostgreSQL géré, outils MCP déjà connectés)                                                                         | Oui, par `DATABASE_URL` |
+| Q-4 | Quelles sources Apify sont autorisées ?                                                                    | Évite la collecte interdite                                        | **TRANCHÉE le 2026-10-05** : tous les job boards nommés, sous le régime toléré `OWNER_ACCEPTED_SCRAPING` (voir §26, C-1). | Non                     |
+| Q-5 | Redis reste-t-il local ou devient-il géré ?                                                                | Le worker en a besoin en permanence                                | Géré si le worker est hébergé ; local sinon                                                                               | Oui                     |
+| Q-6 | Où héberger web, API et worker ?                                                                           | Le cron de 4 h doit tourner sans le poste                          | Hébergeur à choisir ; pas de choix imposé ici                                                                             | Oui                     |
+| Q-7 | Fenêtre de fraîcheur : 24 h, 72 h, ou les deux offerts ?                                                   | Voir C-3                                                           | 3 jours par défaut, filtre 24 h conservé                                                                                  | Oui                     |
+| Q-8 | Durée de conservation des candidatures et de leur historique                                               | Obligation de suppression (RM-008)                                 | Tant que l'utilisateur ne supprime pas, avec revue annuelle                                                               | Oui                     |
 
 ---
 
@@ -599,10 +606,14 @@ Aucune n'est masquée. Chacune demande une décision ou une vérification.
 
 **C-6 - Documentation en retard**
 
-- **Constat** : `docs/architecture.md` dit encore que Workable n'est pas exécuté par le cycle et que la
-  déduplication n'est pas persistée ; `HANDOFF.md` mentionne un espace `/espace` qui n'existe plus dans
-  `apps/web/src/app` (remplacé par la page unique, UX v3) ; `README.md` dit 24 h par défaut.
-- **Proposition** : réaligner ces trois fichiers dans la brique TASK-208.
+- **Constat initial (2026-10-05)** : `docs/architecture.md` disait encore que Workable n'est pas exécuté
+  par le cycle et que la déduplication n'est pas persistée ; `HANDOFF.md` mentionnait un espace `/espace`
+  qui n'existe plus depuis l'UX v3 ; `README.md` annonçait 24 h de fraîcheur par défaut.
+- **Corrigé le 2026-10-06** : `README.md`, `docs/architecture.md` et `HANDOFF.md` sont réalignés sur le
+  code réel, et ce document l'est aussi sur Q-4, le périmètre et sa synthèse.
+- **Reste ouvert** : la roadmap porte une case « Ajouter les commandes Telegram » (phase 11) encore
+  décochée, alors que la phase 17 les marque livrées et que `apps/worker/src/telegram/` les contient.
+  Une case ne se coche que par le propriétaire.
 
 **C-7 - Hébergement du worker**
 
@@ -630,11 +641,13 @@ Aucune n'est masquée. Chacune demande une décision ou une vérification.
 
 ## 28. Synthèse
 
-- Le produit existe et fonctionne sur le poste de développement. Ce qui reste pour une mise en ligne
-  propre : **une base en ligne**, **un hébergeur pour le worker**, et **la décision sur le privé**.
-- Apify est possible, mais seulement dans le cadre du registre. Sans la décision Q-4, la partie Apify ne
-  doit pas être lancée.
-- Aucune ligne de code n'a été écrite pour ce cadrage. Les tâches sont décrites dans
-  [roadmap.md](roadmap.md), phases 20 et 21.
+- Le produit fonctionne, et la base est passée **en ligne** (Neon, TLS obligatoire). Ce qui reste pour une
+  mise en ligne propre : **un hébergeur pour le worker** - sans lui, pas de collecte quand le poste est
+  éteint - et **la décision sur les données privées** (Q-1), qui n'est plus théorique puisque
+  l'application écrit tout ce qu'elle produit dans la base en ligne.
+- Apify est tranché (Q-4) et le moteur est livré : registre rouvert, acteurs épinglés par source, garde de
+  budget prouvée, un premier job board monté mais éteint. Ce qui manque n'est plus une autorisation, mais
+  une décision d'affichage public.
+- Le chantier correspondant vit dans [roadmap.md](roadmap.md), phases 20 à 25.
 
 **Livrables non produits** : `CAHIER_DES_CHARGES.pdf` (aucun outil de conversion vérifié dans l'environnement).

@@ -4,19 +4,33 @@ Document destiné à un agent qui reprend le travail (Codex ou autre). Il dit ce
 qu'est le projet, comment on y travaille, ce qui est **réellement** fait, ce qui
 a déjà été tranché et pourquoi, et les pièges déjà payés.
 
-À jour au 2026-07-27. Refonte UX v3 livrée (proxy zéro clé, recherche par CV,
-/candidatures, matching sur page détail), popup de tri des compétences, dates
-jamais inventées, commandes Telegram, doc de déploiement. CI écrite mais
-bloquée : GitHub répond « Actions has been disabled for this user » - à
-débloquer dans les réglages du compte GitHub, rien à corriger côté dépôt.
-Sources élargies (ordre du propriétaire) : connecteur France Travail écrit
-(API officielle, s'active dès que FRANCETRAVAIL_CLIENT_ID/SECRET existent -
-inscription gratuite sur francetravail.io à faire par le propriétaire) et
-connecteur Workday actif (robots.txt du locataire relu avant chaque collecte ;
-prouvé en réel : Thales refusé, Workday collecté). SuccessFactors vérifié et
-resté fermé. Première collecte réelle France Travail (2026-07-26) : les deux
-premières vraies offres du site sont publiées, et les données démo ont été
-supprimées (2026-07-27) - la base publique ne porte plus que du réel.
+À jour au 2026-10-06. Depuis le 2026-07-27, un pivot : le propriétaire veut un
+véritable outil de scraping multi-sources (Apify, ScrapeGraphAI, Playwright) sur
+les sites carrières et les job boards, plus une refonte de la disposition du
+site. La question Q-4 du cahier des charges est tranchée : les job boards sont
+collectés sous un régime d'accès **toléré, non autorisé**
+(`OWNER_ACCEPTED_SCRAPING`, risque assumé par le propriétaire), avec les
+garde-fous intacts - ni compte, ni cookie, ni CAPTCHA contourné, ni module de
+furtivité, URL d'origine obligatoire.
+
+Livré et poussé : registre de conformité rouvert et daté, conditions d'Apify et
+fiches d'acteurs lues, un acteur épinglé et un secours par source, garde de
+budget par cycle et par mois (plan Apify gratuit, 5 $), connecteur Apify
+générique, déduplication inter-sources avec élection de la source canonique et
+lien de candidature employeur, et Welcome to the Jungle dans un cycle quotidien
+à 6 h - **livré mais éteint** (`SCRAPED_SOURCES_ENABLED=false`).
+
+Trois réserves à connaître avant de continuer : ces briques attendent encore la
+validation du propriétaire (aucune case de la roadmap n'est cochée) ; **aucun
+connecteur de job board n'est monté dans le cycle**, seul l'outil
+`pnpm board:proof` les exécute, donc la garde de budget n'est pas encore appelée
+par le cycle réel ; et la règle d'affichage public d'une offre de job board
+n'est pas tranchée.
+
+La base est passée **en ligne** (Neon, TLS obligatoire) ; Redis reste local. Le
+rôle applicatif n'est pas propriétaire du schéma, ce qui a déjà cassé
+`migrate deploy` deux fois. CI écrite mais toujours bloquée : GitHub répond
+« Actions has been disabled for this user », rien à corriger côté dépôt.
 
 ---
 
@@ -63,18 +77,21 @@ Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 
 - `web` - Next.js 16, port **3100**.
 - `api` - NestJS sur Fastify, port **4000**.
-- `worker` - NestJS + BullMQ, collecte planifiée.
+- `worker` - NestJS + BullMQ, deux planifications : ATS natifs toutes les 4 h,
+  sources scrapées une fois par jour à 6 h (heure de Paris), même file, concurrence 1.
 
 **Paquets** (`packages/`)
 
 - `config` - schémas d'environnement Zod + `loadRootEnv()`.
 - `database` - Prisma 7.8, client généré, migrations **additives uniquement**.
 - `shared`, `ui` - types communs, composants.
-- `job-connectors` - connecteurs ATS, lecture `robots.txt`, découverte Brave.
+- `job-connectors` - connecteurs ATS, lecture `robots.txt`, découverte Brave,
+  garde-fou d'accès, garde de budget (`spend-budget`) et connecteur Apify.
 - `job-normalization` - HTML → texte, titre comparable, localisation Île-de-France.
 - `job-classification` - contrat + métier, détection d'écoles.
-- `job-deduplication` - score de similarité, décision de fusion.
-- `job-pipeline` - décision d'ingestion et écriture en base.
+- `job-deduplication` - similarité, fusion, groupe de revue, priorités de source.
+- `job-pipeline` - décision d'ingestion, élection de la source canonique,
+  lien de candidature employeur, écriture en base.
 - `notifications` - Telegram.
 - `ai` - modèle local (voir §7).
 - `matching-engine` - score CV/offre pur, sans IA, déterministe et explicable.
@@ -136,7 +153,7 @@ curl http://localhost:11434/api/tags   # doit lister qwen2.5:7b
 
 ## 6. État réel du travail
 
-[roadmap.md](roadmap.md) a été réaligné sur cette réalité le 2026-07-24 : ses
+[roadmap.md](roadmap.md) a été réaligné sur cette réalité le 2026-10-06 : ses
 cases et celles de ce document disent désormais la même chose. En cas de doute,
 le code et les commits tranchent.
 
@@ -290,15 +307,76 @@ le code et les commits tranchent.
   publique (registre) ; la fenêtre publique par défaut est passée à 3 jours,
   tri du plus récent au plus ancien (ordre du propriétaire).
 
+### Fait, en attente de validation du propriétaire (2026-10-05 et 2026-10-06)
+
+Ces briques sont écrites, testées et poussées, mais **aucune case de la roadmap
+n'est cochée** : le propriétaire valide, il ne constate pas.
+
+- **Registre rouvert** (TASK-301) : nouveau régime
+  `SourceAccessStatus.OWNER_ACCEPTED_SCRAPING`, distinct de `PUBLIC_FEED` - un
+  accès toléré n'est jamais présenté comme autorisé. Migration additive
+  `20261005100000`, appliquée sur la base en ligne. `PROHIBITED`,
+  `DISABLED_PENDING_PERMISSION`, `SEARCH_ENGINE_DISCOVERY_ONLY` et
+  `MANUAL_IMPORT` restent refusés. Conséquence : les sources encore en attente
+  de permission ont été **retirées du registre**, qui ne porte plus que
+  Greenhouse, Lever, Workable, France Travail, Workday et Welcome to the Jungle.
+- **Conditions lues et acteurs épinglés** (TASK-302, TASK-303) : conditions
+  générales d'Apify, politique d'utilisation acceptable et 10 fiches d'acteurs
+  lues et datées. Clause 11.1 relevée : Apify impose d'indemniser en cas
+  d'extraction de sources non autorisées, donc le risque des job boards porte
+  aussi sur le compte Apify - compte dédié confirmé par le propriétaire. Un
+  acteur et un secours par source. Les acteurs annonçant un contournement
+  d'anti-bot sont écartés.
+- **Garde de budget** (TASK-305) : coût maximal estimé avant l'appel, refus
+  d'un run sans plafond de résultats, billet de réservation par run,
+  `CYCLE_BUDGET_EXCEEDED` et `MONTH_BUDGET_EXCEEDED` arrêtent la source sans
+  arrêter le cycle, et le cumul du mois est relu dans `ConnectorRun` : un
+  redémarrage du worker ne remet pas le compteur à zéro. Défauts : 4,5 $ par
+  mois, 0,15 $ par cycle. Prouvé sur la base en ligne réelle.
+- **Connecteur Apify générique** (TASK-304) : un acteur épinglé, entrée bornée
+  (Zod), jeton dans l'en-tête seulement, jamais dans une URL, sortie revalidée
+  avant ingestion, coût réel lu sur la facture du run. 17 tests avec un faux
+  serveur Apify nommé comme tel.
+- **Première preuve réelle Apify** (TASK-306) : 20 offres, 7 créées, zéro échec,
+  0,01605 $ constatés, base rendue à son état d'avant. Ce run a trouvé un vrai
+  bug : au statut terminal, les compteurs d'événements facturables n'étaient pas
+  à jour et le coût était sous-déclaré. Corrigé par une relecture finale plus un
+  plancher calculé depuis les offres reçues, vérifié ensuite par un run à
+  0,00405 $ égal à la facture.
+- **Déduplication inter-sources** (TASK-307) : à la fusion, l'offre de rang de
+  source le plus élevé reste publiée (officiel 100, job board 40) ; une offre
+  vue d'abord sur un job board cède sa place à l'ATS de l'entreprise ; les
+  sources de l'offre masquée sont recopiées sur la canonique, donc « où et quand
+  l'offre a été vue » reste lisible ; `chooseApplyUrl` préfère toujours un lien
+  employeur à un lien de job board. Prouvé sur la base en ligne réelle.
+- **Cycle quotidien des job boards** (TASK-401) : Welcome to the Jungle via
+  Apify, filtre de métier tech, 30 résultats par run, cron quotidien à 6 h dans
+  la même file que le cycle de 4 h, donc jamais de chevauchement. **Éteint par
+  défaut** (`SCRAPED_SOURCES_ENABLED=false`) et jeton Apify exigé : sinon aucune
+  source n'est montée et rien n'est dépensé. Rendement mesuré faible (40 % des
+  offres payées acceptées) : la limite est l'offre disponible, pas le filtre.
+- **Bugs B009 et B010 fermés** (ordre du propriétaire) : un titre « Business
+  Developer » n'est plus pris pour un métier de développeur, et deux entreprises
+  aux noms voisins ne fusionnent plus. Tests écrits avant le correctif, échec
+  constaté puis succès.
+
 ### Pas encore fait
 
 - Export DOCX des documents générés.
 - Analyse GitHub.
 - Versions du CV source, conservation et chiffrement du **binaire** du CV : seul
   le texte extrait est stocké aujourd'hui.
-- Première collecte réelle France Travail : le connecteur est écrit et testé,
-  mais l'inscription francetravail.io (identifiants partenaires) appartient au
-  propriétaire.
+- Hébergement public du web, de l'API et du worker : la base est en ligne, mais
+  le cron vit encore sur le poste, donc pas de collecte quand il est éteint.
+- Les job boards restants : HelloWork, Indeed, Glassdoor, LinkedIn (phase 22,
+  un site par brique, chacun sur ordre explicite du propriétaire).
+- Sites carrières par extraction IA (phase 23), pilotage et santé des sources
+  (phase 24), refonte de la disposition du site (phase 25).
+- Le branchement de la garde de budget dans le cycle réel : elle n'est appelée
+  que par `pnpm board:proof` aujourd'hui, faute de connecteur monté.
+- Trois décisions du propriétaire encore ouvertes : Q-1 (le profil, le CV et les
+  lettres peuvent-ils aller en base en ligne ?), Q-6 (où héberger worker, API et
+  web) et la règle d'affichage public d'une offre de job board.
 
 ### Un résultat à connaître avant de crier au bug
 
@@ -361,6 +439,44 @@ Le registre dynamique ne rend collectable un domaine que si son `robots.txt`
 
 Les stages sont collectés, mais le filtre par défaut porte sur l'alternance.
 
+### Les job boards sont collectés, sous un risque assumé
+
+Décidé le 2026-10-05 par le propriétaire. LinkedIn, Welcome to the Jungle,
+HelloWork, Glassdoor, Indeed et les autres job boards sont collectés. Leurs
+conditions d'utilisation interdisent la collecte automatisée : la conséquence
+réaliste est civile (blocage d'IP, d'accès ou de compte), pas pénale, et elle est
+assumée. Le régime de registre `OWNER_ACCEPTED_SCRAPING` traduit exactement cela :
+**toléré, jamais présenté comme autorisé**.
+
+Garde-fous non négociables, proposés par l'assistant et conservés :
+
+- aucun compte, aucun login, aucun cookie : seules les pages publiques sont lues ;
+- aucun CAPTCHA contourné, aucun module de furtivité dans le code Findit ;
+- un acteur annonçant un contournement d'anti-bot est écarté ;
+- chaque offre garde son URL d'origine ; une offre sans URL d'origine est rejetée ;
+- cadence et volume bornés par source, budget plafonné par cycle et par mois,
+  interrupteur par source ;
+- le registre reste la porte d'entrée : un site n'est ouvert qu'à sa propre brique.
+
+### Les sources scrapées tournent une fois par jour
+
+Décidé le 2026-10-06. Les ATS natifs restent à 4 h ; tout ce qui est scrapé
+(job boards via Apify, sites carrières via ScrapeGraphAI) tourne une fois par
+jour, dans un cron dédié. Motif : le plan Apify gratuit donne 5 $ par mois, et
+la même collecte toutes les 4 h coûterait environ 77 $ par mois contre environ
+13 $ à une collecte par jour.
+
+### ScrapeGraphAI sert aussi, mais pas les job boards via le cloud
+
+Décidé le 2026-10-06. ScrapeGraphAI prend trois rôles : fournisseur des sites
+carrières sans ATS reconnu, repli de Welcome to the Jungle et HelloWork quand le
+budget Apify est épuisé ou qu'un acteur casse, et peut-être fournisseur principal
+de ces deux sources après mesure. Ses conditions imposent de respecter celles des
+sites cibles : tant que le propriétaire n'a pas confirmé ce risque pour ce
+fournisseur, le repli n'utilise que la bibliothèque locale avec Ollama, jamais
+l'API cloud. LinkedIn, Indeed et Glassdoor n'ont pas de repli local : leur
+protection anti-bot imposerait de la contourner, ce qui reste interdit.
+
 ---
 
 ## 8. Pièges déjà payés
@@ -393,6 +509,24 @@ Chacun a coûté du temps. Les relire évite de les repayer.
   `.env.example` puis poussée sur un dépôt public. Historique réécrit, clé
   révoquée, hook de pré-commit ajouté. **Aucune valeur réelle dans
   `.env.example`, jamais.**
+- **Le rôle applicatif n'est pas propriétaire du schéma** de la base en ligne :
+  une migration qui change la structure échoue et laisse une ligne d'historique
+  en échec. Appliquer la valeur avec une connexion propriétaire, puis
+  `migrate resolve` (rolled-back puis applied). C'est arrivé deux fois.
+- **Le hook de pré-push rejoue `format:check`** : un dépôt mal formaté fait
+  échouer le push. Lancer `pnpm format:check` avant de pousser, et corriger,
+  plutôt que de forcer avec `--no-verify`.
+- **Un « vert » peut venir du cache Turborepo** : il prouve qu'un run identique
+  est déjà passé, pas que le code vient d'être vérifié. Pour une preuve, forcer
+  (`--force`) et lancer les tâches **une par invocation** - enchaîner build et
+  typecheck dans le même `turbo run` est un piège déjà payé.
+- **Node de la machine en v24.10.0** alors que le dépôt exige `>= 24.18 < 25` :
+  pnpm affiche un avertissement d'environnement à chaque commande. Les contrôles
+  passent, mais un environnement non conforme ne doit pas être présenté comme
+  conforme.
+- **Un test peut flotter sous charge** : `@findit/api#test` a échoué une fois
+  après deux runs Turbo lourds, puis est passé cinq fois de suite en run frais.
+  Avant de conclure à une régression, relancer et noter le nom du test fautif.
 
 ---
 
@@ -433,46 +567,53 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ## 10. Prochaines briques, dans l'ordre
 
-Mise à jour du 2026-10-05 (pivot) : le propriétaire veut un véritable outil de
-scraping multi-sources (Apify, ScrapeGraphAI déjà installé, Playwright) sur les
-sites carrières tech **et** les job boards (LinkedIn, WTTJ, HelloWork, Glassdoor,
-Indeed, autres), avec une refonte de la disposition du site ; la gestion des CV
-ne change pas. `roadmap.md` porte maintenant les phases 21 (moteur), 22 (job
-boards), 23 (sites carrières par extraction IA), 24 (pilotage) et 25 (refonte du
-site). Q-4 est tranchée. Le registre de conformité n'est **pas encore réécrit** :
-tant que TASK-301 n'est pas livrée, aucun connecteur de job board ne doit tourner.
-Aucune ligne de code écrite. Premier ordre à donner : TASK-301.
+Mise à jour du 2026-10-06. Le chantier de scraping des 2026-10-05 et 2026-10-06
+est écrit, testé et poussé, mais **attend la validation du propriétaire** : tant
+qu'elle n'est pas donnée, rien de nouveau ne se construit dessus. `roadmap.md`
+porte les phases 20 (base en ligne), 21 (moteur de scraping), 22 (job boards),
+23 (sites carrières par extraction IA), 24 (pilotage) et 25 (refonte du site).
 
-1. **Décisions Q-1 à Q-7** (`CAHIER_DES_CHARGES.md` section 25) : sans elles,
-   ni la base en ligne (TASK-201) ni Apify (TASK-301) ne démarrent.
-2. **Base en ligne** (phase 20, TASK-202 à TASK-204) puis migration et bascule.
-3. **Apify** (phase 21) : uniquement sur sources autorisées au registre ; ne
-   jamais utiliser un acteur LinkedIn, Indeed, Glassdoor ou WTTJ.
-4. Analyse GitHub, commandes du bot Telegram, dettes courtes (Workable dans le
-   cycle, dédup persistée).
+Suivant ce que le propriétaire ordonne :
 
-Le score, l'export PDF du CV et la lettre sont faits côté moteur et API ; il
-reste à les exposer dans une interface.
+1. **Valider les briques en attente** (TASK-301 à TASK-307, TASK-401) : elles
+   sont livrées et prouvées, il ne manque que la case cochée.
+2. **Trancher ce qui bloque** : la règle d'affichage public d'une offre de job
+   board (seul obstacle à l'allumage de Welcome to the Jungle), Q-1 (le privé
+   peut-il aller en base en ligne ?) et Q-6 (où héberger le worker).
+3. **Brancher la garde de budget dans le cycle** : elle existe et elle est
+   prouvée, mais aucun connecteur de job board n'est monté, donc le cycle réel
+   ne l'appelle jamais.
+4. **Poursuivre la phase 22** : HelloWork, puis Indeed, Glassdoor et LinkedIn,
+   un site par brique et sur ordre explicite.
+
+Ensuite, phases 23 à 25 : extraction déterministe des sites carrières (JSON-LD,
+sitemaps, puis Playwright, et ScrapeGraphAI en dernier recours), pilotage et
+santé des sources, refonte de la disposition en quatre espaces (Offres, Mon CV,
+Candidatures, Sources).
 
 Dette d'extraction connue : le modèle local invente parfois des jours précis
 (« 2025-01-01 » quand le CV dit « 2025 »). Rien de faux ne franchit Zod, mais
 la précision affichée peut dépasser la source - à durcir dans une brique
 extraction dédiée.
 
-Deux dettes connues, plus petites : les **commandes du bot Telegram**
-(`/start`, `/status`, `/latest`, `/help`) et l'absence de versionnement/binaire
-chiffré pour les CV sources.
+Deux dettes plus petites : l'absence de versionnement et de chiffrement du
+binaire des CV sources, et l'export DOCX des documents générés.
 
 ---
 
 ## 11. Vérifier son travail
 
 ```bash
-pnpm typecheck   # 24 tâches
-pnpm lint        # 24 tâches, zéro avertissement toléré
-pnpm test        # 24 tâches
-pnpm build       # 15 tâches
+pnpm format:check   # Prettier ; rejoué par le hook de pré-push
+pnpm typecheck      # 30 tâches
+pnpm lint           # 30 tâches, zéro avertissement toléré
+pnpm test           # 30 tâches
+pnpm build          # 17 tâches
 ```
+
+Pour une preuve et non un cache, forcer (`--force`) et lancer chaque tâche
+**une par invocation** : enchaîner build et typecheck dans le même `turbo run`
+est un piège déjà payé.
 
 Validation locale des briques structure CV puis suppression/rétention CV, le
 2026-07-24 :

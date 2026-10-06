@@ -19,7 +19,7 @@ tourne à ~21 tokens/s à chaud, le démarrage à froid charge 4,7 Go.
 ## 2. Installation
 
 ```bash
-git clone https://github.com/Nagoloum/Findit.git
+git clone https://github.com/nagoloumdaniel/Findit.git
 cd Findit
 pnpm install
 pnpm setup:hooks        # hook anti-secret, une fois
@@ -30,7 +30,9 @@ cp .env.example .env    # puis renseigner les variables ci-dessous
 
 Obligatoires :
 
-- `DATABASE_URL` - PostgreSQL.
+- `DATABASE_URL` - PostgreSQL. La base de production est en ligne (Neon) et la
+  connexion exige TLS (`sslmode=require`). Une URL distante sans TLS doit faire
+  échouer le démarrage.
 - `REDIS_URL` - file BullMQ du worker.
 - `INTERNAL_API_KEY` - clé de l'espace privé. Le navigateur ne la voit
   jamais : le serveur Next la porte via le proxy `/api/ws/*`. La changer
@@ -70,13 +72,23 @@ incident a déjà été payé et le hook de pré-commit le bloque.
 ## 4. Base, données, modèle
 
 ```bash
-pnpm infra:up                 # postgres + redis
-pnpm db:migrate               # migrations, additives uniquement
-pnpm registry:sync            # registre de conformité des connecteurs
-pnpm db:import-companies      # annuaire d'entreprises (packages/database/data)
-pnpm careers:scan             # trouve les ATS des sites carrières (robots.txt respecté)
+pnpm infra:up                                        # Redis, et PostgreSQL local si besoin
+pnpm db:migrate                                      # migrations, additives uniquement
+pnpm registry:sync                                   # registre de conformité des connecteurs
+pnpm --filter @findit/database db:import-companies   # annuaire (packages/database/data)
+pnpm careers:scan                                    # trouve les ATS des sites carrières
 ollama pull qwen2.5:7b
 ```
+
+`pnpm infra:up` ne sert qu'à Redis et à une éventuelle base locale : en
+production, `DATABASE_URL` pointe sur la base en ligne, et c'est elle que les
+migrations visent.
+
+Le rôle applicatif n'est **pas propriétaire du schéma** de la base en ligne. Une
+migration qui change la structure échoue donc et laisse une ligne d'historique en
+échec : appliquer le changement avec une connexion propriétaire, puis
+réconcilier l'historique par `prisma migrate resolve` (`--rolled-back` puis
+`--applied`). C'est arrivé deux fois, voir `roadmap.md` (TASK-301, TASK-305).
 
 `pnpm db:seed` insère des offres de DÉMONSTRATION (marquées `isDemo`) - utile
 en développement, à ne pas jouer en production.
