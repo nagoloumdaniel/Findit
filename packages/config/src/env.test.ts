@@ -128,7 +128,7 @@ describe("parseDatabaseEnv", () => {
       DATABASE_URL: required.DATABASE_URL,
     });
 
-    expect(worker.SCRAPED_SOURCES_ENABLED).toBe(false);
+    expect(worker.SCRAPED_SOURCES_ENABLED).toBe(true);
     expect(worker.SCRAPED_COLLECTION_CRON).toBe("0 6 * * *");
     expect(worker.SCRAPING_WTTJ_MAX_ITEMS).toBe(15);
     expect(worker.SCRAPING_HELLOWORK_MAX_ITEMS).toBe(15);

@@ -89,7 +89,14 @@ export const workerEnvSchema = z.object({
    * seulement quand le propriétaire l'a décidé : éteint par défaut, parce que
    * chaque run dépense du crédit. Même allumé, il faut le jeton Apify.
    */
-  SCRAPED_SOURCES_ENABLED: boolFromEnv(false),
+  /*
+   * Job boards scrape : allumé par défaut depuis le 2026-10-07. Mesuré, c'est la
+   * seule famille de sources qui rend : 12 à 13 offres acceptées par cycle, contre
+   * 0 sur 4 251 pages d'entreprises et 2 (déjà connues) sur 13 offres France
+   * Travail. Le coût est borné deux fois — plafond par cycle et plafond mensuel —
+   * et sans `APIFY_API_TOKEN` le cycle ne collecte rien.
+   */
+  SCRAPED_SOURCES_ENABLED: boolFromEnv(true),
   /// Cron du cycle des sources scrapées. Une fois par jour à 6 h, heure de Paris.
   SCRAPED_COLLECTION_CRON: z.string().min(1).default("0 6 * * *"),
   /*
