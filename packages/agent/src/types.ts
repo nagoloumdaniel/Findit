@@ -19,6 +19,8 @@ export const ACTION_KIND = {
   DEDUP: "DEDUP",
   STORE: "STORE",
   PUBLISH: "PUBLISH",
+  /** Une offre écartée à l'écriture, avec son motif dans le détail. */
+  REJECT: "REJECT",
 } as const;
 
 export type ActionKind = (typeof ACTION_KIND)[keyof typeof ACTION_KIND];

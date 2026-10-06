@@ -28,9 +28,11 @@ export type CrawlSource = (options: CrawlOptions) => Promise<CrawlResult>;
 export type ExtractJobs = (page: CrawledPage, model: ExtractModel) => Promise<ExtractionResult>;
 
 /** Persistance des offres retenues. Défaut : le compte est consigné sans écrire. */
-export type PersistJobs = (
-  offers: readonly ExtractionResult["offers"][number][],
-) => Promise<{ readonly inserted: number }>;
+export type PersistJobs = (offers: readonly ExtractionResult["offers"][number][]) => Promise<{
+  readonly inserted: number;
+  readonly duplicates: number;
+  readonly rejected: readonly { readonly title: string; readonly reason: string }[];
+}>;
 
 /**
  * Dépendances du run : les briques déjà construites, injectées pour que la
@@ -282,14 +284,24 @@ export async function runAgent(
     }
 
     // Stockage : si un persistant est fourni, on lui confie les offres retenues
-    // et on consigne le nombre réellement inséré ; sinon, on consigne le compte.
+    // et on consigne ce qu'il en a fait, rejets compris.
     if (counters.retainedCount > 0) {
       if (deps.persist !== undefined) {
-        const { inserted } = await deps.persist(retainedOffers);
+        const result = await deps.persist(retainedOffers);
         await deps.runStore.recordAction(runId, {
           kind: ACTION_KIND.STORE,
-          detail: String(inserted),
+          detail: `${String(result.inserted)} insérée(s), ${String(result.duplicates)} doublon(s), ${String(result.rejected.length)} rejetée(s)`,
+          count: result.inserted,
         });
+
+        // Chaque rejet est consigné avec son motif : sans cela, un run qui
+        // n'insère rien ne dit pas pourquoi, et le motif est perdu.
+        for (const rejection of result.rejected) {
+          await deps.runStore.recordAction(runId, {
+            kind: ACTION_KIND.REJECT,
+            detail: `${rejection.title} : ${rejection.reason}`,
+          });
+        }
       } else {
         await deps.runStore.recordAction(runId, {
           kind: ACTION_KIND.STORE,

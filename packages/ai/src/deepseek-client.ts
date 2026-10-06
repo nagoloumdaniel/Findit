@@ -15,8 +15,15 @@ export type DeepSeekModelConfig = {
   model: string;
   /** Transport, pour le test. Par défaut le `fetch` global. */
   fetch?: FetchLike;
-  /** Plafond de tokens de la réponse. 4096 par défaut, requis par l'API. */
+  /** Plafond de tokens de la réponse. 8192 par défaut, requis par l'API. */
   maxTokens?: number;
+  /**
+   * Raisonnement du modèle. `disabled` par défaut : l'extraction structurée n'a
+   * pas besoin de raisonnement, et `deepseek-flash` en produit un qui consomme
+   * le budget de tokens au point de ne plus laisser de texte sur une page
+   * longue, ce qui faisait échouer l'extraction.
+   */
+  thinking?: "disabled" | "enabled";
 };
 
 export type StructuredRequest<T> = {
@@ -54,7 +61,7 @@ type TextBlock = { type: "text"; text: unknown };
  */
 const ENDPOINT = "https://api.deepseek.com/anthropic/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
-const DEFAULT_MAX_TOKENS = 4096;
+const DEFAULT_MAX_TOKENS = 8192;
 
 /** Reconnaît un bloc texte Anthropic sans faire confiance à la forme reçue. */
 const isTextBlock = (block: unknown): block is TextBlock => {
@@ -91,6 +98,21 @@ const readContent = (payload: unknown): string | null => {
 };
 
 /**
+ * Lit `payload.stop_reason`. « max_tokens » signale une réponse tronquée, qu'on
+ * ne doit jamais confondre avec une sortie valide.
+ */
+const readStopReason = (payload: unknown): string | null => {
+  if (typeof payload !== "object" || payload === null || !("stop_reason" in payload)) {
+    return null;
+  }
+  const reason = (payload as { stop_reason?: unknown }).stop_reason;
+  return typeof reason === "string" ? reason : null;
+};
+
+/** Réponse d'un appel : le texte exploitable et la raison d'arrêt du modèle. */
+type ChatResult = { readonly text: string; readonly stopReason: string | null };
+
+/**
  * Construit la consigne système de la sortie structurée. Le schéma JSON est
  * glissé dans le prompt système : l'endpoint Anthropic de DeepSeek n'a pas
  * d'équivalent du champ `format` d'Ollama. La revalidation Zod côté application
@@ -125,12 +147,15 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
     messages: ChatMessage[],
     temperature: number,
     system?: string,
-  ): Promise<string> => {
+  ): Promise<ChatResult> => {
     const body: Record<string, unknown> = {
       model: config.model,
       max_tokens: maxTokens,
       temperature,
       messages,
+      // Le raisonnement est coupé sauf demande contraire : sur une page longue,
+      // il consomme tout le budget de tokens et ne laisse aucun texte.
+      thinking: { type: config.thinking ?? "disabled" },
     };
     if (system !== undefined) {
       body.system = system;
@@ -166,24 +191,34 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
 
     const content = readContent(payload);
     if (content === null) {
-      throw new AiOutputError("Réponse DeepSeek sans texte exploitable.");
+      throw new AiOutputError(
+        `Réponse DeepSeek sans texte exploitable (arrêt : ${readStopReason(payload) ?? "inconnu"}).`,
+      );
     }
-    return content;
+    return { text: content, stopReason: readStopReason(payload) };
   };
 
   return {
     async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
       // Le schéma est envoyé au modèle dans le prompt système, puis la sortie est
       // revalidée côté nous : une consigne n'est pas une garantie.
-      const content = await chat(
+      const { text, stopReason } = await chat(
         [{ role: "user", content: request.prompt }],
         request.temperature ?? 0,
         structuredSystem(request.system, request.schema),
       );
 
+      // Une réponse tronquée n'est pas une réponse : la signaler clairement
+      // plutôt que de la faire passer pour un JSON invalide.
+      if (stopReason === "max_tokens") {
+        throw new AiOutputError(
+          `Réponse DeepSeek tronquée (max_tokens=${String(maxTokens)} atteint) : augmenter maxTokens.`,
+        );
+      }
+
       let raw: unknown;
       try {
-        raw = JSON.parse(content);
+        raw = JSON.parse(text);
       } catch {
         throw new AiOutputError("La sortie du modèle n'est pas du JSON valide.");
       }
@@ -198,11 +233,12 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
     },
 
     async generateText(request: TextRequest): Promise<string> {
-      return chat(
+      const { text } = await chat(
         [{ role: "user", content: request.prompt }],
         request.temperature ?? 0.4,
         request.system,
       );
+      return text;
     },
   };
 };

@@ -93,6 +93,53 @@ describe("createDeepSeekModel.generateStructured", () => {
     );
   });
 
+  it("ignore le bloc de raisonnement et lit le bloc texte", async () => {
+    const transport = respondWith({
+      content: [
+        { type: "thinking", thinking: "je réfléchis", signature: "abc" },
+        { type: "text", text: JSON.stringify({ nom: "Jean", competences: [] }) },
+      ],
+    });
+
+    await expect(
+      modelWith(transport).generateStructured({ schema: Cv, prompt: "x" }),
+    ).resolves.toEqual({ nom: "Jean", competences: [] });
+  });
+
+  it("coupe le raisonnement dans la requête par défaut", async () => {
+    const transport = respondWith({
+      content: [{ type: "text", text: JSON.stringify({ nom: "Jean", competences: [] }) }],
+    });
+
+    await modelWith(transport).generateStructured({ schema: Cv, prompt: "x" });
+
+    const init = vi.mocked(transport).mock.calls[0]?.[1];
+    if (init === undefined || typeof init.body !== "string") {
+      throw new Error("Le transport n'a pas reçu de corps de requête.");
+    }
+    // Le raisonnement consommait le budget de tokens et vidait la réponse.
+    expect((JSON.parse(init.body) as { thinking: unknown }).thinking).toEqual({ type: "disabled" });
+  });
+
+  it("lève une erreur explicite quand la réponse est tronquée", async () => {
+    const model = modelWith(
+      respondWith({
+        content: [{ type: "text", text: '{"nom":"Jean","compet' }],
+        stop_reason: "max_tokens",
+      }),
+    );
+
+    await expect(model.generateStructured({ schema: Cv, prompt: "x" })).rejects.toThrow(/tronqu/);
+  });
+
+  it("nomme la raison d'arrêt quand aucun texte n'est exploitable", async () => {
+    const model = modelWith(respondWith({ content: [], stop_reason: "max_tokens" }));
+
+    await expect(model.generateStructured({ schema: Cv, prompt: "x" })).rejects.toThrow(
+      /max_tokens/,
+    );
+  });
+
   it("lève AiUnavailableError quand l'API répond en erreur", async () => {
     const model = modelWith(respondWith({}, 500));
     await expect(model.generateStructured({ schema: Cv, prompt: "x" })).rejects.toBeInstanceOf(

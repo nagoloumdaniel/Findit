@@ -3,6 +3,7 @@ node_modules
 dist
 coverage
 packages/database/src/generated
+packages/database/data
 pnpm-lock.yaml
 docs/superpowers/plans
 .claude
