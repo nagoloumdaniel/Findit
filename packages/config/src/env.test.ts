@@ -130,9 +130,9 @@ describe("parseDatabaseEnv", () => {
 
     expect(worker.SCRAPED_SOURCES_ENABLED).toBe(false);
     expect(worker.SCRAPED_COLLECTION_CRON).toBe("0 6 * * *");
-    expect(worker.SCRAPING_WTTJ_MAX_ITEMS).toBe(30);
-    expect(worker.SCRAPING_HELLOWORK_MAX_ITEMS).toBe(40);
-    expect(worker.SCRAPING_INDEED_MAX_ITEMS).toBe(100);
+    expect(worker.SCRAPING_WTTJ_MAX_ITEMS).toBe(15);
+    expect(worker.SCRAPING_HELLOWORK_MAX_ITEMS).toBe(15);
+    expect(worker.SCRAPING_INDEED_MAX_ITEMS).toBe(20);
   });
 
   it("keeps the autonomous agent off by default, daily at 8 am, with a default objective", () => {

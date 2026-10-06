@@ -92,12 +92,20 @@ export const workerEnvSchema = z.object({
   SCRAPED_SOURCES_ENABLED: boolFromEnv(false),
   /// Cron du cycle des sources scrapées. Une fois par jour à 6 h, heure de Paris.
   SCRAPED_COLLECTION_CRON: z.string().min(1).default("0 6 * * *"),
-  /// Résultats par run pour Welcome to the Jungle. 30 tient le plan gratuit.
-  SCRAPING_WTTJ_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(30),
-  /// Résultats par run pour HelloWork. 40 tient le plan gratuit.
-  SCRAPING_HELLOWORK_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(40),
-  /// Résultats par run pour Indeed. 100 tient le plan gratuit.
-  SCRAPING_INDEED_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(100),
+  /*
+   * Résultats par run. Mesuré le 2026-10-07 : deux cycles identiques dos à dos
+   * ont rendu les mêmes 57 offres, accepté les mêmes 13, et n'ont ajouté AUCUNE
+   * offre nouvelle pour 0,052 $ puis 0,064 $. La première page concentre la
+   * fraîcheur — HelloWork accepte 7 offres sur 8 quand on lui en demande 8, mais
+   * 8 sur 40 quand on lui en demande 40. Les plafonds sont donc serrés : payer
+   * des pages profondes revient à racheter ce qu'on a déjà.
+   */
+  /// Résultats par run pour Welcome to the Jungle.
+  SCRAPING_WTTJ_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(15),
+  /// Résultats par run pour HelloWork.
+  SCRAPING_HELLOWORK_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(15),
+  /// Résultats par run pour Indeed.
+  SCRAPING_INDEED_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(20),
   APIFY_API_TOKEN: z.string().min(1).optional(),
 
   /// Clé DeepSeek, partagée avec l'API. Requise seulement quand l'agent est
