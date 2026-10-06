@@ -161,9 +161,11 @@ analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification
   extraites en 6 pages, 3 928 µ$). Sans part de budget par tour, le premier tour
   prenait les 8 pages et `refine` n'était jamais appelé ; avec elle, le même run a
   fait 3 tours, le modèle affinant vers les `site:` ATS (12 866 µ$).
-- **CSS mort `.workspace*`** : `apps/web/src/app/globals.css` garde 24 règles
-  `.workspace*`, plus référencées par aucun composant (`apps/web/src` ne les
-  contient que dans ce fichier).
+- **CSS mort retiré le 2026-10-06** : `apps/web/src/app/globals.css` a perdu ses 24
+  règles `.workspace*` et 44 autres classes de l'ancien espace privé
+  (`resume-*`, `letter-*`, `application-*`, `match-*`, `triage-*`, `cv-search*`,
+  `chip*`), soit 320 lignes. Vérifié : plus aucune référence, accolades équilibrées
+  (167/167), `pnpm build` compile le CSS.
 - **Application de la migration à la base en ligne** : le rôle applicatif n'est
   pas propriétaire du schéma ; appliquer la migration structurelle via la
   connexion propriétaire, puis `migrate resolve`. L'état en ligne n'est pas

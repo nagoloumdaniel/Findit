@@ -333,11 +333,12 @@ doit faire échouer le démarrage.
 - `.env.example` ne déclare pas `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`,
   alors que le worker les lit (défauts respectifs : `false`, `0 8 * * *`, objectif alternance/stage
   en Île-de-France).
-- `CORS_ORIGIN` a pour défaut `http://localhost:3000` dans `packages/config/src/env.ts`, un port
-  interdit pour ce projet ; `.env.example` règle bien 3100, mais une variable absente retombe sur ce
-  défaut.
-- `SEARCH_API_PROVIDER` et `SEARCH_API_KEY` (schéma API) ainsi que `SCRAPEGRAPH_API_KEY` (schéma
-  worker) sont déclarés et présents dans `.env.example`, mais lus nulle part ailleurs.
+- `CORS_ORIGIN` a pour défaut `http://localhost:3100` depuis le nettoyage du 2026-10-06 : le port 3000
+  appartient à un autre projet et un défaut qui y pointait était un piège.
+- Variables mortes retirées le 2026-10-06 : `SEARCH_API_PROVIDER`, `SEARCH_API_KEY` (schéma API) et
+  `SCRAPEGRAPH_API_KEY` (schéma worker) étaient déclarées et présentes dans `.env.example` sans être
+  lues nulle part. Un schéma Zod ignore les clés inconnues, donc les retirer est sans effet sur un
+  `.env` qui les porte encore.
 - Le rôle applicatif de la base en ligne n'est pas propriétaire du schéma : une migration qui change
   la structure doit être appliquée avec une connexion propriétaire, puis réconciliée par
   `migrate resolve`. L'incident s'est produit deux fois.

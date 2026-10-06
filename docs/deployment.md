@@ -78,8 +78,6 @@ Optionnelles :
   (0,15). Remettre l'interrupteur à `false` et redémarrer le worker retire la planification.
 - `TELEGRAM_*` - alertes et résumé de run ; simulation par défaut tant que
   `TELEGRAM_NOTIFICATIONS_ENABLED` et `TELEGRAM_DRY_RUN` ne sont pas réglés.
-- `SCRAPEGRAPH_API_KEY` - déclarée dans le schéma worker et `.env.example`, mais lue nulle part
-  ailleurs dans le code à ce jour.
 
 Règle absolue : aucune valeur réelle dans `.env.example`, jamais - un incident a déjà été payé et le
 hook de pré-commit le bloque.
