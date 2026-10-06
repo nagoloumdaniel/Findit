@@ -42,7 +42,12 @@ IA (DeepSeek) :
 - `DEEPSEEK_INPUT_USD_PER_MTOK` / `DEEPSEEK_OUTPUT_USD_PER_MTOK` - tarif du compte, en dollars par
   million de tokens. Facultatifs : les tokens consommés sont relevés dans tous les cas et inscrits
   dans le détail des actions `EXTRACT`, mais un coût ne se déduit pas sans tarif. Sans eux,
-  `AgentRun.costMicroUsd` reste à zéro.
+  `AgentRun.costMicroUsd` reste à zéro. Grille publique
+  ([api-docs.deepseek.com/quick_start/pricing](https://api-docs.deepseek.com/quick_start/pricing)) :
+  `deepseek-flash` coûte 0,15 à 0,30 $/M en entrée et 0,60 à 1,20 $/M en sortie selon l'heure, et
+  bien moins en cache ; `deepseek-v4-pro` coûte 0,66 à 1,32 $/M en entrée et 1,98 à 3,96 $/M en
+  sortie. Les valeurs retenues sont la crête et le cache manqué, c'est-à-dire le pire cas, dans la
+  même logique que la garde de budget Apify : le coût affiché ne peut pas être sous-estimé.
 
 Agent autonome (worker) :
 
