@@ -42,12 +42,11 @@ IA (DeepSeek) :
 - `DEEPSEEK_INPUT_USD_PER_MTOK` / `DEEPSEEK_OUTPUT_USD_PER_MTOK` - tarif du compte, en dollars par
   million de tokens. Facultatifs : les tokens consommés sont relevés dans tous les cas et inscrits
   dans le détail des actions `EXTRACT`, mais un coût ne se déduit pas sans tarif. Sans eux,
-  `AgentRun.costMicroUsd` reste à zéro. Grille publique
-  ([api-docs.deepseek.com/quick_start/pricing](https://api-docs.deepseek.com/quick_start/pricing)) :
-  `deepseek-flash` coûte 0,15 à 0,30 $/M en entrée et 0,60 à 1,20 $/M en sortie selon l'heure, et
-  bien moins en cache ; `deepseek-v4-pro` coûte 0,66 à 1,32 $/M en entrée et 1,98 à 3,96 $/M en
-  sortie. Les valeurs retenues sont la crête et le cache manqué, c'est-à-dire le pire cas, dans la
-  même logique que la garde de budget Apify : le coût affiché ne peut pas être sous-estimé.
+  `AgentRun.costMicroUsd` reste à zéro. `.env.example` retient 0,30 $/M en entrée et 1,20 $/M en
+  sortie (crête et cache manqué), soit le pire cas, dans la même logique que la garde de budget
+  Apify : le coût affiché ne peut pas être sous-estimé. La grille du fournisseur reste externe au
+  dépôt :
+  [api-docs.deepseek.com/quick_start/pricing](https://api-docs.deepseek.com/quick_start/pricing).
 
 Agent autonome (worker) :
 
@@ -57,9 +56,11 @@ Agent autonome (worker) :
   (`Europe/Paris`).
 - `AGENT_OBJECTIVE` - objectif en langage naturel ; défaut
   `alternance et stage développeur en Île-de-France`.
+- `AGENT_DISCOVERY_ONLY` - `false` par défaut, `true` dans `.env.example`. À `true`, l'agent
+  planifie, cherche, sélectionne et enregistre les entreprises au registre, sans crawler ni
+  extraire.
 
-Ces trois variables sont lues par `packages/config/src/env.ts` mais absentes de `.env.example` :
-les ajouter au `.env` est nécessaire pour changer les défauts de l'agent.
+Ces variables sont déclarées dans `.env.example`.
 
 Optionnelles :
 
@@ -70,10 +71,9 @@ Optionnelles :
   (inscription gratuite sur francetravail.io, produit « Offres d'emploi v2 ») ; sans elles, la
   source est simplement absente du cycle.
 - `APIFY_API_TOKEN` - jeton du compte Apify dédié, pour les job boards. Sans lui, aucun job board
-  n'est collecté, même interrupteur allumé. Un run dépense du crédit réel : le cycle quotidien des
-  job boards est **allumé par défaut** depuis le 2026-10-07, parce qu'il est la seule famille de
-  sources qui rend (12-13 offres acceptées par cycle, contre 0 sur les boards d'entreprises et 2
-  déjà connues sur France Travail). Réglages :
+  n'est collecté, même interrupteur allumé. Un run dépense du crédit réel : `SCRAPED_SOURCES_ENABLED`
+  est **à `true` par défaut** depuis le 2026-10-07, parce que c'est la seule famille de sources qui
+  a rendu des offres acceptées lors des mesures. Réglages :
   `SCRAPED_COLLECTION_CRON` (6 h, heure de Paris), `SCRAPING_WTTJ_MAX_ITEMS` (15),
   `SCRAPING_HELLOWORK_MAX_ITEMS` (15), `SCRAPING_INDEED_MAX_ITEMS` (20), et les plafonds de
   dépense `SCRAPING_BUDGET_MONTHLY_USD` (4,5 pour le plan gratuit) et `SCRAPING_BUDGET_CYCLE_USD`
@@ -90,7 +90,7 @@ hook de pré-commit le bloque.
 
 ```bash
 pnpm infra:up                                        # Redis, et PostgreSQL local si besoin
-pnpm db:migrate                                      # migrations, additives uniquement
+pnpm db:migrate                                      # migrations : additives sauf la suppression de l'espace privé
 pnpm registry:sync                                   # registre de conformité des connecteurs
 pnpm --filter @findit/database db:import-companies   # annuaire (packages/database/data)
 pnpm careers:scan                                    # trouve les ATS des sites carrières
@@ -140,8 +140,9 @@ Contrôles de vie : `GET /health` sur l'API ; la home répond sur 3100.
 
 - Sauvegarde : `pg_dump` de la base (offres, entreprises et registre sont le patrimoine à sauver).
 - Retour arrière applicatif : `git checkout <commit précédent>` puis `pnpm install && pnpm build` et
-  redémarrage. Les migrations étant additives uniquement, un binaire ancien tourne sur un schéma
-  plus récent.
+  redémarrage. Les migrations courantes sont additives, mais
+  `20261006120000_agent_and_remove_private` est destructive : un binaire antérieur à cette migration
+  n'est plus compatible avec le schéma.
 - Ne jamais faire de `migrate reset` en production.
 
 ## 8. Vérification post-déploiement
@@ -151,7 +152,8 @@ pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
 Puis sur le réel : `GET /health`, une collecte ATS (`ConnectorRun` en base), et - si l'agent est
-allumé - un run (`AgentRun`) avec `DEEPSEEK_API_KEY` et `BRAVE_SEARCH_API_KEY`. Les job boards se
-vérifient à la demande par `pnpm board:proof`. Les scores de CV se testent par
-`POST /api/matching/score` avec un corps `{ cvText }`. Hors saison, l'absence d'offres exploitables
-est un résultat normal, pas une panne.
+allumé - un run (`AgentRun`) avec `DEEPSEEK_API_KEY` et `BRAVE_SEARCH_API_KEY`. Les job boards
+tournent par défaut : vérifier un `ConnectorRun` du cycle `scraped-collection` quand
+`APIFY_API_TOKEN` est fourni ; `pnpm board:proof` reste l'exécution à la demande, hors cron. Les
+scores de CV se testent par `POST /api/matching/score` avec un corps `{ cvText }`. Hors saison,
+l'absence d'offres exploitables est un résultat normal, pas une panne.

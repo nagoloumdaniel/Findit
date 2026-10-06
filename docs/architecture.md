@@ -1,6 +1,6 @@
 # Architecture Findit (Web Intelligence Agent)
 
-Ce document décrit l'architecture réelle du dépôt au 2026-10-06, après le pivot vers un agent
+Ce document décrit l'architecture réelle du dépôt au 2026-10-07, après le pivot vers un agent
 autonome de collecte web. Le cahier des charges est
 [CAHIER_DES_CHARGES.md](../CAHIER_DES_CHARGES.md) ; la source de vérité opérationnelle détaillée
 reste [roadmap.md](../roadmap.md).
@@ -38,9 +38,11 @@ Worker NestJS (processus séparé, même file BullMQ)
           |                      + normalisation, classification, déduplication, ingestion, ProcessingLog
           |
           +--> job boards      : Welcome to the Jungle, HelloWork, Indeed via Apify
-          |                      montés seulement si SCRAPED_SOURCES_ENABLED=true ET jeton Apify
+          |                      planification montée par défaut (SCRAPED_SOURCES_ENABLED=true),
+          |                      collecte seulement si un jeton Apify existe
           |
-          +--> agent autonome  : Search -> Crawl -> Extract -> Store (voir section suivante)
+          +--> agent autonome  : Planification -> Search/Score -> Sélection -> Crawl/Extract -> Store
+          |                      (voir section suivante)
           |
     +--> Telegram, si explicitement activé (TELEGRAM_NOTIFICATIONS_ENABLED + token + chat)
 ```
@@ -53,7 +55,8 @@ matching appelle l'API depuis le navigateur via `NEXT_PUBLIC_API_URL`.
 
 L'entrée est `runAgent(objective, deps)` dans `packages/orchestrator/src/run-agent.ts`. La séquence
 est fixe, sauf les tours de planification : le modèle choisit les recherches, voit ce que le tour a
-produit, et décide s'il en faut un autre (section 5). Il ne choisit pas encore les autres étapes.
+produit, et décide s'il en faut un autre (section 5). Il choisit aussi les sources à crawler ; il ne
+choisit ni le mode d'extraction ni la fin du run.
 
 ```text
 Objectif (AGENT_OBJECTIVE)
@@ -63,17 +66,20 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   le modèle propose les requêtes (schéma Zod, bornées à `maxQueries`), le terme de contrat
     |   entre guillemets (mesuré : 6 titres du périmètre sur 10 avec, 1 sans) ; sortie invalide,
     |   vide ou modèle en panne rendent le plan déterministe — le run ne part jamais sans recherche
-    |   Sélection : le tour rassemble d'abord les sources notées (phase 1), puis le modèle choisit
-    |   lesquelles visiter et dans quel ordre (phase 2, plafonné aux 12 meilleures), puis crawl et
-    |   extraction (phase 3). Sans sélecteur : l'ordre du score. Seules des URL candidates reviennent,
+    |   Sélection (`packages/orchestrator/src/selector.ts`) : le tour rassemble d'abord les sources
+    |   notées (phase 1), puis le modèle choisit lesquelles visiter et dans quel ordre (phase 2,
+    |   plafonné aux 12 meilleures), puis crawl et extraction (phase 3). Sans sélecteur : l'ordre du
+    |   score. Seules des URL candidates reviennent,
     |   et une sortie vide ou hors schéma rend l'ordre du score. En **mode découverte seule**
     |   (`AGENT_DISCOVERY_ONLY`), la phase 3 est vide : l'extraction de pages d'entreprises n'a jamais
     |   rendu d'offre du périmètre (0 sur 4 251) alors que la découverte alimente le registre.
     |   Registre : chaque source retenue est présentée au registre (`discoverSource`). Une entreprise
     |   d'ATS à jeton (Greenhouse, Lever, Workday) devient une `CompanySource`, que son connecteur
     |   recollecte en flux complet — l'agent n'a pas à extraire ce que le connecteur sait lire.
-    |   Workable collecte par requête, pas par entreprise : rien à enregistrer. Un hôte inconnu relève
-    |   du registre dynamique, qui lit `robots.txt` avant toute visite.
+    |   Workable collecte par requête, pas par entreprise : rien à enregistrer. Un locataire d'ATS qui
+    |   publie les offres des autres n'est pas enregistré non plus (`isAggregatorTenant`, liste citée :
+    |   `lever/jobgether`). Un hôte inconnu n'est pas enregistré : la visite reste gouvernée par
+    |   `robots.txt`, que le crawler respecte.
     |   Mémoire : les URL sont mémorisées sous une clé normalisée (casse, `www.`, fragment, slash
     |   final et paramètres de suivi ignorés, **requête conservée** : elle porte l'identité de la page,
     |   `?page=2` par exemple). Seules les pages entrées dans le budget du tour sont inscrites comme
@@ -82,8 +88,8 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   réel : `/carrieres`, `/carrieres/`, `/company/careers` et `ivalua.com/company/careers/` mènent
     |   tous à `https://www.ivalua.com/company/careers/`.
     v
-@findit/agent : generateSearchQueries(objective)
-    |   repli : requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle
+Repli déterministe (planificateur sans modèle) : generateSearchQueries(objective)
+    |   requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle
     v
 Brave Search, si BRAVE_SEARCH_API_KEY existe (sinon aucun résultat)
     |
@@ -203,25 +209,25 @@ date de publication non ISO est traitée comme illisible plutôt qu'interprété
 
 Dix-sept paquets réels.
 
-| Package                      | Rôle                                                                                             | État réel                                |
-| ---------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| `@findit/shared`             | Contrats de périmètre (contrats, métiers, zone, fraîcheur)                                       | Actif                                    |
-| `@findit/config`             | Schémas Zod, chargement `.env` racine                                                            | Actif                                    |
-| `@findit/database`           | Schéma Prisma, migrations, client, seed, annuaire d'employeurs                                   | Actif, migrations additives              |
-| `@findit/ui`                 | Composants d'interface réutilisables (`PageShell`)                                               | Actif                                    |
-| `@findit/job-connectors`     | ATS, job boards Apify, découverte Brave, registre de conformité, robots, garde de budget         | Actif ; job boards éteints par défaut    |
-| `@findit/job-normalization`  | Nettoyage HTML et comparaison des offres, résolution de commune                                  | Actif                                    |
-| `@findit/job-classification` | Décisions contrat, métier, lieu, école et risque                                                 | Actif                                    |
-| `@findit/job-deduplication`  | Similarité et décision de doublon                                                                | Actif, décision écrite en base           |
-| `@findit/job-pipeline`       | Ingestion, élection de la source canonique, lien d'apply                                         | Actif ; non utilisé par l'agent autonome |
-| `@findit/notifications`      | Alertes Telegram, résumé de run et commandes du bot                                              | Actif                                    |
-| `@findit/ai`                 | Client DeepSeek et sorties structurées validées par Zod                                          | Actif                                    |
-| `@findit/agent`              | Requêtes de recherche, scoring de sources, mémoire et magasins de run                            | Actif                                    |
-| `@findit/crawler`            | Crawl borné, robots.txt, HTTP et rendu                                                           | Actif                                    |
-| `@findit/extract`            | Extraction `JobPosting` JSON-LD déterministe puis DeepSeek, validation Zod, exclusion des écoles | Actif                                    |
-| `@findit/orchestrator`       | Pipeline de l'agent (`runAgent`), cascade de récupération et bornes de run                       | Actif                                    |
-| `@findit/persist`            | Écriture des offres extraites (classification, localisation, déduplication)                      | Actif                                    |
-| `@findit/matching`           | Structuration du CV et score CV/offre via DeepSeek, sous-scores déterministes                    | Actif                                    |
+| Package                      | Rôle                                                                                             | État réel                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `@findit/shared`             | Contrats de périmètre (contrats, métiers, zone, fraîcheur)                                       | Actif                                                                           |
+| `@findit/config`             | Schémas Zod, chargement `.env` racine                                                            | Actif                                                                           |
+| `@findit/database`           | Schéma Prisma, migrations, client, seed, annuaire d'employeurs                                   | Actif ; additives sauf la migration de suppression de l'espace privé            |
+| `@findit/ui`                 | Composants d'interface réutilisables (`PageShell`)                                               | Actif                                                                           |
+| `@findit/job-connectors`     | ATS, job boards Apify, découverte Brave, registre de conformité, robots, garde de budget         | Actif ; job boards allumés par défaut depuis le 2026-10-07 (jeton Apify requis) |
+| `@findit/job-normalization`  | Nettoyage HTML et comparaison des offres, résolution de commune                                  | Actif                                                                           |
+| `@findit/job-classification` | Décisions contrat, métier, lieu, école et risque                                                 | Actif                                                                           |
+| `@findit/job-deduplication`  | Similarité et décision de doublon                                                                | Actif, décision écrite en base                                                  |
+| `@findit/job-pipeline`       | Ingestion, élection de la source canonique, lien d'apply                                         | Actif ; non utilisé par l'agent autonome                                        |
+| `@findit/notifications`      | Alertes Telegram, résumé de run et commandes du bot                                              | Actif                                                                           |
+| `@findit/ai`                 | Client DeepSeek et sorties structurées validées par Zod                                          | Actif                                                                           |
+| `@findit/agent`              | Requêtes de recherche, scoring de sources, mémoire et magasins de run                            | Actif                                                                           |
+| `@findit/crawler`            | Crawl borné, robots.txt, HTTP et rendu                                                           | Actif                                                                           |
+| `@findit/extract`            | Extraction `JobPosting` JSON-LD déterministe puis DeepSeek, validation Zod, exclusion des écoles | Actif                                                                           |
+| `@findit/orchestrator`       | Pipeline de l'agent (`runAgent`), planificateur, sélecteur, cascade de récupération et bornes    | Actif                                                                           |
+| `@findit/persist`            | Écriture des offres extraites (classification, localisation, déduplication)                      | Actif                                                                           |
+| `@findit/matching`           | Structuration du CV et score CV/offre via DeepSeek, sous-scores déterministes                    | Actif                                                                           |
 
 Les paquets `@findit/documents`, `@findit/matching-engine` et `@findit/resume-parser` n'existent
 plus.
@@ -263,11 +269,11 @@ Les trois planifications vivent dans la même file `job-pipeline`, avec un seul 
 concurrence 1 : deux cycles ne se chevauchent jamais. `upsertJobScheduler` est idempotent ; un
 interrupteur à `false` retire la planification (et ne l'ignore pas seulement).
 
-| Planification | Nom du job           | Cron par défaut | Montée si                      |
-| ------------- | -------------------- | --------------- | ------------------------------ |
-| ATS natifs    | `collection-cycle`   | `0 */4 * * *`   | toujours                       |
-| Job boards    | `scraped-collection` | `0 6 * * *`     | `SCRAPED_SOURCES_ENABLED=true` |
-| Agent         | `agent-run`          | `0 8 * * *`     | `AGENT_RUN_ENABLED=true`       |
+| Planification | Nom du job           | Cron par défaut | Montée si                               |
+| ------------- | -------------------- | --------------- | --------------------------------------- |
+| ATS natifs    | `collection-cycle`   | `0 */4 * * *`   | toujours                                |
+| Job boards    | `scraped-collection` | `0 6 * * *`     | `SCRAPED_SOURCES_ENABLED=true` (défaut) |
+| Agent         | `agent-run`          | `0 8 * * *`     | `AGENT_RUN_ENABLED=true`                |
 
 Toutes utilisent `JOB_COLLECTION_TIMEZONE` (défaut `Europe/Paris`). Les crons sont réglables par
 `JOB_COLLECTION_CRON`, `SCRAPED_COLLECTION_CRON` et `AGENT_COLLECTION_CRON`.
@@ -327,11 +333,11 @@ ont été supprimées par la migration `20261006120000_agent_and_remove_private`
 Chaque runtime lit la configuration via `@findit/config` et échoue vite si une variable requise est
 invalide.
 
-| Runtime | Variables principales                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`                                                                                                                                                                                                                                                                                                                                                                 |
-| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                                                                                                                                                                                                                 |
-| Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_INPUT_USD_PER_MTOK`, `DEEPSEEK_OUTPUT_USD_PER_MTOK`, `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON`, `AGENT_OBJECTIVE`, `FRANCETRAVAIL_*`, `TELEGRAM_*`, `APP_URL` |
+| Runtime | Variables principales                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`                                                                                                                                                                                                                                                                                                                                                                                         |
+| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                                                                                                                                                                                                                                         |
+| Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_INPUT_USD_PER_MTOK`, `DEEPSEEK_OUTPUT_USD_PER_MTOK`, `AGENT_RUN_ENABLED`, `AGENT_DISCOVERY_ONLY`, `AGENT_COLLECTION_CRON`, `AGENT_OBJECTIVE`, `FRANCETRAVAIL_*`, `TELEGRAM_*`, `APP_URL` |
 
 `INTERNAL_API_KEY` est **héritée** : `parseApiEnv` l'exige encore (minimum 32 caractères) et l'API
 refuse de démarrer sans elle, mais plus aucun code ne la lit. Il n'y a ni proxy Next, ni
@@ -348,9 +354,6 @@ doit faire échouer le démarrage.
 - Aucune authentification, aucun modèle `User` : le dashboard d'administration et toutes les routes
   de l'API sont accessibles à qui atteint le service. Une instance publique doit être protégée
   entièrement par le reverse proxy.
-- `.env.example` ne déclare pas `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`,
-  alors que le worker les lit (défauts respectifs : `false`, `0 8 * * *`, objectif alternance/stage
-  en Île-de-France).
 - `CORS_ORIGIN` a pour défaut `http://localhost:3100` depuis le nettoyage du 2026-10-06 : le port 3000
   appartient à un autre projet et un défaut qui y pointait était un piège.
 - Variables mortes retirées le 2026-10-06 : `SEARCH_API_PROVIDER`, `SEARCH_API_KEY` (schéma API) et
@@ -359,20 +362,20 @@ doit faire échouer le démarrage.
   `.env` qui les porte encore.
 - Le rôle applicatif de la base en ligne n'est pas propriétaire du schéma : une migration qui change
   la structure doit être appliquée avec une connexion propriétaire, puis réconciliée par
-  `migrate resolve`. L'incident s'est produit deux fois.
+  `migrate resolve` (procédure dans [HANDOFF.md](../HANDOFF.md) §7).
 - `DATABASE_URL_OWNER` existe dans le `.env` local mais n'est déclaré nulle part dans le code ni
   dans `.env.example`.
 - Reprise en cascade partielle : la relecture de page vide, l'extraction `JobPosting` JSON-LD avant
-  le LLM et l'abandon journalisé (`AgentError.retried = true`) sont livrés. L'étape « connecteurs
-  spécialisés en repli » (CDC §4.7, étape 3) n'est pas câblée dans l'agent : il n'invoque pas
-  `@findit/job-connectors` comme secours.
-- Boucle d'outils partielle : le modèle choisit **les recherches** et décide s'il en faut un autre
-  tour à la lumière du précédent (`createLlmQueryPlanner` + `refine`, avec repli déterministe). La
-  suite de `runAgent` reste fixe : il ne choisit ni le crawl, ni l'extraction, ni l'arrêt, et les
-  observations ne portent que sur la recherche. Le reste de la section 5 (décision sur les autres
-  outils) reste à faire.
-- Les job boards et l'agent autonome sont éteints par défaut (`SCRAPED_SOURCES_ENABLED=false`,
-  `AGENT_RUN_ENABLED=false`) ; les job boards ne tournent que par `pnpm board:proof`.
+  le LLM et l'abandon journalisé (`AgentError.retried = true`) sont livrés. L'étape 3 du CDC §4.7
+  (« extraction spécialisée, connecteurs / API officielles ») n'est couverte que par le JSON-LD :
+  l'agent n'invoque pas `@findit/job-connectors` comme secours.
+- Boucle d'outils partielle : le modèle choisit **les recherches** (`createLlmQueryPlanner` +
+  `refine`, repli déterministe) **et les sources à crawler** (`createLlmSourceSelector`, repli
+  ordre du score). Il ne choisit ni le mode d'extraction (JSON-LD ou LLM) ni l'arrêt, et `refine`
+  ne produit que des requêtes. Le reste de la section 5 reste à faire.
+- L'agent autonome est éteint par défaut (`AGENT_RUN_ENABLED=false`). Les job boards sont allumés
+  par défaut (`SCRAPED_SOURCES_ENABLED=true`) mais ne collectent rien sans `APIFY_API_TOKEN` ;
+  `pnpm board:proof` reste l'exécution à la demande, hors cron.
 - Le workflow CI est écrit dans `.github/workflows/ci.yml`, mais l'état du compte GitHub et
   l'exécution réelle des Actions ne sont pas vérifiables depuis le dépôt.
 - L'analyse GitHub et l'export DOCX n'existent pas ; la génération de CV et de lettres a été
