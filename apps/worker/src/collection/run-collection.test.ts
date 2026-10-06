@@ -21,6 +21,7 @@ const NOW = new Date("2026-07-17T12:00:00.000Z");
 class FakeStore implements ConnectorRunStore {
   readonly closed: { runId: string; result: ClosedRun }[] = [];
   readonly counts = new Map<string, DecisionCounts>();
+  readonly costs = new Map<string, number>();
   readonly errors: RecordedError[] = [];
   #next = 0;
 
@@ -43,6 +44,11 @@ class FakeStore implements ConnectorRunStore {
   }
   recordDecisionCounts(runId: string, counts: DecisionCounts): Promise<void> {
     this.counts.set(runId, counts);
+    return Promise.resolve();
+  }
+
+  recordCost(runId: string, costMicroUsd: number): Promise<void> {
+    this.costs.set(runId, costMicroUsd);
     return Promise.resolve();
   }
 }

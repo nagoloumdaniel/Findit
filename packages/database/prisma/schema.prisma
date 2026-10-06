@@ -292,10 +292,15 @@ enum AtsKind {
   FRANCE_TRAVAIL
   OTHER
   UNKNOWN
+  /// Job board lu par un fournisseur de scraping (Apify, ScrapeGraphAI), pas un ATS d'entreprise.
+  JOB_BOARD
 }
 
 /// Régime d'accès à une source, tenu à jour dans la documentation de conformité.
 /// Aucune collecte n'est permise hors des régimes explicitement autorisés.
+/// OWNER_ACCEPTED_SCRAPING n'est pas une autorisation de la source : c'est un
+/// accès toléré, que le propriétaire a décidé d'utiliser en connaissance du
+/// risque (conditions d'utilisation de la plateforme qui l'interdisent).
 enum SourceAccessStatus {
   OFFICIAL_API
   PUBLIC_FEED
@@ -304,6 +309,7 @@ enum SourceAccessStatus {
   MANUAL_IMPORT
   DISABLED_PENDING_PERMISSION
   PROHIBITED
+  OWNER_ACCEPTED_SCRAPING
 }
 
 /// Où et comment collecter les offres d'une entreprise.
@@ -437,6 +443,11 @@ model ConnectorRun {
   jobsQuarantined Int @default(0)
   duplicatesFound Int @default(0)
   errorCount      Int @default(0)
+
+  /// Coût facturé par la source pour cette exécution, en micro-dollars entiers
+  /// (5 $ = 5 000 000). Zéro pour les sources gratuites. Le plafond mensuel des
+  /// sources payantes se calcule en additionnant cette colonne.
+  costMicroUsd Int @default(0)
 
   /// Relie les journaux d'une même exécution entre les processus.
   correlationId String

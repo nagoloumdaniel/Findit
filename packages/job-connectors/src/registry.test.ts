@@ -7,6 +7,7 @@ import { greenhouseConnector } from "./greenhouse.js";
 import { leverConnector } from "./lever.js";
 import { workableConnector } from "./workable.js";
 import { workdayConnector } from "./workday.js";
+import { createWttjConnector } from "./wttj.js";
 import { CONNECTOR_REGISTRY_ENTRIES } from "./registry.js";
 
 const entryFor = (name: string) =>
@@ -51,6 +52,10 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
       [workableConnector, SourceAccessStatus.PUBLIC_FEED],
       [franceTravailConnector, SourceAccessStatus.OFFICIAL_API],
       [workdayConnector, SourceAccessStatus.AUTHORIZED_CRAWL],
+      [
+        createWttjConnector({ token: "test", maxItems: 1 }),
+        SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+      ],
     ] as const;
 
     for (const [connector, accessStatus] of regimes) {
@@ -64,14 +69,14 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   });
 
   it("holds no line for the sources the register found closed", () => {
-    // Ces sources ont été retirées du registre : aucune ligne, donc aucune
-    // exécution possible.
+    // Ces sources n'ont aucune ligne : aucune exécution possible. Les job boards
+    // s'ouvrent un par un, à leur brique (phase 22) ; Welcome to the Jungle l'est
+    // depuis TASK-306 et a donc quitté cette liste.
     for (const name of [
       "ashby",
       "linkedin",
       "indeed",
       "glassdoor",
-      "welcome-to-the-jungle",
       "smartrecruiters",
       "smartrecruiters-www",
       "teamtailor",

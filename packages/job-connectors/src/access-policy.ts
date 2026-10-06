@@ -6,11 +6,16 @@ import { ConnectorStatus, SourceAccessStatus } from "@findit/database";
  * découverte, `MANUAL_IMPORT` passe par un humain, et les deux derniers ferment
  * la source. La liste des régimes et leur signification sont tenues dans
  * docs/legal-compliance.md.
+ *
+ * `OWNER_ACCEPTED_SCRAPING` (décision du propriétaire, 2026-10-05) permet la
+ * collecte d'un job board dont les conditions l'interdisent. Il reste un régime
+ * à part pour que l'accès toléré ne se confonde jamais avec un accès permis.
  */
 export const COLLECTION_ALLOWED_STATUSES: readonly SourceAccessStatus[] = [
   SourceAccessStatus.OFFICIAL_API,
   SourceAccessStatus.PUBLIC_FEED,
   SourceAccessStatus.AUTHORIZED_CRAWL,
+  SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
 ];
 
 /**

@@ -51,6 +51,7 @@ class InMemoryRunStore implements ConnectorRunStore {
   readonly runs: OpenedRun[] = [];
   readonly errors: StoredError[] = [];
   readonly decisionCounts = new Map<string, DecisionCounts>();
+  readonly costs = new Map<string, number>();
 
   constructor(private readonly registration: ConnectorRegistration | null) {}
 
@@ -81,6 +82,11 @@ class InMemoryRunStore implements ConnectorRunStore {
 
   recordDecisionCounts(runId: string, counts: DecisionCounts): Promise<void> {
     this.decisionCounts.set(runId, counts);
+    return Promise.resolve();
+  }
+
+  recordCost(runId: string, costMicroUsd: number): Promise<void> {
+    this.costs.set(runId, costMicroUsd);
     return Promise.resolve();
   }
 }

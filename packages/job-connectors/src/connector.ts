@@ -23,6 +23,13 @@ export interface RawJob {
    * doit venir de chaque offre, jamais d'un libellé de requête.
    */
   readonly companyName?: string | null;
+  /**
+   * Lien de candidature quand la source le donne : souvent la page de l'ATS de
+   * l'employeur, derrière une offre de job board. Les connecteurs natifs ne le
+   * renseignent pas - leur `url` est déjà celle de l'ATS. Il n'est pas encore
+   * persisté ; la fusion inter-sources (TASK-307) en dépend.
+   */
+  readonly applyUrl?: string | null;
   readonly rawContent: string;
   readonly contentType: string;
 }
@@ -64,6 +71,19 @@ export interface CollectionContext {
   readonly now: () => Date;
   /** Relie les journaux d'une même exécution entre les processus. */
   readonly correlationId: string;
+  /**
+   * Déclare ce que l'exécution a coûté jusqu'ici, en micro-dollars, TOTAL et non
+   * incrément : l'appeler deux fois remplace la valeur. Sert aux sources
+   * payantes ; une source gratuite ne l'appelle jamais. Le coût déclaré avant un
+   * échec est consigné quand même : un run raté a pu être facturé.
+   */
+  readonly reportCostMicroUsd: (totalMicroUsd: number) => void;
+  /**
+   * Signale un fait qui n'a pas fait échouer la collecte mais que la trace doit
+   * garder, par exemple des éléments rejetés par la validation. Il est consigné
+   * comme erreur de la source, sans clore l'exécution en échec.
+   */
+  readonly reportNotice: (kind: string, message: string) => void;
 }
 
 /**
@@ -83,6 +103,13 @@ export interface JobSourceConnector<TTarget = CollectionTarget> {
    * `Crawl-delay: 1` : son connecteur déclare 1000.
    */
   readonly minRequestIntervalMs: number;
+  /**
+   * Présent seulement sur une source payante : coût MAXIMAL d'une exécution
+   * pour cette cible, en micro-dollars. Sa présence rend la garde de budget
+   * obligatoire - un connecteur qui en dépend ne s'exécute pas sans elle. Elle
+   * lève si l'exécution n'est pas bornée.
+   */
+  estimateCostMicroUsd?(target: TTarget): number;
 
   collect(
     permit: CollectionPermit,

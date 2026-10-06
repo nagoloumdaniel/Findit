@@ -79,6 +79,7 @@ describe("runConnector", () => {
       target,
       jobs: [rawJob],
       requestCount: 1,
+      costMicroUsd: 0,
       startedAt: wallClock,
       finishedAt: wallClock,
     });

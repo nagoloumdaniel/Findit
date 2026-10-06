@@ -17,12 +17,16 @@ import {
   COLLECTION_SCHEDULER_ID,
   FINDIT_QUEUE,
   JOB_PIPELINE_QUEUE,
+  SCRAPED_COLLECTION_JOB,
+  SCRAPED_COLLECTION_SCHEDULER_ID,
   WORKER_ENV,
   WORKER_PRISMA,
   WORKER_REDIS_CONNECTION,
 } from "../queue/queue.constants.js";
-import { createCycleDeps } from "./cycle-deps.js";
+import { createCycleDeps, createScrapedCycleDeps } from "./cycle-deps.js";
+import { createJobHandler } from "./job-handler.js";
 import { runCycle } from "./run-cycle.js";
+import { runScrapedCycle } from "./run-scraped-cycle.js";
 
 /**
  * Programme la collecte et l'exécute.
@@ -51,36 +55,88 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       { name: COLLECTION_CYCLE_JOB, opts: { removeOnComplete: 50, removeOnFail: 100 } },
     );
 
-    this.#worker = new Worker(
-      JOB_PIPELINE_QUEUE,
-      async () => {
-        // Des dépendances neuves par cycle : chacune porte son propre
-        // identifiant de corrélation, qui relie tous ses journaux.
-        const started = new Date();
-        const summary = await runCycle(createCycleDeps(this.prisma, this.env));
+    /*
+     * Les job boards ont leur propre planification, une fois par jour : un run
+     * coûte du crédit, la cadence de 4 h des ATS n'a pas lieu de les concerner.
+     * Interrupteur éteint, la planification est RETIRÉE (et non seulement
+     * ignorée) : couper l'interrupteur puis redémarrer arrête vraiment la
+     * dépense, même si une planification a été posée lors d'un démarrage
+     * précédent.
+     */
+    if (this.env.SCRAPED_SOURCES_ENABLED) {
+      await this.queue.upsertJobScheduler(
+        SCRAPED_COLLECTION_SCHEDULER_ID,
+        { pattern: this.env.SCRAPED_COLLECTION_CRON, tz: this.env.JOB_COLLECTION_TIMEZONE },
+        { name: SCRAPED_COLLECTION_JOB, opts: { removeOnComplete: 50, removeOnFail: 100 } },
+      );
+    } else {
+      await this.queue.removeJobScheduler(SCRAPED_COLLECTION_SCHEDULER_ID);
+    }
 
-        const notified = await this.#notify(started);
+    const handle = createJobHandler({
+      native: () => this.#runNativeCycle(),
+      scraped: () => this.#runScrapedCycle(),
+    });
 
-        // Journal structuré : une ligne par cycle, lisible et filtrable.
-        console.log(
-          JSON.stringify({
-            event: "collection-cycle",
-            correlationId: summary.collection.correlationId,
-            startedAt: started.toISOString(),
-            queriesRun: summary.queriesRun,
-            companiesDiscovered: summary.companiesDiscovered,
-            sourcesRegistered: summary.sourcesRegistered,
-            accepted: summary.collection.totalAccepted,
-            quarantined: summary.collection.totalQuarantined,
-            rejected: summary.collection.totalRejected,
-            notified,
-          }),
-        );
+    this.#worker = new Worker(JOB_PIPELINE_QUEUE, (job) => handle(job), {
+      connection: this.connection,
+      concurrency: 1,
+    });
+  }
 
-        return summary;
-      },
-      { connection: this.connection, concurrency: 1 },
+  async #runNativeCycle(): Promise<unknown> {
+    // Des dépendances neuves par cycle : chacune porte son propre
+    // identifiant de corrélation, qui relie tous ses journaux.
+    const started = new Date();
+    const summary = await runCycle(createCycleDeps(this.prisma, this.env));
+
+    const notified = await this.#notify(started);
+
+    // Journal structuré : une ligne par cycle, lisible et filtrable.
+    console.log(
+      JSON.stringify({
+        event: "collection-cycle",
+        correlationId: summary.collection.correlationId,
+        startedAt: started.toISOString(),
+        queriesRun: summary.queriesRun,
+        companiesDiscovered: summary.companiesDiscovered,
+        sourcesRegistered: summary.sourcesRegistered,
+        accepted: summary.collection.totalAccepted,
+        quarantined: summary.collection.totalQuarantined,
+        rejected: summary.collection.totalRejected,
+        notified,
+      }),
     );
+
+    return summary;
+  }
+
+  async #runScrapedCycle(): Promise<unknown> {
+    const started = new Date();
+    const summary = await runScrapedCycle(createScrapedCycleDeps(this.prisma, this.env));
+
+    const notified = await this.#notify(started);
+
+    console.log(
+      JSON.stringify({
+        event: "scraped-collection",
+        correlationId: summary.correlationId,
+        startedAt: started.toISOString(),
+        sources: summary.jobs.map((job) => ({
+          connector: job.connectorName,
+          failed: job.failed,
+          reason: job.failureReason,
+          discovered: job.discovered,
+          accepted: job.accepted,
+        })),
+        accepted: summary.totalAccepted,
+        quarantined: summary.totalQuarantined,
+        rejected: summary.totalRejected,
+        notified,
+      }),
+    );
+
+    return summary;
   }
 
   /**

@@ -24,7 +24,7 @@ describe("decideCollectionAccess", () => {
     expect(decideCollectionAccess("greenhouse", registration(), now)).toEqual({ allowed: true });
   });
 
-  it("allows exactly the three documented collection regimes and no other", () => {
+  it("allows exactly the four documented collection regimes and no other", () => {
     const allowed = Object.values(SourceAccessStatus).filter(
       (accessStatus) =>
         decideCollectionAccess("greenhouse", registration({ accessStatus }), now).allowed,
@@ -34,8 +34,36 @@ describe("decideCollectionAccess", () => {
       SourceAccessStatus.OFFICIAL_API,
       SourceAccessStatus.PUBLIC_FEED,
       SourceAccessStatus.AUTHORIZED_CRAWL,
+      SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
     ]);
     expect(allowed).toEqual([...COLLECTION_ALLOWED_STATUSES]);
+  });
+
+  it("still refuses a prohibited or permission-pending source after the owner decision", () => {
+    for (const accessStatus of [
+      SourceAccessStatus.PROHIBITED,
+      SourceAccessStatus.DISABLED_PENDING_PERMISSION,
+      SourceAccessStatus.SEARCH_ENGINE_DISCOVERY_ONLY,
+      SourceAccessStatus.MANUAL_IMPORT,
+    ]) {
+      expect(
+        decideCollectionAccess("indeed", registration({ name: "indeed", accessStatus }), now),
+      ).toMatchObject({ allowed: false, reason: "ACCESS_STATUS_FORBIDS_COLLECTION" });
+    }
+  });
+
+  it("applies the same terms-review delay to an owner-accepted source", () => {
+    const base = { accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING };
+    expect(
+      decideCollectionAccess("greenhouse", registration({ ...base, termsCheckedAt: null }), now),
+    ).toMatchObject({ allowed: false, reason: "TERMS_NEVER_CHECKED" });
+    expect(
+      decideCollectionAccess(
+        "greenhouse",
+        registration({ ...base, termsCheckedAt: daysBefore(TERMS_MAX_AGE_DAYS + 1) }),
+        now,
+      ),
+    ).toMatchObject({ allowed: false, reason: "TERMS_CHECK_EXPIRED" });
   });
 
   it("refuses a source that is only allowed to be discovered through a search engine", () => {

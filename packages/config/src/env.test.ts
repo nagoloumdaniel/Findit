@@ -97,4 +97,52 @@ describe("parseDatabaseEnv", () => {
     expect(() => parseApiEnv({ ...required, DATABASE_URL: remote })).toThrow();
     expect(() => parseWorkerEnv({ REDIS_URL: required.REDIS_URL, DATABASE_URL: remote })).toThrow();
   });
+
+  it("defaults the scraping budget to the free Apify plan with a safety margin", () => {
+    const worker = parseWorkerEnv({
+      REDIS_URL: required.REDIS_URL,
+      DATABASE_URL: required.DATABASE_URL,
+    });
+
+    expect(worker.SCRAPING_BUDGET_MONTHLY_USD).toBe(4.5);
+    expect(worker.SCRAPING_BUDGET_CYCLE_USD).toBe(0.15);
+  });
+
+  it("reads a custom budget and refuses a negative one", () => {
+    const base = { REDIS_URL: required.REDIS_URL, DATABASE_URL: required.DATABASE_URL };
+
+    expect(
+      parseWorkerEnv({
+        ...base,
+        SCRAPING_BUDGET_MONTHLY_USD: "17",
+        SCRAPING_BUDGET_CYCLE_USD: "0.6",
+      }),
+    ).toMatchObject({ SCRAPING_BUDGET_MONTHLY_USD: 17, SCRAPING_BUDGET_CYCLE_USD: 0.6 });
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_BUDGET_MONTHLY_USD: "-1" })).toThrow();
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_BUDGET_CYCLE_USD: "abc" })).toThrow();
+  });
+
+  it("keeps the scraped-sources cycle off by default, daily at 6 am, 30 results per run", () => {
+    const worker = parseWorkerEnv({
+      REDIS_URL: required.REDIS_URL,
+      DATABASE_URL: required.DATABASE_URL,
+    });
+
+    expect(worker.SCRAPED_SOURCES_ENABLED).toBe(false);
+    expect(worker.SCRAPED_COLLECTION_CRON).toBe("0 6 * * *");
+    expect(worker.SCRAPING_WTTJ_MAX_ITEMS).toBe(30);
+  });
+
+  it("turns the scraped-sources cycle on only with an explicit true, and bounds the result cap", () => {
+    const base = { REDIS_URL: required.REDIS_URL, DATABASE_URL: required.DATABASE_URL };
+
+    expect(
+      parseWorkerEnv({ ...base, SCRAPED_SOURCES_ENABLED: "true" }).SCRAPED_SOURCES_ENABLED,
+    ).toBe(true);
+    expect(parseWorkerEnv({ ...base, SCRAPED_SOURCES_ENABLED: "1" }).SCRAPED_SOURCES_ENABLED).toBe(
+      false,
+    );
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_WTTJ_MAX_ITEMS: "0" })).toThrow();
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_WTTJ_MAX_ITEMS: "101" })).toThrow();
+  });
 });

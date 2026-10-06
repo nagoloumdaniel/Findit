@@ -15,14 +15,17 @@ import type {
 import type { SearchTarget } from "@findit/job-connectors";
 import {
   BraveSearchProvider,
+  createCycleBudget,
   createFranceTravailConnector,
   createPrismaConnectorRunStore,
+  createPrismaSpendLedger,
   greenhouseConnector,
   GREENHOUSE_CONNECTOR_NAME,
   leverConnector,
   LEVER_CONNECTOR_NAME,
   listCollectableSources,
   registerDiscoveredSource,
+  usdToMicroUsd,
   workableConnector,
   workdayConnector,
   WORKDAY_CONNECTOR_NAME,
@@ -30,6 +33,8 @@ import {
 import type { CollectionJob } from "./run-collection.js";
 import { createIngestionPersistence, runCollection } from "./run-collection.js";
 import type { CycleDeps } from "./run-cycle.js";
+import type { ScrapedCycleDeps } from "./run-scraped-cycle.js";
+import { scrapedSourceJobs } from "./scraped-sources.js";
 
 /** Connecteurs qui se collectent par jeton d'entreprise, par nom. */
 const TOKEN_CONNECTORS: ReadonlyMap<string, JobSourceConnector<CollectionTarget>> = new Map([
@@ -104,23 +109,13 @@ const franceTravailSearchJobs = (
 };
 
 /**
- * Assemble les dépendances réelles d'un cycle depuis l'environnement.
- *
- * Sans clé Brave, la recherche est neutralisée : le cycle collecte les
- * entreprises déjà connues du registre, sans en découvrir de nouvelles. La clé
- * ne quitte pas ce module.
+ * Ce que les deux cycles partagent : le journal des exécutions, l'ingestion et
+ * les dépendances d'exécution des connecteurs, garde de budget comprise. Chaque
+ * appel crée un cycle neuf, avec son identifiant de corrélation et son budget.
  */
-export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps => {
+const createCollectionRuntime = (prisma: PrismaClient, env: WorkerEnv) => {
   const store = createPrismaConnectorRunStore(prisma);
   const persistence = createIngestionPersistence(prisma, () => new Date());
-
-  const provider: WebSearchProvider | null =
-    env.BRAVE_SEARCH_API_KEY === undefined
-      ? null
-      : new BraveSearchProvider({ apiKey: env.BRAVE_SEARCH_API_KEY, fetch: globalThis.fetch });
-
-  const search = (query: WebSearchQuery): Promise<readonly WebSearchResult[]> =>
-    provider === null ? noDiscovery() : provider.search(query);
 
   const connectorDeps: RunConnectorDeps = {
     fetch: globalThis.fetch,
@@ -129,7 +124,37 @@ export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps
     now: () => new Date(),
     // Un identifiant par cycle relie tous les journaux d'une même exécution.
     correlationId: `cycle-${randomUUID()}`,
+    // Garde de dépense des sources payantes : un cycle a son budget, le mois
+    // est relu dans le registre des exécutions. Les sources gratuites l'ignorent.
+    budget: createCycleBudget(
+      {
+        monthlyMicroUsd: usdToMicroUsd(env.SCRAPING_BUDGET_MONTHLY_USD),
+        cycleMicroUsd: usdToMicroUsd(env.SCRAPING_BUDGET_CYCLE_USD),
+      },
+      createPrismaSpendLedger(prisma),
+    ),
   };
+
+  return { store, persistence, connectorDeps };
+};
+
+/**
+ * Assemble les dépendances réelles d'un cycle depuis l'environnement.
+ *
+ * Sans clé Brave, la recherche est neutralisée : le cycle collecte les
+ * entreprises déjà connues du registre, sans en découvrir de nouvelles. La clé
+ * ne quitte pas ce module.
+ */
+export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps => {
+  const { store, persistence, connectorDeps } = createCollectionRuntime(prisma, env);
+
+  const provider: WebSearchProvider | null =
+    env.BRAVE_SEARCH_API_KEY === undefined
+      ? null
+      : new BraveSearchProvider({ apiKey: env.BRAVE_SEARCH_API_KEY, fetch: globalThis.fetch });
+
+  const search = (query: WebSearchQuery): Promise<readonly WebSearchResult[]> =>
+    provider === null ? noDiscovery() : provider.search(query);
 
   return {
     search,
@@ -144,5 +169,21 @@ export const createCycleDeps = (prisma: PrismaClient, env: WorkerEnv): CycleDeps
     searchIntervalMs: 1000,
     sourcePriority: 100,
     searchJobs: [...workableSearchJobs(100), ...franceTravailSearchJobs(env, 100)],
+  };
+};
+
+/**
+ * Dépendances du cycle quotidien des sources scrapées. Même socle que le cycle
+ * de 4 heures - même journal, même ingestion, même garde de budget - mais aucune
+ * découverte : seules les sources que la configuration monte sont collectées.
+ */
+export const createScrapedCycleDeps = (prisma: PrismaClient, env: WorkerEnv): ScrapedCycleDeps => {
+  const { store, persistence, connectorDeps } = createCollectionRuntime(prisma, env);
+
+  return {
+    jobs: scrapedSourceJobs(env),
+    collect: (jobs) =>
+      runCollection(jobs, { store, persistence, connectorDeps, now: () => new Date() }),
+    correlationId: connectorDeps.correlationId,
   };
 };

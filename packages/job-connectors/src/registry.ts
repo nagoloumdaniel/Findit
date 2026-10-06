@@ -6,6 +6,7 @@ import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
 import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
 import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
+import { WTTJ_CONNECTOR_NAME } from "./wttj.js";
 
 /**
  * Une ligne du registre, telle que docs/legal-compliance.md l'a établie.
@@ -27,6 +28,7 @@ export interface ConnectorRegistryEntry {
 /** Dates des vérifications consignées dans le registre. */
 const VERIFIED_2026_07_17 = new Date("2026-07-17T00:00:00.000Z");
 const VERIFIED_2026_07_26 = new Date("2026-07-26T00:00:00.000Z");
+const VERIFIED_2026_10_06 = new Date("2026-10-06T00:00:00.000Z");
 
 export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
   {
@@ -72,6 +74,15 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_07_26,
     notes:
       "robots.txt des locataires releve le 2026-07-26 : User-agent * avec Allow sur les sites carriere. Le connecteur relit le robots.txt de CHAQUE locataire avant CHAQUE collecte et refuse sans Allow explicite.",
+  },
+  {
+    name: WTTJ_CONNECTOR_NAME,
+    atsKind: AtsKind.JOB_BOARD,
+    accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_10_06,
+    notes:
+      "Acces TOLERE, non autorise : les conditions de Welcome to the Jungle interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify bebity/welcome-to-the-jungle-jobs-scraper, sans compte ni cookie, profession Tech, 30 resultats par run par defaut (plan gratuit), budget plafonne. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
   },
 ];
 

@@ -53,7 +53,42 @@ export type {
 export { CONNECTOR_REGISTRY_ENTRIES, loadRegistration, syncConnectorRegistry } from "./registry.js";
 export type { ConnectorRegistryEntry } from "./registry.js";
 
-export { CollectionRefusedError, runConnector } from "./run.js";
+export {
+  APIFY_REQUEST_INTERVAL_MS,
+  ApifyItemError,
+  ApifyRunError,
+  ApifyShapeError,
+  createApifyConnector,
+} from "./apify.js";
+export type { ApifyConnectorConfig } from "./apify.js";
+
+export {
+  BudgetGuardMissingError,
+  BudgetRefusedError,
+  CollectionRefusedError,
+  RunTracker,
+  runConnector,
+} from "./run.js";
+
+export {
+  MICRO_USD_PER_USD,
+  UnboundedRunError,
+  assertBoundedMaxItems,
+  createCycleBudget,
+  microUsdToUsd,
+  usdToMicroUsd,
+  worstCaseRunCostMicroUsd,
+} from "./spend-budget.js";
+export type {
+  ActorPricing,
+  BudgetConfig,
+  BudgetDecision,
+  BudgetRefusalReason,
+  BudgetTicket,
+  CycleBudget,
+  SpendLedger,
+} from "./spend-budget.js";
+export { createPrismaSpendLedger, startOfMonthUtc } from "./spend-ledger.js";
 export type { ConnectorRunOutcome, RunConnectorDeps } from "./run.js";
 
 /*
@@ -100,3 +135,15 @@ export { listCollectableSources, registerDiscoveredSource } from "./discovered-s
 export type { CollectableSource, DiscoveredSource } from "./discovered-sources.js";
 
 export { buildDiscoveryQueries } from "./discovery-queries.js";
+
+export {
+  WTTJ_ACTOR_ID,
+  WTTJ_CONNECTOR_NAME,
+  WTTJ_MAX_ITEMS_CEILING,
+  WttjInputError,
+  createWttjConnector,
+  mapWttjItem,
+} from "./wttj.js";
+export type { WttjConnectorOptions } from "./wttj.js";
+
+export { SOURCE_PRIORITY_JOB_BOARD, SOURCE_PRIORITY_OFFICIAL } from "./source-priority.js";
