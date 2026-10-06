@@ -138,7 +138,10 @@ ce défaut reste collectée, stockée et atteignable par un filtre : changer d'a
 jamais une migration.
 
 Les offres hors périmètre sont refusées par la classification, la résolution de localisation ou les
-contraintes de stockage.
+contraintes de stockage. La résolution de localisation lit le code postal français quand la source en
+porte un (« 92000 Nanterre, France » → 92) au lieu de s'arrêter au mot « France » ; à l'écriture, une
+date de publication non ISO est traitée comme illisible plutôt qu'interprétée à l'américaine
+(« 06/10/2026 » deviendrait le 10 juin).
 
 ## Applications
 

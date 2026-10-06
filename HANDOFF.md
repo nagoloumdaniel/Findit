@@ -44,6 +44,11 @@ pièges déjà payés.
   (`extractStructuredOffers`) avant le LLM, relance des seuls échecs, et abandon
   journalisé dans `AgentError` avec `retried = true`. Bornes :
   `maxRecoveries` (5) et `maxAttemptsPerStep` / `maxTotalAttempts` du moteur.
+- **Localisation et date corrigées après mesure** : `resolveLocation` lit le code
+  postal français (« 92000 Nanterre, France » → 92, alors que la clé de commune
+  « 92000 nanterre » ne correspondait à rien et faisait refuser l'offre comme
+  vague) ; `parsePublishedAt` exige une forme ISO, sinon la date est illisible
+  plutôt qu'interprétée à l'américaine.
 - **Suivi de l'usage du modèle** : `@findit/ai` lit `usage.input_tokens` /
   `usage.output_tokens` de chaque réponse, les cumule (`model.usage()`) et les
   facture à la page dans l'action `EXTRACT` (`AgentAction.costMicroUsd`, puis

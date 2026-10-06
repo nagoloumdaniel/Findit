@@ -95,14 +95,30 @@ const normalizeName = (name: string): string =>
     .trim();
 
 /**
+ * Forme ISO acceptée pour une date de publication : `AAAA-MM-JJ`, avec une
+ * heure facultative. L'extraction est consignée de produire cette forme ; tout
+ * le reste est refusé plutôt qu'interprété.
+ */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)?$/u;
+
+/**
  * Lit la date de publication donnée par la source. Rend `null` quand elle est
  * absente ou illisible : `publishedAt` est NOT NULL et ne se devine jamais.
+ *
+ * Le POURQUOI de la forme stricte : `new Date` accepte à peu près tout, et le
+ * fait à l'américaine. « 06/10/2026 », écrit par une source française, y devient
+ * le 10 juin — une date plausible, donc invérifiable, qui ferait publier une
+ * offre à la mauvaise date. Une forme non ISO est traitée comme illisible.
  */
 const parsePublishedAt = (value: string | undefined): Date | null => {
   if (value === undefined || value.trim() === "") {
     return null;
   }
-  const date = new Date(value);
+  const trimmed = value.trim();
+  if (!ISO_DATE.test(trimmed)) {
+    return null;
+  }
+  const date = new Date(trimmed);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 

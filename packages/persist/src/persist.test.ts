@@ -178,6 +178,18 @@ describe("persistOffers - rejets", () => {
     expect(prisma.job.create).not.toHaveBeenCalled();
   });
 
+  it("refuse une date non ISO au lieu de l'interpréter à l'américaine", async () => {
+    const prisma = createPrisma();
+
+    // « 06/10/2026 » veut dire le 6 octobre en France, mais `new Date` en fait
+    // le 10 juin : une date plausible, donc invérifiable. On refuse.
+    const result = await persistOffers([offer({ publishedAt: "06/10/2026" })], depsFor(prisma));
+
+    expect(result.inserted).toBe(0);
+    expect(result.rejected[0]?.reason).toContain("illisible");
+    expect(prisma.job.create).not.toHaveBeenCalled();
+  });
+
   it("rejette une offre dont le contrat est hors périmètre", async () => {
     const prisma = createPrisma();
 

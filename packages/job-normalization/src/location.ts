@@ -130,6 +130,29 @@ const VAGUE_FRENCH = new Set([
   "iles de france",
 ]);
 
+/**
+ * Département déduit d'un code postal français, par ses deux premiers chiffres.
+ * Les huit départements d'Île-de-France y sont, et eux seuls : un code postal
+ * hors zone prouve que l'offre est ailleurs, ce qui vaut mieux que « France ».
+ */
+const DEPARTMENT_BY_POSTAL_PREFIX: ReadonlyMap<string, IleDeFranceDepartment> = new Map([
+  ["75", "75"],
+  ["77", "77"],
+  ["78", "78"],
+  ["91", "91"],
+  ["92", "92"],
+  ["93", "93"],
+  ["94", "94"],
+  ["95", "95"],
+]);
+
+/** Un code postal français, isolé : cinq chiffres, rien de collé. */
+const POSTAL_CODE = /\b\d{5}\b/u;
+
+/** Le libellé débarrassé de son code postal, espaces normalisés. */
+const withoutPostalCode = (part: string): string =>
+  part.replace(POSTAL_CODE, " ").replace(/\s+/gu, " ").trim();
+
 const stripWorkMode = (label: string): { rest: string; workMode: JobWorkMode | null } => {
   const match = WORK_MODE_PREFIX.exec(label);
   if (match === null) {
@@ -144,10 +167,10 @@ const stripWorkMode = (label: string): { rest: string; workMode: JobWorkMode | n
  * Range un libellé de localisation dans le périmètre, ou dit pourquoi il n'y
  * entre pas.
  *
- * Le libellé est la seule information dont on dispose : aucune des offres
- * relevées ne porte de code postal. La ville rendue est celle que la source a
- * écrite ; le département vient de la table officielle des communes, jamais
- * d'une supposition.
+ * Le libellé est la seule information dont on dispose. La ville rendue est celle
+ * que la source a écrite ; le département vient de la table officielle des
+ * communes, ou des deux premiers chiffres d'un code postal quand la source en
+ * porte un. Jamais d'une supposition.
  *
  * Un libellé peut porter plusieurs lieux - « Berlin, Berlin, Germany; Paris,
  * Paris, France » existe réellement. Il suffit qu'un seul soit en
@@ -167,6 +190,7 @@ export const resolveLocation = (label: string | null): LocationResolution => {
 
   let sawVagueFrance = false;
   let sawAmbiguousCommune: string | null = null;
+  let sawOutsideDepartment = false;
 
   // Le point-virgule sépare des lieux distincts ; la virgule, le tiret espacé et
   // les parenthèses précisent un même lieu. « Montrouge - 92 » écrit la commune
@@ -183,6 +207,33 @@ export const resolveLocation = (label: string | null): LocationResolution => {
 
     for (const part of parts) {
       const key = normalizeCommune(part);
+
+      /*
+       * Certaines sources écrivent « 92000 Nanterre, France ». Le code postal
+       * donne le département directement ; sans ce détour, la clé de commune
+       * devient « 92000 nanterre », ne correspond à rien, et l'offre est refusée
+       * comme trop vague alors que le département est explicite.
+       */
+      const postalCode = POSTAL_CODE.exec(part)?.[0] ?? null;
+      if (postalCode !== null) {
+        const department = DEPARTMENT_BY_POSTAL_PREFIX.get(postalCode.slice(0, 2));
+        if (department !== undefined) {
+          const city = withoutPostalCode(part);
+          return {
+            inScope: true,
+            // La source n'a pas toujours écrit de commune : le code postal reste
+            // alors le libellé, jamais une commune inventée.
+            city: city === "" ? postalCode : city,
+            departmentCode: department,
+            workMode,
+            evidence: segment.trim(),
+          };
+        }
+        // Un code postal français hors des huit départements : la preuve que
+        // l'offre est ailleurs, plus forte que le mot « France ».
+        sawOutsideDepartment = true;
+        continue;
+      }
 
       if (VAGUE_FRENCH.has(key)) {
         sawVagueFrance = true;
@@ -216,6 +267,15 @@ export const resolveLocation = (label: string | null): LocationResolution => {
       inScope: false,
       reason: "AMBIGUOUS_COMMUNE",
       detail: `« ${sawAmbiguousCommune} » est le nom de deux communes d'Île-de-France : le libellé ne dit pas laquelle.`,
+      workMode,
+    };
+  }
+
+  if (sawOutsideDepartment) {
+    return {
+      inScope: false,
+      reason: "OUTSIDE_ILE_DE_FRANCE",
+      detail: `« ${label} » porte un code postal hors Île-de-France.`,
       workMode,
     };
   }

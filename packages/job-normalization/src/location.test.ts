@@ -151,4 +151,47 @@ describe("resolveLocation", () => {
       expect(resolveLocation(label)).toMatchObject({ inScope: false, reason: "NO_LOCATION" });
     }
   });
+
+  it("lit un code postal d'Île-de-France collé à la commune", () => {
+    // Relevé sur un vrai run : « 92000 Nanterre, France » était refusé comme
+    // trop vague, alors que 92 est un département du périmètre.
+    expect(resolveLocation("92000 Nanterre, France")).toMatchObject({
+      inScope: true,
+      city: "Nanterre",
+      departmentCode: "92",
+    });
+    expect(resolveLocation("75001 Paris")).toMatchObject({
+      inScope: true,
+      city: "Paris",
+      departmentCode: "75",
+    });
+  });
+
+  it("lit le code postal qu'il précède ou qu'il suive la commune", () => {
+    expect(resolveLocation("Nanterre 92000")).toMatchObject({
+      inScope: true,
+      city: "Nanterre",
+      departmentCode: "92",
+    });
+  });
+
+  it("prend un code postal hors zone pour une preuve, pas pour un flou", () => {
+    // « France » seul serait TOO_VAGUE ; le code postal, lui, dit où.
+    expect(resolveLocation("69000 Lyon, France")).toMatchObject({
+      inScope: false,
+      reason: "OUTSIDE_ILE_DE_FRANCE",
+    });
+    expect(resolveLocation("69000 Lyon")).toMatchObject({
+      inScope: false,
+      reason: "OUTSIDE_ILE_DE_FRANCE",
+    });
+  });
+
+  it("situe le département sur un code postal seul, sans inventer de commune", () => {
+    expect(resolveLocation("92000")).toMatchObject({
+      inScope: true,
+      city: "92000",
+      departmentCode: "92",
+    });
+  });
 });
