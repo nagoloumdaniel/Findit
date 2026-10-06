@@ -1,35 +1,43 @@
 import type { Metadata } from "next";
 
-/*
- * Vue d’ensemble du dashboard. Les compteurs sont à zéro tant que l’agent n’a
- * pas été lancé : un zéro affiché vaut « rien n’a tourné », jamais « rien
- * trouvé ». Aucun chiffre n’est donc inventé ici.
- */
-const STATS = [
-  { label: "Dernier run", value: "Aucun" },
-  { label: "Sources", value: "0" },
-  { label: "Pages", value: "0" },
-  { label: "Nouvelles données", value: "0" },
-] as const;
+import { fetchAgentStats } from "../../lib/api";
 
 export const metadata: Metadata = { title: "Vue d’ensemble" };
+export const dynamic = "force-dynamic";
 
-export default function DashboardOverviewPage() {
+export default async function DashboardOverviewPage() {
+  const stats = await fetchAgentStats();
+
+  const cards = stats.ok
+    ? [
+        { label: "Dernier run", value: stats.data.lastRun?.status ?? "Aucun" },
+        { label: "Sources", value: String(stats.data.sourceCount) },
+        { label: "Pages", value: String(stats.data.pageCount) },
+        { label: "Nouvelles données", value: String(stats.data.publishedJobCount) },
+      ]
+    : [
+        { label: "Dernier run", value: "—" },
+        { label: "Sources", value: "—" },
+        { label: "Pages", value: "—" },
+        { label: "Nouvelles données", value: "—" },
+      ];
+
   return (
     <>
       <h1>Vue d’ensemble</h1>
       <p className="dashboard-lead">
         Statut de l’agent de collecte. Les compteurs restent à zéro tant que l’agent n’a pas été
-        lancé et que l’API n’est pas branchée.
+        lancé.
       </p>
       <div className="stat-grid">
-        {STATS.map((stat) => (
-          <div className="stat-card" key={stat.label}>
-            <p className="stat-card-label">{stat.label}</p>
-            <p className="stat-card-value">{stat.value}</p>
+        {cards.map((card) => (
+          <div className="stat-card" key={card.label}>
+            <p className="stat-card-label">{card.label}</p>
+            <p className="stat-card-value">{card.value}</p>
           </div>
         ))}
       </div>
+      {stats.ok ? null : <p className="dashboard-lead">L’API est injoignable.</p>}
     </>
   );
 }

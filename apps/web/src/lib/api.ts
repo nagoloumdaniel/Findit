@@ -124,3 +124,48 @@ export const fetchJobDetail = async (
     return { ok: false, reason: "UNAVAILABLE" };
   }
 };
+
+export type AgentRunSummary = {
+  id: string;
+  objective: string;
+  status: string;
+  searches: number;
+  pages: number;
+  extracted: number;
+  validated: number;
+  duplicates: number;
+  inserted: number;
+  errors: number;
+  costMicroUsd: number;
+  startedAt: string;
+  endedAt: string | null;
+};
+
+export type AgentStats = {
+  lastRun: AgentRunSummary | null;
+  sourceCount: number;
+  pageCount: number;
+  publishedJobCount: number;
+};
+
+export type SourceItem = {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  schedule: string;
+  maxDepth: number;
+  maxPages: number;
+  priority: number;
+  enabled: boolean;
+  lastCrawlAt: string | null;
+};
+
+export const fetchAgentStats = (): Promise<ApiResult<AgentStats>> =>
+  request<AgentStats>("/api/agent/stats");
+
+export const fetchAgentRuns = (): Promise<ApiResult<AgentRunSummary[]>> =>
+  request<AgentRunSummary[]>("/api/agent/runs");
+
+export const fetchAgentSources = (): Promise<ApiResult<SourceItem[]>> =>
+  request<SourceItem[]>("/api/agent/sources");
