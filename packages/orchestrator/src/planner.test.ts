@@ -21,6 +21,26 @@ describe("deterministicQueryPlanner", () => {
 });
 
 describe("createLlmQueryPlanner", () => {
+  it("consigne au modèle de mettre le terme de contrat entre guillemets", async () => {
+    const systems: string[] = [];
+    const capturing: PlannerModel = {
+      generateStructured: <T>(request: {
+        readonly schema: unknown;
+        readonly prompt: string;
+        readonly system?: string;
+      }): Promise<T> => {
+        systems.push(request.system ?? "");
+        return Promise.resolve({ queries: [{ query: "alternance développeur" }] } as T);
+      },
+    };
+
+    await createLlmQueryPlanner({ model: capturing }).plan({ objective: OBJECTIVE, maxQueries: 3 });
+
+    // Mesuré contre Brave : la phrase exacte ramène 6 titres du périmètre sur 10,
+    // contre 1 sans guillemets.
+    expect(systems[0]).toContain('"alternance"');
+  });
+
   it("rend le plan du modèle, dédupliqué et borné", async () => {
     const planner = createLlmQueryPlanner({
       model: modelReturning({

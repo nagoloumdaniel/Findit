@@ -60,7 +60,8 @@ Objectif (AGENT_OBJECTIVE)
     |
     v
 Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/planner.ts`)
-    |   le modèle propose les requêtes (schéma Zod, bornées à `maxQueries`) ; sortie invalide,
+    |   le modèle propose les requêtes (schéma Zod, bornées à `maxQueries`), le terme de contrat
+    |   entre guillemets (mesuré : 6 titres du périmètre sur 10 avec, 1 sans) ; sortie invalide,
     |   vide ou modèle en panne rendent le plan déterministe — le run ne part jamais sans recherche
     v
 @findit/agent : generateSearchQueries(objective)

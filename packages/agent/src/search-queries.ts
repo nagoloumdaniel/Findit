@@ -217,9 +217,14 @@ export const generateSearchQueries = (objective: string): readonly GeneratedSear
   // 2. Les pages de source d'abord, une par couple contrat × domaine de
   // confiance : c'est là que vivent les offres, à la source, alors qu'une liste
   // d'agrégateur coûte cher à crawler et rend peu.
+  //
+  // Le contrat est entre guillemets : mesuré contre Brave sur jobs.lever.co, la
+  // même requête sans guillemets ne ramenait qu'un titre du périmètre sur dix,
+  // contre six avec. La phrase exacte écarte les pages qui ne font que citer le
+  // mot au passage.
   for (const contract of contractVariants) {
     for (const domain of SITE_TARGETS) {
-      add(primary, `${firstTarget} ${contract} site:${domain}`);
+      add(primary, `${firstTarget} "${contract}" site:${domain}`);
     }
   }
 

@@ -40,6 +40,16 @@ describe("generateSearchQueries", () => {
     expect(all.some((q) => q.includes("site:jobs.lever.co"))).toBe(true);
   });
 
+  it("met le contrat entre guillemets dans les requêtes de source", () => {
+    // Mesuré contre Brave : sans guillemets, 1 titre du périmètre sur 10 ;
+    // avec, 6 sur 10.
+    const all = generateSearchQueries("alternance et stage développeur en Île-de-France").map(
+      (q) => q.query,
+    );
+    expect(all).toContain('développeur "alternance" site:boards.greenhouse.io');
+    expect(all).toContain('développeur "stage" site:jobs.lever.co');
+  });
+
   it("produit une variante par rôle : le métier cible les pages du périmètre", () => {
     const all = generateSearchQueries("alternance et stage développeur en Île-de-France").map(
       (q) => q.query,

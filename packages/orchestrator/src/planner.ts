@@ -110,6 +110,7 @@ const SYSTEM_PROMPT = [
   "Périmètre : contrats d'alternance et de stage, métiers du développement, Île-de-France.",
   "Règles strictes :",
   "- Produis entre 8 et 20 requêtes courtes, chacune exploitable telle quelle par un moteur de recherche.",
+  '- Mets le terme de contrat entre guillemets, par exemple "alternance" ou "stage" : mesuré contre Brave sur jobs.lever.co, la même requête sans guillemets ne ramenait qu\'un titre du périmètre sur dix, contre six avec.',
   "- Couvre plusieurs angles : contrat (alternance, stage), métier, technologie et lieu.",
   "- Commence par les requêtes `site:` sur les domaines qui hébergent les offres (boards.greenhouse.io, jobs.lever.co, apply.workable.com, jobs.ashbyhq.com, jobs.teamtailor.com), car le budget de pages est court : mesuré, un plan qui commence par des requêtes génériques envoie le crawl sur des agrégateurs (LinkedIn, Glassdoor, Indeed) qui répondent 403 ou ne portent aucune offre.",
   "- N'invente pas de marque d'entreprise ni de nom propre absent de l'objectif.",

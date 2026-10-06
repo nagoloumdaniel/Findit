@@ -42,6 +42,13 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Le contrat entre guillemets dans les requêtes** : mesuré contre Brave sur
+  `jobs.lever.co`, `développeur alternance` ramenait 1 titre du périmètre sur 10,
+  `développeur "alternance"` en ramenait 6 ; `-CDI` n'apportait rien, et
+  `stage OR alternance` restait à 3/10. La règle est dans le prompt du
+  planificateur (`planner.ts`) et dans le générateur déterministe
+  (`search-queries.ts`) ; vérifié sur le modèle réel : 10 requêtes, toutes citant
+  le contrat.
 - **Porte de conformité des sources découvertes** : l'agent consulte le registre
   avant de crawler (`decideDiscoveredSourceAccess`,
   `packages/job-connectors/src/board-access.ts`, branchée par le worker et
