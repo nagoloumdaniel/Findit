@@ -179,6 +179,24 @@ const crawlKey = (url: string): string => {
 };
 
 /**
+ * Vrai pour une URL que la source annonce elle-même en erreur.
+ *
+ * Le POURQUOI : mesuré sur trois runs, les boards Greenhouse reviennent du moteur
+ * sous la forme `?error=true` (offre supprimée ou expirée). Ces pages consommaient
+ * une résolution de redirection et un crawl sans jamais porter d'offre. Le signal
+ * est écrit par la source, pas deviné : on ne filtre que `error=true` et `error=1`.
+ */
+const ERROR_PAGE_PATTERN = /[?&]error=(?:true|1)(?:&|$)/iu;
+
+const isErrorPageUrl = (url: string): boolean => {
+  try {
+    return ERROR_PAGE_PATTERN.test(new URL(url).search);
+  } catch {
+    return ERROR_PAGE_PATTERN.test(url);
+  }
+};
+
+/**
  * Nombre de candidates envoyées au sélecteur. Mesuré : lui donner les 29 sources
  * d'un tour coûtait 1 012 µ$ pour la seule sélection, soit 90 % du run ; le score
  * a déjà classé les sources, le modèle n'a besoin que du haut de la liste pour
@@ -365,6 +383,7 @@ export async function runAgent(
        * connues.
        */
       const candidatesByUrl = new Map<string, SourceCandidate>();
+      let errorPagesSkipped = 0;
       for (const query of current.queries) {
         if (shouldStop() || roundExhausted()) {
           break;
@@ -398,6 +417,11 @@ export async function runAgent(
             kept: source.keep,
           });
 
+          if (isErrorPageUrl(source.result.url)) {
+            errorPagesSkipped += 1;
+            continue;
+          }
+
           if (source.keep && !candidatesByUrl.has(source.result.url)) {
             candidatesByUrl.set(source.result.url, {
               url: source.result.url,
@@ -426,7 +450,11 @@ export async function runAgent(
       const selectionUsage = usageDelta(selectionUsageBefore, deps.model.usage?.());
       await deps.runStore.recordAction(runId, {
         kind: ACTION_KIND.DISCOVER,
-        detail: `sélection ${selection.source} · ${String(selection.urls.length)} source(s) sur ${String(candidates.length)}`,
+        detail: `sélection ${selection.source} · ${String(selection.urls.length)} source(s) sur ${String(candidates.length)}${
+          errorPagesSkipped === 0
+            ? ""
+            : ` · ${String(errorPagesSkipped)} page(s) en erreur écartée(s)`
+        }`,
         count: selection.urls.length,
         costMicroUsd:
           selectionUsage !== null && deps.modelCost !== undefined

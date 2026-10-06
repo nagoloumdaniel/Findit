@@ -1444,4 +1444,41 @@ describe("runAgent - choix des sources", () => {
 
     expect(crawled).toEqual(["https://example.com/company/careers/"]);
   });
+
+  it("écarte une page que la source elle-même annonce en erreur", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    // Mesuré sur trois runs : les boards Greenhouse reviennent en `?error=true`
+    // (offre supprimée) et consommaient résolution et crawl pour rien.
+    const search = makeSearch([
+      {
+        url: "https://job-boards.greenhouse.io/mirakllabs?error=true",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "job-boards.greenhouse.io",
+      },
+      {
+        url: "https://example.com/offres",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual(["https://example.com/offres"]);
+    const selection = fake.actions.find((action) => (action.detail ?? "").startsWith("sélection"));
+    expect(selection?.detail).toContain("1 page(s) en erreur écartée(s)");
+  });
 });
