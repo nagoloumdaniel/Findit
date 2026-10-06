@@ -63,6 +63,47 @@ const ROLE_TOKENS: ReadonlyArray<readonly [JobRoleCategory, readonly string[]]> 
 ];
 
 /*
+ * Des titres où « developer » et « développeur » désignent un poste commercial :
+ * un « business developer » vend, il ne programme pas (bug B009, constaté sur
+ * des offres réelles de Welcome to the Jungle). Sans cette liste, le mot suffit
+ * à ranger le poste parmi les développeurs.
+ */
+const COMMERCIAL_PHRASES: readonly string[] = [
+  "business developer",
+  "business development",
+  "biz dev",
+  "bizdev",
+  "sales developer",
+  "sales development",
+  "developpeur commercial",
+  "developpeuse commerciale",
+  "developpeur d affaires",
+  "developpeuse d affaires",
+  "developpement commercial",
+  "developpement d affaires",
+];
+
+/*
+ * Un titre d'ingénierie qui cite le développement commercial comme domaine du
+ * produit - « Software Engineer, Business Development Platform » - reste un
+ * poste d'ingénierie. Seuls des mots qui nomment le métier d'ingénieur ou une
+ * spécialité d'ingénierie le prouvent ; « mobile » ou « react » seuls ne le
+ * prouvent pas, un commercial peut vendre du mobile.
+ */
+const ENGINEERING_MARKERS: readonly string[] = [
+  "engineer",
+  "ingenieur",
+  "software",
+  "full stack",
+  "fullstack",
+  "back end",
+  "backend",
+  "front end",
+  "frontend",
+  "devops",
+];
+
+/*
  * `normalizeForMatching` rend un texte encadré d'espaces et à espaces uniques.
  * Chercher « mot » entouré d'espaces suffit donc à trouver un mot entier, sans
  * expression régulière - et donc sans avoir à échapper « c++ » ou « c# », dont
@@ -77,6 +118,11 @@ const mentions = (haystack: string, needle: string): boolean => haystack.include
  */
 export const readRole = (title: string): RoleSignal => {
   const normalized = normalizeForMatching(title);
+
+  const commercial = COMMERCIAL_PHRASES.some((phrase) => mentions(normalized, phrase));
+  if (commercial && !ENGINEERING_MARKERS.some((marker) => mentions(normalized, marker))) {
+    return { role: null, reason: null };
+  }
 
   for (const [role, tokens] of ROLE_TOKENS) {
     const found = tokens.find((token) => mentions(normalized, token));

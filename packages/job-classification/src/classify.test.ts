@@ -85,6 +85,43 @@ describe("classifyJob", () => {
     }
   });
 
+  it("does not take a business developer for a developer", () => {
+    // Titres réels relevés sur Welcome to the Jungle le 2026-10-06 (bug B009) :
+    // le mot anglais « developer » désigne ici un poste commercial.
+    for (const title of [
+      "Business developer BtoB - Stage F/H",
+      "Business Developer - Stage 4-6 mois",
+      "Stage - Business Development Representative",
+      "Alternance - Développeur commercial (H/F)",
+      "Alternance - Développeuse d'affaires",
+      "Stage - Sales Developer",
+      "Alternance Biz Dev",
+    ]) {
+      const decision = classifyJob({ title });
+
+      expect(decision, title).toMatchObject({ outcome: "REJECTED", roleCategory: null });
+      expect(decision.contractType, title).not.toBeNull();
+      expect(decision.reasons.join(" "), title).toContain("ne nomme aucun métier du périmètre");
+    }
+  });
+
+  it("still accepts an engineering title that merely mentions business development", () => {
+    expect(
+      classifyJob({ title: "Stage - Software Engineer, Business Development Platform" }),
+    ).toMatchObject({ outcome: "ACCEPTED", roleCategory: "SOFTWARE_ENGINEERING" });
+    expect(classifyJob({ title: "Alternance - Développeur Back-end Java" })).toMatchObject({
+      outcome: "ACCEPTED",
+      roleCategory: "BACKEND",
+    });
+  });
+
+  it("keeps a plain web developer, whose title says nothing commercial", () => {
+    expect(classifyJob({ title: "Stage - Développeur Web (H/F)" })).toMatchObject({
+      outcome: "ACCEPTED",
+      roleCategory: "OTHER_DEVELOPER",
+    });
+  });
+
   it("does not read « Internal » as an internship", () => {
     // Titre réel : « Internal Control Apprentice (Tech & Product) ». Chercher
     // « intern » sans borne de mot en ferait un stage.
