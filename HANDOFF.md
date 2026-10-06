@@ -124,14 +124,18 @@ sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
   hôtes Greenhouse à un seul — le connecteur, lui, construit sa requête depuis le
   jeton, l'hôte n'identifie que la ligne du registre — et la ligne redondante a été
   retirée (94 → 93 sources ; `doctolib` n'en a plus qu'une).
-- **Dette — matching de CV non suivi, et son coût non plus** :
-  `apps/api/src/matching/matching.service.ts` construit un modèle DeepSeek, l'appelle,
-  et ne lit jamais `model.usage()` : aucun jeton, aucun coût, aucun log. Le `cvText`
-  reçu n'est pas persisté non plus, donc la page Matching reste un collage sans
-  historique. Suivre ce coût demande une table (aucune ne convient :
-  `AgentRun`/`AgentAction` sont sémantiquement réservés à l'agent, `ConnectorRun`
-  aux connecteurs), donc une **migration structurelle** — à appliquer avec la
-  connexion propriétaire puis `migrate resolve`, comme le rappelle §7.
+- **Résolu — le coût du matching CV est suivi** : `apps/api/src/matching/matching.service.ts`
+  lit `model.usage()` autour de toute la requête (structuration du CV **et** les
+  15 scores) et écrit une ligne `ModelCall` (`purpose = "cv-matching"`) avec les
+  jetons et le coût. La table a été ajoutée par la migration
+  `20261007020000_model_calls`, **appliquée avec la connexion propriétaire**
+  (`neondb_owner`, droits de création vérifiés) puis le client régénéré. Le coût
+  remonte par `GET /api/agent/analytics` (`matchingCost`) et s'affiche dans le
+  dashboard ; un échec d'écriture est journalisé sans faire échouer la requête.
+  **Mesure réelle** : un matching complet (CV structuré + 15 offres scorées) a
+  écrit **16 516 + 6 668 tokens pour 12 956 µ$ (0,013 $)** — invisible jusqu'ici.
+  Le `cvText` reçu n'est toujours pas persisté : la page Matching reste un collage
+  sans historique, c'est une autre dette.
 - **Dette — hôtes inconnus non enregistrés** : `collectDiscoveries` calcule
   `unknownHosts` (`packages/job-connectors/src/discovery.ts` l.136-141), qu'aucun
   appelant ne consomme ; une visite éventuelle reste gouvernée par `robots.txt` via
