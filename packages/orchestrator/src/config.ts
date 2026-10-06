@@ -56,6 +56,14 @@ export interface RunAgentOptions {
   readonly country?: string;
   readonly language?: string;
   readonly resultCount?: number;
+  /**
+   * Découverte seule : planifier, chercher, choisir les sources et les enregistrer
+   * au registre, sans crawler ni extraire. Mesuré : sur 4 251 offres lues sur des
+   * boards d'entreprises, **0** passait le périmètre, alors que la découverte a
+   * fait entrer 10 entreprises au registre pour 812 µ$. Ce mode garde ce qui rend,
+   * et retire ce qui coûte ~1 600 µ$ par run pour rien.
+   */
+  readonly discoveryOnly?: boolean;
   /** Horloge injectable, pour rendre les bornes de temps vérifiables en test. */
   readonly now?: () => number;
 }
@@ -73,6 +81,7 @@ export interface ResolvedOptions {
   readonly country: string;
   readonly language: string;
   readonly resultCount: number;
+  readonly discoveryOnly: boolean;
   readonly now: () => number;
 }
 
@@ -103,6 +112,7 @@ export const resolveOptions = (options: RunAgentOptions): ResolvedOptions => {
     country: options.country ?? DEFAULT_COUNTRY,
     language: options.language ?? DEFAULT_LANGUAGE,
     resultCount: options.resultCount ?? DEFAULT_RESULT_COUNT,
+    discoveryOnly: options.discoveryOnly ?? false,
     now: options.now ?? defaultNow,
   };
 

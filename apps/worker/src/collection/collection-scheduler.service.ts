@@ -241,32 +241,38 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       return verdict;
     };
 
-    const result = await runAgent(this.env.AGENT_OBJECTIVE, {
-      runStore: createAgentRunStore(this.prisma),
-      memoryStore: createAgentMemoryStore(this.prisma),
-      search,
-      crawl,
-      model,
-      // Section 5 : le modèle choisit les recherches, le plan déterministe sert
-      // de repli automatique si sa réponse est inutilisable.
-      planner: createLlmQueryPlanner({ model }),
-      // Section 5 : le modèle choisit aussi quelles sources visiter.
-      sourceSelector: createLlmSourceSelector({ model }),
-      // Un alias de redirection est reconnu avant d'être payé.
-      resolveUrl: (url) => resolveFinalUrl(url),
-      /*
-       * Les découvertes de l'agent alimentent le registre. Sans ce branchement,
-       * une entreprise trouvée par l'agent — et payée en crawl et en extraction —
-       * n'est jamais recollectée : mesuré, 0 `CompanySource` créée par un run
-       * d'agent, alors que le cycle natif en tire un flux complet par simple
-       * reconnaissance d'URL.
-       */
-      discoverSource: (url) => registerDiscoveryFromUrl(this.prisma, url),
-      sourceGate,
-      ...(modelCost === undefined ? {} : { modelCost }),
-      recoverPage: (url) => this.#recoverPage(url),
-      persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
-    });
+    const result = await runAgent(
+      this.env.AGENT_OBJECTIVE,
+      {
+        runStore: createAgentRunStore(this.prisma),
+        memoryStore: createAgentMemoryStore(this.prisma),
+        search,
+        crawl,
+        model,
+        // Section 5 : le modèle choisit les recherches, le plan déterministe sert
+        // de repli automatique si sa réponse est inutilisable.
+        planner: createLlmQueryPlanner({ model }),
+        // Section 5 : le modèle choisit aussi quelles sources visiter.
+        sourceSelector: createLlmSourceSelector({ model }),
+        // Un alias de redirection est reconnu avant d'être payé.
+        resolveUrl: (url) => resolveFinalUrl(url),
+        /*
+         * Les découvertes de l'agent alimentent le registre. Sans ce branchement,
+         * une entreprise trouvée par l'agent — et payée en crawl et en extraction —
+         * n'est jamais recollectée : mesuré, 0 `CompanySource` créée par un run
+         * d'agent, alors que le cycle natif en tire un flux complet par simple
+         * reconnaissance d'URL.
+         */
+        discoverSource: (url) => registerDiscoveryFromUrl(this.prisma, url),
+        sourceGate,
+        ...(modelCost === undefined ? {} : { modelCost }),
+        recoverPage: (url) => this.#recoverPage(url),
+        persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
+      },
+      // Mode découverte seule : ce qui rend (le registre) reste, ce qui ne rend
+      // rien (crawl et extraction d'entreprises) n'est plus payé.
+      { discoveryOnly: this.env.AGENT_DISCOVERY_ONLY },
+    );
 
     const notified = await this.#notifyAgentRun(result.runId);
 

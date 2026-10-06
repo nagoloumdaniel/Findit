@@ -53,35 +53,39 @@ const main = async (): Promise<void> => {
           });
 
   try {
-    const result = await runAgent(env.AGENT_OBJECTIVE, {
-      runStore: createAgentRunStore(prisma),
-      memoryStore: createAgentMemoryStore(prisma),
-      search,
-      crawl,
-      model,
-      planner: createLlmQueryPlanner({ model }),
-      sourceSelector: createLlmSourceSelector({ model }),
-      resolveUrl: (url) => resolveFinalUrl(url),
-      // Même branchement que le worker : les découvertes alimentent le registre.
-      discoverSource: (url) => registerDiscoveryFromUrl(prisma, url),
-      // Même porte de conformité que le worker : le registre décide.
-      sourceGate: (url) => decideDiscoveredSourceAccess(prisma, url, new Date()),
-      ...(modelCost === undefined ? {} : { modelCost }),
-      recoverPage: async (url: string): Promise<CrawledPage | null> => {
-        const recovered = await crawl({
-          startUrl: url,
-          maxDepth: 0,
-          maxPages: 1,
-          maxRuntimeMs: 30_000,
-        });
-        const page = recovered.pages[0];
-        if (page === undefined || (page.text.trim() === "" && page.html.trim() === "")) {
-          return null;
-        }
-        return page;
+    const result = await runAgent(
+      env.AGENT_OBJECTIVE,
+      {
+        runStore: createAgentRunStore(prisma),
+        memoryStore: createAgentMemoryStore(prisma),
+        search,
+        crawl,
+        model,
+        planner: createLlmQueryPlanner({ model }),
+        sourceSelector: createLlmSourceSelector({ model }),
+        resolveUrl: (url) => resolveFinalUrl(url),
+        // Même branchement que le worker : les découvertes alimentent le registre.
+        discoverSource: (url) => registerDiscoveryFromUrl(prisma, url),
+        // Même porte de conformité que le worker : le registre décide.
+        sourceGate: (url) => decideDiscoveredSourceAccess(prisma, url, new Date()),
+        ...(modelCost === undefined ? {} : { modelCost }),
+        recoverPage: async (url: string): Promise<CrawledPage | null> => {
+          const recovered = await crawl({
+            startUrl: url,
+            maxDepth: 0,
+            maxPages: 1,
+            maxRuntimeMs: 30_000,
+          });
+          const page = recovered.pages[0];
+          if (page === undefined || (page.text.trim() === "" && page.html.trim() === "")) {
+            return null;
+          }
+          return page;
+        },
+        persist: (offers) => persistOffers(offers, { prisma }),
       },
-      persist: (offers) => persistOffers(offers, { prisma }),
-    });
+      { discoveryOnly: env.AGENT_DISCOVERY_ONLY },
+    );
 
     console.log(JSON.stringify(result, null, 2));
     console.log(`duree : ${Date.now() - startedAt} ms`);

@@ -122,6 +122,12 @@ export const workerEnvSchema = z.object({
    */
   AGENT_RUN_ENABLED: boolFromEnv(false),
   /// Cron du run quotidien de l'agent. 8 h, heure de Paris.
+  /*
+   * Découverte seule : l'agent cherche, choisit et enregistre des entreprises,
+   * sans crawler ni extraire. Mesuré : 0 offre acceptée sur 4 251 pages
+   * d'entreprises, contre 10 entreprises entrées au registre pour 812 µ$.
+   */
+  AGENT_DISCOVERY_ONLY: boolFromEnv(false),
   AGENT_COLLECTION_CRON: z.string().min(1).default("0 8 * * *"),
   /// Objectif par défaut de l'agent, en langage naturel.
   AGENT_OBJECTIVE: z.string().min(1).default("alternance et stage développeur en Île-de-France"),

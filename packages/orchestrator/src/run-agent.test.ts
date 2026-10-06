@@ -1616,3 +1616,65 @@ describe("runAgent - enregistrement des sources découvertes", () => {
     ).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Découverte seule (décision du 2026-10-07)
+// ---------------------------------------------------------------------------
+
+describe("runAgent - découverte seule", () => {
+  it("n'ouvre aucune page et n'extrait rien, mais présente les sources au registre", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    let extractCalls = 0;
+    const registered: string[] = [];
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://jobs.lever.co/theodo/abc123"),
+      crawl: (options) => {
+        crawled.push(options.startUrl);
+        return Promise.resolve(successCrawl(options.startUrl));
+      },
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [], rejected: [] });
+      },
+      discoverSource: (url) => {
+        registered.push(url);
+        return Promise.resolve("enregistrée · lever/theodo");
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, {
+      maxQueries: 1,
+      discoveryOnly: true,
+    });
+
+    // Rien n'est crawlé ni extrait : c'est tout l'objet du mode.
+    expect(crawled).toEqual([]);
+    expect(extractCalls).toBe(0);
+    expect(result).toMatchObject({ pageCount: 0, sourceCount: 0, extractedCount: 0 });
+    // La découverte, elle, continue : c'est ce qui rend.
+    expect(registered).toEqual(["https://jobs.lever.co/theodo/abc123"]);
+    expect(
+      fake.actions.some((action) => (action.detail ?? "").startsWith("découverte seule")),
+    ).toBe(true);
+    expect(fake.actions.some((action) => (action.detail ?? "").startsWith("source · "))).toBe(true);
+  });
+
+  it("crawle normalement quand le mode n'est pas demandé", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const deps = buildDeps(fake, {
+      search: oneSource("https://jobs.lever.co/theodo/abc123"),
+      crawl: (options) => {
+        crawled.push(options.startUrl);
+        return Promise.resolve(successCrawl(options.startUrl));
+      },
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(crawled).toEqual(["https://jobs.lever.co/theodo/abc123"]);
+  });
+});

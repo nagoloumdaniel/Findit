@@ -501,8 +501,21 @@ export async function runAgent(
             : 0,
       });
 
-      // Phase 3 : crawl et extraction, dans l'ordre choisi.
-      for (const sourceUrl of selection.urls) {
+      /*
+       * Phase 3 : crawl et extraction, dans l'ordre choisi. En mode découverte
+       * seule, la phase est vide : mesuré, l'extraction de pages d'entreprises ne
+       * rendait aucune offre du périmètre (0 sur 4 251) pour ~1 600 µ$ par run,
+       * alors que la découverte, elle, fait entrer des entreprises au registre.
+       */
+      if (config.discoveryOnly) {
+        await deps.runStore.recordAction(runId, {
+          kind: ACTION_KIND.DISCOVER,
+          detail: `découverte seule · ${String(candidates.length)} candidate(s), crawl et extraction ignorés`,
+          count: 0,
+        });
+      }
+
+      for (const sourceUrl of config.discoveryOnly ? [] : selection.urls) {
         if (shouldStop() || roundExhausted()) {
           break;
         }
