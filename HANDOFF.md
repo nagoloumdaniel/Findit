@@ -116,15 +116,22 @@ sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
   propriétaire du schéma ; appliquer la migration structurelle via la connexion
   propriétaire, puis `migrate resolve`. L'état en ligne n'est pas vérifiable depuis
   ce dépôt et n'est pas affirmé ici.
-- **Dette — Greenhouse a deux hôtes** : le registre est unique par
+- **Résolu — Greenhouse a deux hôtes** : le registre est unique par
   `(entreprise, domaine)`, or `boards.greenhouse.io` et `job-boards.greenhouse.io`
-  sont deux domaines. Mesuré le 2026-10-07 : sur 36 `CompanySource` Greenhouse,
-  `doctolib` en porte deux, une par hôte, donc une collecte en double (absorbée
-  ensuite par la déduplication des offres). Corriger demande de normaliser l'hôte
-  du connecteur, côté registre.
-- **Dette — matching de CV non suivi** : `POST /api/matching/score` reçoit un
-  `cvText` collé et ne le persiste pas (`apps/api/src/matching/matching.service.ts`),
-  la page Matching n'est donc qu'un collage sans historique.
+  sont deux domaines. Mesuré le 2026-10-07 : `doctolib` portait deux
+  `CompanySource`, donc une collecte en double. Corrigé en deux temps :
+  `canonicalAtsHost` (`packages/job-connectors/src/ats-hosts.ts`) ramène les deux
+  hôtes Greenhouse à un seul — le connecteur, lui, construit sa requête depuis le
+  jeton, l'hôte n'identifie que la ligne du registre — et la ligne redondante a été
+  retirée (94 → 93 sources ; `doctolib` n'en a plus qu'une).
+- **Dette — matching de CV non suivi, et son coût non plus** :
+  `apps/api/src/matching/matching.service.ts` construit un modèle DeepSeek, l'appelle,
+  et ne lit jamais `model.usage()` : aucun jeton, aucun coût, aucun log. Le `cvText`
+  reçu n'est pas persisté non plus, donc la page Matching reste un collage sans
+  historique. Suivre ce coût demande une table (aucune ne convient :
+  `AgentRun`/`AgentAction` sont sémantiquement réservés à l'agent, `ConnectorRun`
+  aux connecteurs), donc une **migration structurelle** — à appliquer avec la
+  connexion propriétaire puis `migrate resolve`, comme le rappelle §7.
 - **Dette — hôtes inconnus non enregistrés** : `collectDiscoveries` calcule
   `unknownHosts` (`packages/job-connectors/src/discovery.ts` l.136-141), qu'aucun
   appelant ne consomme ; une visite éventuelle reste gouvernée par `robots.txt` via
