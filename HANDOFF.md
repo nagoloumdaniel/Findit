@@ -134,8 +134,18 @@ sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
   dashboard ; un échec d'écriture est journalisé sans faire échouer la requête.
   **Mesure réelle** : un matching complet (CV structuré + 15 offres scorées) a
   écrit **16 516 + 6 668 tokens pour 12 956 µ$ (0,013 $)** — invisible jusqu'ici.
-  Le `cvText` reçu n'est toujours pas persisté : la page Matching reste un collage
-  sans historique, c'est une autre dette.
+- **Résolu — le matching CV a un historique** : le `cvText` était reçu puis oublié.
+  Il est désormais conservé dans `MatchingRun` (migration `20261007030000_matching_runs`,
+  appliquée avec la connexion propriétaire) **avec une rétention courte** :
+  `MATCHING_RETENTION_HOURS` (défaut 72 h), purgée à chaque écriture plutôt que par
+  une tâche planifiée — une écriture est le seul moment où l'on sait qu'un matching
+  vient d'avoir lieu. `GET /api/matching/history` liste les matchings **sans le CV**
+  (minimisation), `GET /api/matching/history/:id` rend le CV et ses items, et la
+  page Matching affiche « Matchings passés ». Mesuré sur le réel : liste sans
+  `cvText`, détail identique au CV soumis.
+  Note de conformité : un CV est une donnée personnelle
+  (docs/legal-compliance.md, règles de minimisation) ; la durée est réglable et
+  rien d'autre n'en est dérivé que le matching demandé.
 - **Dette — hôtes inconnus non enregistrés** : `collectDiscoveries` calcule
   `unknownHosts` (`packages/job-connectors/src/discovery.ts` l.136-141), qu'aucun
   appelant ne consomme ; une visite éventuelle reste gouvernée par `robots.txt` via
