@@ -39,7 +39,7 @@ export const apiEnvSchema = z.object({
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   DATABASE_URL: databaseUrl,
   REDIS_URL: url,
-  CORS_ORIGIN: origin.default("http://localhost:3000"),
+  CORS_ORIGIN: origin.default("http://localhost:3100"),
   INTERNAL_API_KEY: z.string().min(32),
   /*
    * Fournisseur IA : DeepSeek uniquement (décision du propriétaire, voir
@@ -51,8 +51,6 @@ export const apiEnvSchema = z.object({
   /// Modèle DeepSeek. deepseek-flash par défaut ; deepseek-v4-pro pour le
   /// raisonnement fort (voir HANDOFF.md §6).
   DEEPSEEK_MODEL: z.string().min(1).default("deepseek-flash"),
-  SEARCH_API_PROVIDER: z.enum(["disabled", "brave", "serper"]).default("disabled"),
-  SEARCH_API_KEY: z.string().default(""),
 });
 
 export const workerEnvSchema = z.object({
@@ -101,7 +99,6 @@ export const workerEnvSchema = z.object({
   /// Résultats par run pour Indeed. 100 tient le plan gratuit.
   SCRAPING_INDEED_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(100),
   APIFY_API_TOKEN: z.string().min(1).optional(),
-  SCRAPEGRAPH_API_KEY: z.string().min(1).optional(),
 
   /// Clé DeepSeek, partagée avec l'API. Requise seulement quand l'agent est
   /// allumé (`AGENT_RUN_ENABLED=true`) ; absente, le worker démarre quand même

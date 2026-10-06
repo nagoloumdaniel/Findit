@@ -884,76 +884,6 @@ h1 {
   display: grid;
   gap: 1rem;
 }
-
-.resume-card {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  padding: 1.1rem 1.25rem;
-  display: grid;
-  gap: 0.6rem;
-}
-
-.resume-card-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.resume-card-header h3 {
-  margin: 0;
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
-}
-
-.resume-badge {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--fg-subtle);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  padding: 0.2rem 0.65rem;
-  white-space: nowrap;
-}
-
-.resume-badge-ok {
-  color: var(--accent);
-  border-color: var(--accent-border);
-  background: var(--accent-wash);
-}
-
-.resume-meta {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-}
-
-.resume-facts {
-  border-top: 1px solid var(--border);
-  padding-top: 0.6rem;
-  display: grid;
-  gap: 0.25rem;
-  font-size: var(--text-sm);
-}
-
-.resume-facts p {
-  margin: 0;
-}
-
-.resume-warnings {
-  color: var(--fg-muted);
-  font-style: italic;
-}
-
-.resume-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 .workspace-button {
   font: inherit;
   font-size: var(--text-sm);
@@ -979,22 +909,6 @@ h1 {
   border-color: var(--border-strong);
   color: var(--accent);
 }
-
-.footer-private-link {
-  margin-top: 3rem;
-  text-align: center;
-  font-size: var(--text-xs);
-}
-
-.footer-private-link a {
-  color: var(--fg-subtle);
-  text-decoration: none;
-}
-
-.footer-private-link a:hover {
-  color: var(--accent);
-}
-
 /* Barre de progression de la structuration : une estimation assumée. */
 .workspace-progress-block {
   display: grid;
@@ -1097,155 +1011,7 @@ h1 {
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
 }
-
-.application-title {
-  margin: 0;
-  font-size: var(--text-xl);
-  line-height: var(--leading-snug);
-}
-
-.application-note {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--fg-muted);
-}
-
-.match-card,
-.letter-card {
-  border-top: 1px solid var(--border);
-  padding-top: 0.75rem;
-  display: grid;
-  gap: 0.5rem;
-  font-size: var(--text-sm);
-}
-
-.match-headline {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-.match-score {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
-  color: var(--accent);
-}
-
-.match-confidence {
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-}
-
-.match-breakdown,
-.match-notes {
-  margin: 0;
-  padding-left: 1.1rem;
-  display: grid;
-  gap: 0.2rem;
-}
-
-.match-criterion {
-  font-weight: var(--weight-semibold);
-}
-
-.match-line {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  align-items: center;
-}
-
-.chip {
-  font-size: var(--text-2xs);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  padding: 0.1rem 0.55rem;
-  color: var(--fg-muted);
-}
-
-.chip-ok {
-  color: var(--accent);
-  border-color: var(--accent-border);
-  background: var(--accent-wash);
-}
-
-.chip-missing {
-  border-style: dashed;
-}
-
-.letter-subject {
-  margin: 0;
-  font-weight: var(--weight-semibold);
-}
-
-.letter-paragraph {
-  margin: 0;
-  line-height: var(--leading-body);
-}
-
-.letter-note {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-  font-style: italic;
-}
-
 /* Suivi des candidatures : formulaires compacts et historique date. */
-.application-status-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.application-select {
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--fg);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  padding: 0.4rem 0.9rem;
-}
-
-.application-note-input {
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 0.4rem 0.9rem;
-  flex: 1;
-  min-width: 12rem;
-}
-
-.application-notes-form {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.application-notes {
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.75rem;
-  resize: vertical;
-}
-
-.application-history {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-  display: grid;
-  gap: 0.15rem;
-}
-
 /* Bouton Filtres : les filtres se replient, l'etat actif les garde ouverts. */
 .filters-toggle {
   margin-top: 0.75rem;
@@ -1339,24 +1105,6 @@ h1 {
 
 /* Recherche par CV : bouton dans la ligne de recherche, resultats en pleine
    largeur en dessous (meme technique display: contents que les filtres). */
-.cv-search {
-  display: contents;
-}
-
-.cv-search-results {
-  grid-column: 1 / -1;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.cv-search-results:empty {
-  display: none;
-}
-
-.cv-search-change {
-  justify-self: start;
-}
-
 /* Navigation haute, discrete : un lien, pas une barre lourde. */
 .top-nav {
   display: flex;
@@ -1404,74 +1152,6 @@ button.filters-toggle-button {
 }
 
 /* Popup de tri des competences : superposition sobre, decisions explicites. */
-.triage-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 10, 11, 0.55);
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  z-index: 50;
-}
-
-.triage-card {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  max-width: 34rem;
-  width: 100%;
-  max-height: 85vh;
-  overflow-y: auto;
-  display: grid;
-  gap: 0.9rem;
-}
-
-.triage-title {
-  margin: 0;
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
-}
-
-.triage-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.9rem;
-}
-
-.triage-row {
-  display: grid;
-  gap: 0.35rem;
-  border-top: 1px solid var(--border);
-  padding-top: 0.7rem;
-}
-
-.triage-skill {
-  font-weight: var(--weight-semibold);
-}
-
-.triage-reason {
-  color: var(--fg-subtle);
-  font-size: var(--text-sm);
-}
-
-.triage-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.triage-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: var(--text-sm);
-  color: var(--fg-muted);
-  cursor: pointer;
-}
-
 /* ------------------------------------------------------------------ */
 /* Dashboard administrateur : barre latérale + zone de contenu         */
 /* ------------------------------------------------------------------ */
