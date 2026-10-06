@@ -72,8 +72,8 @@ describe("createHelloworkConnector", () => {
 
     expect(connector.name).toBe(HELLOWORK_CONNECTOR_NAME);
     expect(connector.atsKind).toBe(AtsKind.JOB_BOARD);
-    // 50 + 20 x 950 = 19 050 micro-dollars, soit 0,01905 $.
-    expect(connector.estimateCostMicroUsd?.(target)).toBe(19_050);
+    // 50 + (20 + 20 de dépassement de page) x 950 = 38 050 micro-dollars, soit 0,03805 $.
+    expect(connector.estimateCostMicroUsd?.(target)).toBe(38_050);
   });
 
   it("refuses a cap above the absolute ceiling or no cap at all", () => {

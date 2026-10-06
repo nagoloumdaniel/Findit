@@ -16,6 +16,14 @@ export const HELLOWORK_ACTOR_ID = "solidcode/hellowork-scraper";
  */
 export const HELLOWORK_MAX_ITEMS_CEILING = 100;
 
+/*
+ * L'acteur garde la dernière page entière quand elle dépasse le plafond
+ * demandé : pour un plafond de 40 résultats, il en a rendu 60 (constaté sur un
+ * run réel le 2026-10-06). Ce dépassement est facturé, donc la charge maximale
+ * et l'estimation le couvrent ; `limit` reste borné au plafond demandé.
+ */
+const RESULT_OVERSHOOT = 20;
+
 export class HelloworkInputError extends Error {
   override readonly name = "HelloworkInputError";
 
@@ -130,6 +138,7 @@ export const createHelloworkConnector = (
     eventPricesMicroUsd: EVENT_PRICES,
     maxItems: options.maxItems,
     maxItemsCeiling: HELLOWORK_MAX_ITEMS_CEILING,
+    resultOvershoot: RESULT_OVERSHOOT,
     buildInput: (target, maxItems) => {
       if (!LOCATIONS.has(target.location)) {
         throw new HelloworkInputError(

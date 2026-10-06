@@ -29,9 +29,9 @@ describe("scrapedSourceJobs", () => {
     for (const job of jobs) {
       expect(job.sourcePriority).toBe(SOURCE_PRIORITY_JOB_BOARD);
     }
-    // WTTJ 30 : 50 + 30 x (300 + 500) = 24 050 ; HelloWork 40 : 50 + 40 x 950 = 38 050.
+    // WTTJ 30 : 50 + 30 x (300 + 500) = 24 050 ; HelloWork 40 : 50 + (40 + 20 de dépassement) x 950 = 57 050.
     expect(jobs[0]?.connector.estimateCostMicroUsd?.(jobs[0].target)).toBe(24_050);
-    expect(jobs[1]?.connector.estimateCostMicroUsd?.(jobs[1].target)).toBe(38_050);
+    expect(jobs[1]?.connector.estimateCostMicroUsd?.(jobs[1].target)).toBe(57_050);
   });
 
   it("refuses a result cap above the absolute ceiling of a source", () => {

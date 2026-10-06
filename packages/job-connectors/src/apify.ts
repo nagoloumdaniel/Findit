@@ -87,6 +87,14 @@ export interface ApifyConnectorConfig {
   readonly maxItems: number;
   /** Maximum que le code autorise pour cette source, quoi que dise la configuration. */
   readonly maxItemsCeiling: number;
+  /**
+   * Résultats supplémentaires qu'un acteur peut rendre au-delà de son propre
+   * plafond, avant de s'arrêter. Certains acteurs gardent la dernière page
+   * entière même quand elle dépasse le plafond demandé : ce dépassement est
+   * facturé, donc la charge maximale et l'estimation doivent le couvrir pour ne
+   * pas faire avorter le run. `limit` reste borné à `maxItems`.
+   */
+  readonly resultOvershoot?: number;
   /** Entrée de l'acteur, bornée : elle doit reprendre `maxItems` sous le nom que l'acteur lit. */
   readonly buildInput: (
     target: SearchTarget,
@@ -112,7 +120,8 @@ export const createApifyConnector = (
   config: ApifyConnectorConfig,
 ): JobSourceConnector<SearchTarget> => {
   const maxItems = assertBoundedMaxItems(config.maxItems, config.maxItemsCeiling);
-  const worstCase = worstCaseRunCostMicroUsd(config.pricing, maxItems);
+  const resultOvershoot = config.resultOvershoot ?? 0;
+  const worstCase = worstCaseRunCostMicroUsd(config.pricing, maxItems + resultOvershoot);
   const maxPolls = config.maxPolls ?? DEFAULT_MAX_POLLS;
   const actorPath = config.actorId.replace("/", "~");
   const headers = {

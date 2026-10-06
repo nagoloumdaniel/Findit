@@ -92,7 +92,7 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     status: ConnectorStatus.ACTIVE,
     termsCheckedAt: VERIFIED_2026_10_06,
     notes:
-      "Acces TOLERE, non autorise : les conditions de HelloWork interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify solidcode/hellowork-scraper, sans compte ni cookie, contrat alternance/stage et region Ile-de-France filtres cote acteur, 40 resultats par run par defaut (plan gratuit), budget plafonne. L'acteur n'honore pas le plafond de resultats de son entree : le volume et le cout sont bornes par la charge maximale du run. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
+      "Acces TOLERE, non autorise : les conditions de HelloWork interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify solidcode/hellowork-scraper, sans compte ni cookie, contrat alternance/stage et region Ile-de-France filtres cote acteur, 40 resultats par run par defaut (plan gratuit), budget plafonne. L'acteur garde la derniere page entiere quand elle depasse le plafond demande : la charge maximale couvre ce depassement (resultOvershoot 20). Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
   },
 ];
 
