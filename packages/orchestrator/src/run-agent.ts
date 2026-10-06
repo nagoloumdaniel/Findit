@@ -83,6 +83,15 @@ export interface RunAgentDeps {
    * d'échec.
    */
   readonly planner?: QueryPlanner;
+  /**
+   * Porte d'accès d'une source découverte, consultée avant de la crawler. Le
+   * registre de conformité est la seule autorité : l'appelant la branche
+   * (`decideDiscoveredSourceAccess`). Défaut : aucune porte, toute source gardée
+   * est visitée.
+   */
+  readonly sourceGate?: (
+    url: string,
+  ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -323,6 +332,24 @@ export async function runAgent(
           }
 
           const sourceUrl = source.result.url;
+
+          /*
+           * Conformité : le registre décide si cette source peut être visitée.
+           * Le refus est consigné, jamais silencieux — c'est ce qui permet de
+           * constater qu'une source a été écartée pour une raison de droit, et
+           * non parce qu'elle n'a rien rendu.
+           */
+          if (deps.sourceGate !== undefined) {
+            const verdict = await deps.sourceGate(sourceUrl);
+            if (!verdict.allowed) {
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.DISCOVER,
+                detail: `source refusée · ${sourceUrl} · ${verdict.reason}`,
+                count: 0,
+              });
+              continue;
+            }
+          }
 
           // Mémoire : une URL déjà visitée n'est pas re-crawlée dans ce run.
           try {

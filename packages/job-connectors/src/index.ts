@@ -1,3 +1,6 @@
+export { decideDiscoveredSourceAccess } from "./board-access.js";
+export type { SourceAccessRefusal, SourceAccessVerdict } from "./board-access.js";
+
 export {
   COLLECTION_ALLOWED_STATUSES,
   TERMS_MAX_AGE_DAYS,

@@ -230,6 +230,9 @@ interface DepsInput {
   readonly model?: ExtractModel;
   readonly modelCost?: (usage: ModelUsage) => number;
   readonly planner?: QueryPlanner;
+  readonly sourceGate?: (
+    url: string,
+  ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -643,6 +646,49 @@ describe("runAgent - porte déterministe", () => {
     expect(result).toMatchObject({ extractedCount: 0, errorCount: 0 });
     expect(extractCalls).toBe(0);
     expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain("liste ATS");
+  });
+
+  it("ne crawle pas une source que le registre refuse", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    const search = makeSearch([
+      {
+        url: "https://fr.linkedin.com/jobs/alternance-emplois",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "fr.linkedin.com",
+      },
+      {
+        url: "https://example.com/jobs",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      sourceGate: (url) =>
+        Promise.resolve(
+          url.includes("linkedin")
+            ? { allowed: false, reason: "NO_CONNECTOR" }
+            : { allowed: true, reason: "CAREER_SITE" },
+        ),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(crawled).toEqual(["https://example.com/jobs"]);
+    const refusal = fake.actions.find(
+      (action) => action.kind === "DISCOVER" && (action.detail ?? "").includes("source refusée"),
+    );
+    expect(refusal?.detail).toContain("NO_CONNECTOR");
   });
 });
 

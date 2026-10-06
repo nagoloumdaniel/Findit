@@ -5,8 +5,8 @@ import { createDeepSeekModel, computeCostMicroUsd } from "@findit/ai";
 import type { ModelUsage } from "@findit/ai";
 import { crawl } from "@findit/crawler";
 import type { CrawledPage } from "@findit/crawler";
-import { BraveSearchProvider } from "@findit/job-connectors";
-import type { WebSearchProvider } from "@findit/job-connectors";
+import { BraveSearchProvider, decideDiscoveredSourceAccess } from "@findit/job-connectors";
+import type { SourceAccessVerdict, WebSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
 import { createLlmQueryPlanner } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
@@ -218,6 +218,28 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
             fetch: globalThis.fetch,
           });
 
+    /*
+     * Le registre est relu une fois par hôte et par run : la porte est appelée
+     * pour chaque source gardée, et deux requêtes du même board ne méritent pas
+     * deux lectures de la même ligne.
+     */
+    const verdicts = new Map<string, SourceAccessVerdict>();
+    const sourceGate = async (url: string): Promise<SourceAccessVerdict> => {
+      let host = url;
+      try {
+        host = new URL(url).hostname;
+      } catch {
+        // Hôte illisible : le verdict se prend sur l'URL telle quelle.
+      }
+      const cached = verdicts.get(host);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const verdict = await decideDiscoveredSourceAccess(this.prisma, url, new Date());
+      verdicts.set(host, verdict);
+      return verdict;
+    };
+
     const result = await runAgent(this.env.AGENT_OBJECTIVE, {
       runStore: createAgentRunStore(this.prisma),
       memoryStore: createAgentMemoryStore(this.prisma),
@@ -227,6 +249,7 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       // Section 5 : le modèle choisit les recherches, le plan déterministe sert
       // de repli automatique si sa réponse est inutilisable.
       planner: createLlmQueryPlanner({ model }),
+      sourceGate,
       ...(modelCost === undefined ? {} : { modelCost }),
       recoverPage: (url) => this.#recoverPage(url),
       persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
