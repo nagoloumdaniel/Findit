@@ -42,6 +42,14 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Pages que la source annonce en erreur écartées** : les boards Greenhouse
+  reviennent du moteur sous la forme `?error=true` (offre supprimée) et
+  consommaient résolution de redirection et crawl sans jamais porter d'offre. Le
+  filtre ne retient que `error=true` et `error=1`, écrits par la source — rien de
+  deviné. Fréquence mesurée contre Brave : **1 résultat sur 8** sur une requête
+  `site:job-boards.greenhouse.io "alternance"`, 0 sur les trois autres essayées.
+  Gain réel mais rare, et le dernier run réel n'en a rencontré aucune : la preuve
+  est le test, pas la mesure.
 - **Prompt de sélection compacté (numéros au lieu d'URL)** : le modèle recopiait les
   adresses complètes, payées en entrée **et** en sortie. Il reçoit maintenant une
   liste numérotée (`3. [90] jobs.lever.co — Alternance développeur`) et répond
