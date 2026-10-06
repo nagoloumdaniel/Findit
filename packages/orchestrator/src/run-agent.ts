@@ -13,13 +13,14 @@ import type {
   TerminalRunStatus,
 } from "@findit/agent";
 import type { CrawlOptions, CrawlResult, CrawledPage } from "@findit/crawler";
-import { extractJobsFromPage } from "@findit/extract";
+import { extractJobsFromPage, extractStructuredOffers } from "@findit/extract";
 import type { ExtractModel, ExtractionResult } from "@findit/extract";
 import type { WebSearchProvider, WebSearchQuery, WebSearchResult } from "@findit/job-connectors";
 
 import { resolveOptions } from "./config.js";
 import type { ResolvedOptions, RunAgentOptions } from "./config.js";
 import { isValidOffer, normalizeTitle } from "./dedup.js";
+import { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 
 /** Une source à crawler : l'URL de départ et ses bornes, confiées au crawler. */
 export type CrawlSource = (options: CrawlOptions) => Promise<CrawlResult>;
@@ -46,6 +47,17 @@ export interface RunAgentDeps {
   readonly model: ExtractModel;
   /** Extraction. Défaut : `extractJobsFromPage`. */
   readonly extract?: ExtractJobs;
+  /**
+   * Extraction spécialisée, déterministe et gratuite, tentée avant le modèle.
+   * Défaut : les données structurées `schema.org JobPosting`.
+   */
+  readonly specializedExtract?: (page: CrawledPage) => ExtractionResult;
+  /**
+   * Relecture d'une page revenue vide. La fonction injectée refait la lecture ;
+   * côté crawler, elle y applique HTTP puis navigateur et revérifie
+   * `robots.txt`. Sans elle, une page vide est ignorée comme avant.
+   */
+  readonly recoverPage?: (url: string) => Promise<CrawledPage | null>;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -139,6 +151,7 @@ export async function runAgent(
 ): Promise<RunAgentResult> {
   const config = resolveOptions(options);
   const extract = deps.extract ?? extractJobsFromPage;
+  const specializedExtract = deps.specializedExtract ?? extractStructuredOffers;
 
   const runId = await deps.runStore.startRun(objective);
   const deadline = config.now() + config.maxRuntimeMs;
@@ -152,12 +165,15 @@ export async function runAgent(
     errorCount: 0,
   };
 
+  /** Relectures de pages vides déjà consommées, bornées par `maxRecoveries`. */
+  let recoveriesUsed = 0;
+
   const isTimedOut = (): boolean => config.now() >= deadline;
   const shouldStop = (): boolean => isTimedOut() || counters.pageCount >= config.maxPages;
 
-  const recordError = async (kind: string, message: string): Promise<void> => {
+  const recordError = async (kind: string, message: string, retried = false): Promise<void> => {
     counters.errorCount += 1;
-    await deps.runStore.recordError(runId, { kind, message });
+    await deps.runStore.recordError(runId, { kind, message, retried });
   };
 
   const seenTitles = new Set<string>();
@@ -242,29 +258,110 @@ export async function runAgent(
             detail: page.url,
           });
 
-          // Une page sans contenu (refus robots.txt ou erreur réseau) n'offre
-          // rien à extraire : elle a déjà été comptée, on passe à la suivante.
+          /*
+           * Une page sans contenu a épuisé les étapes 1 et 2 du cascade : le
+           * crawler a déjà tenté HTTP, puis le navigateur quand le HTML le
+           * demandait. On lui offre une dernière relecture bornée, puis on
+           * abandonne en consignant l'échec — jamais en silence. Un refus
+           * `robots.txt` n'est pas une erreur : la page n'a pas le droit d'être
+           * lue, on la saute. Sans fonction de relecture, ou borne atteinte, le
+           * comportement d'origine est conservé : la page vide est ignorée.
+           */
+          let usable = page;
           if (page.text.trim() === "" && page.html.trim() === "") {
-            continue;
+            if (page.robotsDenied) {
+              continue;
+            }
+            if (deps.recoverPage === undefined || recoveriesUsed >= config.maxRecoveries) {
+              continue;
+            }
+
+            recoveriesUsed += 1;
+            const read = await runRecovery<CrawledPage>([
+              {
+                strategy: RECOVERY_STRATEGY.READ,
+                maxAttempts: 2,
+                run: () => deps.recoverPage?.(page.url) ?? Promise.resolve(null),
+              },
+            ]);
+
+            if (read.found) {
+              usable = read.value;
+              // Une relecture est un fait de collecte, pas une page de plus :
+              // le compte `pages` ne bouge pas, la trace reste.
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.CRAWL,
+                detail: `${page.url} · relecture (${RECOVERY_STRATEGY.READ})`,
+                count: 0,
+              });
+            } else {
+              const failure = read.attempts.find((attempt) => attempt.outcome === "error");
+              await recordError(
+                ACTION_KIND.CRAWL,
+                `${page.url} : page illisible après relecture${
+                  failure?.error === undefined ? "" : ` (${failure.error})`
+                }`,
+                true,
+              );
+              continue;
+            }
           }
 
-          // Extraction : un échec de page est consigné, la suivante continue.
-          let extraction: ExtractionResult;
-          try {
-            extraction = await extract(page, deps.model);
-          } catch (error) {
-            await recordError(ACTION_KIND.EXTRACT, errorMessage(error));
-            continue;
+          /*
+           * Extraction en cascade (section 4.7) : l'extraction spécialisée
+           * d'abord, déterministe et gratuite ; le modèle ensuite, seule étape
+           * payante. Un étage qui ne trouve rien passe la main au suivant. Seul
+           * un échec est relancé, et seulement là où il peut être transitoire :
+           * la lecture des données structurées est pure, elle ne tourne qu'une
+           * fois, alors que l'appel au modèle est retenté. Si tout échoue, la
+           * page est abandonnée avec sa raison, et la suivante continue.
+           */
+          const extraction = await runRecovery<ExtractionResult>([
+            {
+              strategy: RECOVERY_STRATEGY.SPECIALIZED,
+              maxAttempts: 1,
+              run: () => {
+                const structured = specializedExtract(usable);
+                return Promise.resolve(structured.offers.length > 0 ? structured : null);
+              },
+            },
+            {
+              strategy: RECOVERY_STRATEGY.LLM,
+              maxAttempts: 2,
+              run: async () => {
+                const result = await extract(usable, deps.model);
+                return result.offers.length > 0 ? result : null;
+              },
+            },
+          ]);
+
+          let result: ExtractionResult;
+          if (extraction.found) {
+            result = extraction.value;
+          } else {
+            const failure = extraction.attempts.find((attempt) => attempt.outcome === "error");
+            if (failure !== undefined) {
+              await recordError(
+                ACTION_KIND.EXTRACT,
+                `${usable.url} : ${failure.error ?? "extraction impossible"}`,
+                true,
+              );
+              continue;
+            }
+            // Aucune stratégie n'a rien trouvé, et aucune n'a échoué : la page
+            // ne porte pas d'offre. C'est un fait, pas une erreur.
+            result = { offers: [], rejected: [] };
           }
+
           await deps.runStore.recordAction(runId, {
             kind: ACTION_KIND.EXTRACT,
-            detail: page.url,
+            detail: `${usable.url} · ${extraction.found ? extraction.strategy : "aucune"}`,
             // Le compteur `extracted` compte les offres trouvées, pas les pages.
-            count: extraction.offers.length,
+            count: result.offers.length,
           });
 
           // Validation puis déduplication par titre normalisé, dans ce run.
-          for (const offer of extraction.offers) {
+          for (const offer of result.offers) {
             counters.extractedCount += 1;
             if (!isValidOffer(offer)) {
               continue;

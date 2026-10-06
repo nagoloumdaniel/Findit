@@ -14,6 +14,7 @@ export {
   DEFAULT_MAX_PAGES,
   DEFAULT_MAX_PAGES_PER_SOURCE,
   DEFAULT_MAX_QUERIES,
+  DEFAULT_MAX_RECOVERIES,
   DEFAULT_MAX_RUNTIME_MS,
   DEFAULT_RESULT_COUNT,
   RunAgentConfigError,
@@ -21,3 +22,15 @@ export {
 export type { RunAgentOptions } from "./config.js";
 
 export { isHttpUrl, isValidOffer, normalizeTitle } from "./dedup.js";
+
+export { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
+export type {
+  RecoveryAttempt,
+  RecoveryAttemptOutcome,
+  RecoveryExhausted,
+  RecoveryOptions,
+  RecoveryOutcome,
+  RecoveryStep,
+  RecoveryStrategy,
+  RecoverySuccess,
+} from "./recovery.js";

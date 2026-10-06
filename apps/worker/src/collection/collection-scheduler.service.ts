@@ -3,6 +3,7 @@ import type { PrismaClient } from "@findit/database";
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
 import { createDeepSeekModel } from "@findit/ai";
 import { crawl } from "@findit/crawler";
+import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider } from "@findit/job-connectors";
 import type { WebSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
@@ -44,6 +45,12 @@ const NO_SEARCH: WebSearchProvider = {
   healthCheck: () =>
     Promise.resolve({ healthy: false, detail: "Aucune clé de recherche configurée." }),
 };
+
+/**
+ * Durée maximale d'une relecture de page vide. Elle est plus courte que le run
+ * entier : une relecture est une seconde chance, pas un second run.
+ */
+const PAGE_RECOVERY_TIMEOUT_MS = 30_000;
 
 /**
  * Programme la collecte et l'exécute.
@@ -200,6 +207,7 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       search,
       crawl,
       model,
+      recoverPage: (url) => this.#recoverPage(url),
       persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
     });
 
@@ -222,6 +230,28 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
     );
 
     return result;
+  }
+
+  /**
+   * Relit une page que le crawl a rendue vide (erreur réseau, réponse sans
+   * contenu). Elle repasse par le crawler borné : `robots.txt` est revérifié,
+   * et le repli navigateur reste disponible. Une page toujours vide rend
+   * `null` : l'appelant la consigne comme perdue au lieu de l'ignorer.
+   */
+  async #recoverPage(url: string): Promise<CrawledPage | null> {
+    const result = await crawl({
+      startUrl: url,
+      maxDepth: 0,
+      maxPages: 1,
+      maxRuntimeMs: PAGE_RECOVERY_TIMEOUT_MS,
+    });
+
+    const page = result.pages[0];
+    if (page === undefined || (page.text.trim() === "" && page.html.trim() === "")) {
+      return null;
+    }
+
+    return page;
   }
 
   /**

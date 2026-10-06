@@ -15,6 +15,13 @@ export const DEFAULT_MAX_PAGES = 50;
 /** Durée maximale du run, en millisecondes (5 minutes). */
 export const DEFAULT_MAX_RUNTIME_MS = 5 * 60 * 1000;
 
+/**
+ * Nombre maximal de relectures d'une page revenue vide sur l'ensemble du run.
+ * Une relecture coûte une requête, et parfois un navigateur : la borne évite
+ * qu'un site entièrement vide transforme le run en machine à rendus.
+ */
+export const DEFAULT_MAX_RECOVERIES = 5;
+
 /** Pays des recherches web, au sens du moteur. */
 export const DEFAULT_COUNTRY = "fr";
 
@@ -34,6 +41,8 @@ export interface RunAgentOptions {
   readonly maxPagesPerSource?: number;
   readonly maxPages?: number;
   readonly maxRuntimeMs?: number;
+  /** Relectures maximales d'une page vide, sur l'ensemble du run. */
+  readonly maxRecoveries?: number;
   readonly scoreThreshold?: number;
   readonly country?: string;
   readonly language?: string;
@@ -49,6 +58,7 @@ export interface ResolvedOptions {
   readonly maxPagesPerSource: number;
   readonly maxPages: number;
   readonly maxRuntimeMs: number;
+  readonly maxRecoveries: number;
   readonly scoreThreshold: number;
   readonly country: string;
   readonly language: string;
@@ -77,6 +87,7 @@ export const resolveOptions = (options: RunAgentOptions): ResolvedOptions => {
     maxPagesPerSource: options.maxPagesPerSource ?? DEFAULT_MAX_PAGES_PER_SOURCE,
     maxPages: options.maxPages ?? DEFAULT_MAX_PAGES,
     maxRuntimeMs: options.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS,
+    maxRecoveries: options.maxRecoveries ?? DEFAULT_MAX_RECOVERIES,
     scoreThreshold: options.scoreThreshold ?? DEFAULT_SCORE_THRESHOLD,
     country: options.country ?? DEFAULT_COUNTRY,
     language: options.language ?? DEFAULT_LANGUAGE,
@@ -98,6 +109,9 @@ export const resolveOptions = (options: RunAgentOptions): ResolvedOptions => {
   }
   if (!Number.isFinite(resolved.maxRuntimeMs) || resolved.maxRuntimeMs <= 0) {
     throw new RunAgentConfigError("maxRuntimeMs doit être strictement positif.");
+  }
+  if (!Number.isInteger(resolved.maxRecoveries) || resolved.maxRecoveries < 0) {
+    throw new RunAgentConfigError("maxRecoveries doit être un entier positif ou nul.");
   }
   if (
     !Number.isFinite(resolved.scoreThreshold) ||

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@findit/crawler": "workspace:*",
+    "cheerio": "1.2.0",
     "zod": "4.4.3"
   }
 }

@@ -132,37 +132,23 @@ const toJobOffer = (extracted: ExtractedOffer, page: CrawledPage): JobOffer => {
 };
 
 /**
- * Transforme une page crawlée en offres structurées via le modèle DeepSeek.
+ * Enrichit et filtre une liste d'offres extraites, quelle qu'en soit la source :
+ * modèle ou données structurées. Le tri est le même dans les deux cas — école
+ * d'abord, puis complétude — pour qu'une offre ne dépende jamais de son origine.
  *
- * La sortie du modèle est revalidée contre le schéma Zod, puis chaque offre est
- * enrichie, filtrée (écoles) et notée (validation). Une école ou une offre
- * incomplète est écartée avec un motif explicite, jamais silencieusement.
+ * Une école ou une offre incomplète est écartée avec un motif explicite, jamais
+ * silencieusement. La fonction est synchrone et sans I/O : elle ne fait que
+ * transformer des données déjà lues.
  */
-export const extractJobsFromPage = async (
+export const finalizeExtraction = (
+  extracted: readonly ExtractedOffer[],
   page: CrawledPage,
-  model: ExtractModel,
-  now: Date = new Date(),
-): Promise<ExtractionResult> => {
-  const raw = await model.generateStructured<ExtractionResponse>({
-    schema: extractionResponseSchema,
-    system: SYSTEM_PROMPT,
-    prompt: buildPrompt(page, now),
-  });
-
-  // Revalidation défensive : un modèle, ou une doublure de test, peut ne pas
-  // appliquer le schéma. On ne fait confiance qu'à une sortie validée par Zod.
-  const parsed = extractionResponseSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new ExtractError(
-      `La sortie du modèle ne respecte pas le schéma attendu : ${parsed.error.message}`,
-    );
-  }
-
+): ExtractionResult => {
   const offers: JobOffer[] = [];
   const rejected: RejectedOffer[] = [];
 
-  for (const extracted of parsed.data.offers) {
-    const offer = toJobOffer(extracted, page);
+  for (const item of extracted) {
+    const offer = toJobOffer(item, page);
     const validation = scoreValidation(offer);
 
     // Une école passe avant tout : même complète, elle n'est pas une offre.
@@ -188,4 +174,33 @@ export const extractJobsFromPage = async (
   }
 
   return { offers, rejected };
+};
+
+/**
+ * Transforme une page crawlée en offres structurées via le modèle DeepSeek.
+ *
+ * La sortie du modèle est revalidée contre le schéma Zod, puis déléguée à
+ * `finalizeExtraction` pour l'enrichissement et le filtrage.
+ */
+export const extractJobsFromPage = async (
+  page: CrawledPage,
+  model: ExtractModel,
+  now: Date = new Date(),
+): Promise<ExtractionResult> => {
+  const raw = await model.generateStructured<ExtractionResponse>({
+    schema: extractionResponseSchema,
+    system: SYSTEM_PROMPT,
+    prompt: buildPrompt(page, now),
+  });
+
+  // Revalidation défensive : un modèle, ou une doublure de test, peut ne pas
+  // appliquer le schéma. On ne fait confiance qu'à une sortie validée par Zod.
+  const parsed = extractionResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ExtractError(
+      `La sortie du modèle ne respecte pas le schéma attendu : ${parsed.error.message}`,
+    );
+  }
+
+  return finalizeExtraction(parsed.data.offers, page);
 };

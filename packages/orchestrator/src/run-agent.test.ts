@@ -1,6 +1,6 @@
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
 import type { CrawlResult, CrawledPage } from "@findit/crawler";
-import type { ExtractModel, JobOffer } from "@findit/extract";
+import type { ExtractModel, ExtractionResult, JobOffer } from "@findit/extract";
 import type {
   WebSearchProvider,
   WebSearchProviderHealth,
@@ -223,6 +223,8 @@ interface DepsInput {
   readonly search: WebSearchProvider;
   readonly crawl: CrawlSource;
   readonly extract: ExtractJobs;
+  readonly specializedExtract?: (page: CrawledPage) => ExtractionResult;
+  readonly recoverPage?: (url: string) => Promise<CrawledPage | null>;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -377,5 +379,167 @@ describe("runAgent", () => {
     // Le run est bien clôturé en succès : la source morte ne l'a pas fait échouer.
     expect(fake.runs.get("run-1")?.status).toBe("SUCCEEDED");
     expect(fake.runs.get("run-1")?.counters.errors).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cascade de récupération (cahier des charges, section 4.7)
+// ---------------------------------------------------------------------------
+
+/** Une page revenue vide : ni HTML, ni texte, aucun statut. */
+const makeEmptyPage = (url: string): CrawledPage => ({
+  url,
+  depth: 0,
+  html: "",
+  text: "",
+  status: 0,
+  robotsDenied: false,
+});
+
+/** Un crawl réduit à la seule page de départ, telle qu'on la lui donne. */
+const crawlOf =
+  (page: CrawledPage): CrawlSource =>
+  () =>
+    Promise.resolve({
+      pages: [page],
+      stopReason: "completed",
+      truncated: false,
+      visitedCount: 1,
+      robotsDeniedCount: 0,
+    });
+
+/** Une recherche qui ne remonte qu'une source exploitable. */
+const oneSource = (url: string): WebSearchProvider =>
+  makeSearch([{ url, title: "Offres d'alternance", description: "Postes à pourvoir", host: url }]);
+
+describe("runAgent - cascade de récupération", () => {
+  it("extrait par les données structurées sans appeler le modèle", async () => {
+    const fake = buildFakePrisma();
+    const extract: ExtractJobs = () => {
+      throw new Error("Le modèle ne doit pas être appelé quand l'extraction spécialisée trouve.");
+    };
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      specializedExtract: () => ({ offers: [makeOffer("Développeur", "Acme")], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 1, retainedCount: 1, errorCount: 0 });
+    expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain(
+      "specialized",
+    );
+  });
+
+  it("escalade vers le modèle quand les données structurées ne trouvent rien", async () => {
+    const fake = buildFakePrisma();
+    const extract: ExtractJobs = () =>
+      Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] });
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      specializedExtract: () => ({ offers: [], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 1, errorCount: 0 });
+    expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain("llm");
+  });
+
+  it("abandonne une page dont toutes les stratégies échouent, avec retried=true", async () => {
+    const fake = buildFakePrisma();
+    const extract: ExtractJobs = () => Promise.reject(new Error("modèle indisponible"));
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      specializedExtract: () => {
+        throw new Error("aucun JobPosting lisible");
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 0, retainedCount: 0, errorCount: 1 });
+    expect(fake.errors[0]).toMatchObject({ kind: "EXTRACT", retried: true });
+    expect(fake.runs.get("run-1")?.status).toBe("SUCCEEDED");
+  });
+
+  it("relit une page vide puis extrait la page relue", async () => {
+    const fake = buildFakePrisma();
+    const recovered = makePage("https://example.com/jobs");
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makeEmptyPage("https://example.com/jobs")),
+      extract: () => Promise.reject(new Error("Le modèle ne doit pas servir ici.")),
+      recoverPage: () => Promise.resolve(recovered),
+      specializedExtract: () => ({ offers: [makeOffer("Développeur", "Acme")], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ pageCount: 1, extractedCount: 1, errorCount: 0 });
+    expect(fake.actions.map((action) => action.detail)).toContain(
+      "https://example.com/jobs · relecture (read)",
+    );
+  });
+
+  it("abandonne une page restée vide après relecture", async () => {
+    const fake = buildFakePrisma();
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makeEmptyPage("https://example.com/jobs")),
+      extract: () => Promise.reject(new Error("jamais appelé")),
+      recoverPage: () => Promise.resolve(null),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 0, errorCount: 1 });
+    expect(fake.errors[0]).toMatchObject({ kind: "CRAWL", retried: true });
+  });
+
+  it("borne le nombre de relectures sur le run", async () => {
+    const fake = buildFakePrisma();
+    const emptyCrawl: CrawlSource = () =>
+      Promise.resolve({
+        pages: [makeEmptyPage("https://example.com/a"), makeEmptyPage("https://example.com/b")],
+        stopReason: "completed",
+        truncated: false,
+        visitedCount: 2,
+        robotsDeniedCount: 0,
+      });
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: emptyCrawl,
+      extract: () => Promise.reject(new Error("jamais appelé")),
+      recoverPage: () => Promise.resolve(null),
+    });
+
+    const result = await runAgent("alternance développeur", deps, {
+      maxQueries: 1,
+      maxRecoveries: 1,
+    });
+
+    // Une seule relecture tentée : la seconde page vide est abandonnée sans
+    // nouvelle tentative, et le run reste borné.
+    expect(result).toMatchObject({ pageCount: 2, errorCount: 1 });
+  });
+
+  it("rejette une borne de relecture invalide avant tout accès réseau", async () => {
+    const fake = buildFakePrisma();
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await expect(
+      runAgent("alternance", deps, { maxQueries: 1, maxRecoveries: -1 }),
+    ).rejects.toThrow("maxRecoveries");
   });
 });

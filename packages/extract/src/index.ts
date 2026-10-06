@@ -1,10 +1,12 @@
-export { ExtractError, extractJobsFromPage } from "./extract.js";
+export { ExtractError, extractJobsFromPage, finalizeExtraction } from "./extract.js";
 export type {
   ExtractModel,
   ExtractStructuredRequest,
   ExtractionResult,
   RejectedOffer,
 } from "./extract.js";
+
+export { extractStructuredOffers } from "./structured.js";
 
 export { extractedOfferSchema, extractionResponseSchema, jobOfferSchema } from "./schema.js";
 export type { ExtractedOffer, ExtractionResponse, JobOffer } from "./schema.js";
