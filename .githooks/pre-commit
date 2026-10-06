@@ -22,8 +22,11 @@ fi
 
 # 2. Motifs de secrets connus dans les lignes ajoutées.
 #    Brave (BSAK…), OpenAI (sk-…), GitHub (ghp_/gho_…), token Telegram, Slack.
+#    .claude/** (skills tiers vendus) est exclu : leurs polices base64 et leurs
+#    exemples produisent des faux positifs, et ce n'est pas du code produit par
+#    Findit.
 patterns='BSAK[A-Za-z0-9_/+-]{16}|sk-[A-Za-z0-9]{20}|gh[pousr]_[A-Za-z0-9]{30}|[0-9]{8,10}:[A-Za-z0-9_-]{35}|xox[baprs]-[A-Za-z0-9-]{10}'
-count=$(git diff --cached --unified=0 -- . ':(exclude).githooks/**' | grep -E '^\+' | grep -vE '^\+\+\+' | grep -cE "$patterns")
+count=$(git diff --cached --unified=0 -- . ':(exclude).githooks/**' ':(exclude).claude/**' | grep -E '^\+' | grep -vE '^\+\+\+' | grep -cE "$patterns")
 if [ "$count" -gt 0 ]; then
   fail "$count ligne(s) ressemblent à une clé d'API ou un token."
 fi
