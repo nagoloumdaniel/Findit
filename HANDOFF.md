@@ -49,8 +49,11 @@ pièges déjà payés.
   d'une collecte de 10 sources. L'agent ne l'enregistre plus et le journal dit
   `source · agrégateur ignoré · lever/jobgether` ; vérifié sur la base réelle
   (95 → 95 sources, aucune écriture).
-  **Reste à faire, sur décision** : la ligne `jobgether` créée avant le filtre est
-  toujours au registre (`fetchedJobCount` 0) et sera recollectée à chaque cycle.
+  **Fait le 2026-10-07** : la ligne `jobgether` enregistrée avant le filtre a été
+  retirée du registre — cible unique vérifiée avant suppression, **95 → 94
+  sources**, plus aucune source `jobgether`. Le reste du cycle ne paiera donc plus
+  ses 3 501 offres par passe. L'entreprise `jobgether` demeure en base, sans
+  source : elle ne déclenche aucune collecte.
 - **Le journal parle de « source », plus de « source enregistrée »** : la phrase
   vient désormais de l'appelant, qui seul sait s'il a enregistré, ignoré ou
   reconnu. Sinon une source écartée s'affichait comme enregistrée.
