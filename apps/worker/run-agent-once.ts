@@ -10,6 +10,8 @@ import { runAgent } from "@findit/orchestrator";
 import { createLlmQueryPlanner, createLlmSourceSelector } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
 
+import { registerDiscoveryFromUrl } from "./src/collection/register-discovery.js";
+
 /*
  * Run unique de l'agent, hors BullMQ : sert à vérifier la boucle complète
  * (Search → Crawl → Extract → Persist) sur de vraies sources, sans attendre le
@@ -60,6 +62,8 @@ const main = async (): Promise<void> => {
       planner: createLlmQueryPlanner({ model }),
       sourceSelector: createLlmSourceSelector({ model }),
       resolveUrl: (url) => resolveFinalUrl(url),
+      // Même branchement que le worker : les découvertes alimentent le registre.
+      discoverSource: (url) => registerDiscoveryFromUrl(prisma, url),
       // Même porte de conformité que le worker : le registre décide.
       sourceGate: (url) => decideDiscoveredSourceAccess(prisma, url, new Date()),
       ...(modelCost === undefined ? {} : { modelCost }),

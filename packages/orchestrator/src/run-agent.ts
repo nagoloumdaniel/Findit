@@ -107,6 +107,12 @@ export interface RunAgentDeps {
    * porte, seule l'adresse déjà vue est reconnue. Défaut : aucune résolution.
    */
   readonly resolveUrl?: (url: string) => Promise<string | null>;
+  /**
+   * Enregistre une source découverte auprès du registre (`CompanySource`) pour
+   * que son connecteur la recollecte. Rend une phrase à journaliser, ou `null`
+   * quand l'URL n'est pas une source enregistrable. Défaut : rien n'est enregistré.
+   */
+  readonly discoverSource?: (url: string) => Promise<string | null>;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -343,6 +349,8 @@ export async function runAgent(
     const executedQueries: string[] = [];
     /** Clés des sources déjà crawlées dans ce run, variantes d'URL comprises. */
     const crawledKeys = new Set<string>();
+    /** URL de sources déjà présentées au registre, une fois par run. */
+    const discoveredUrls = new Set<string>();
     let round = 0;
 
     /** Pages autorisées pour le tour en cours, recalculée à chaque tour. */
@@ -429,6 +437,37 @@ export async function runAgent(
               score: source.score,
               title: `${source.result.title} ${source.result.description}`.trim(),
             });
+          }
+
+          /*
+           * Enregistrement de la source découverte (phase 1). Le POURQUOI : une
+           * entreprise trouvée sur un ATS doit entrer au registre pour que son
+           * connecteur la recollecte aux cycles suivants ; sans cela, la
+           * découverte du run est jetée avec le run. On le fait ici, et non après
+           * la sélection : la sélection est un choix de crawl, une source retenue
+           * par le scoring mais écartée du crawl doit tout de même être
+           * enregistrée. Une URL n'est présentée qu'une fois par run, une page
+           * annoncée en erreur a déjà été écartée plus haut, et une source déjà
+           * crawlée n'a rien de neuf à enregistrer.
+           */
+          if (
+            source.keep &&
+            deps.discoverSource !== undefined &&
+            !discoveredUrls.has(source.result.url) &&
+            !crawledKeys.has(crawlKey(source.result.url))
+          ) {
+            discoveredUrls.add(source.result.url);
+            try {
+              const phrase = await deps.discoverSource(source.result.url);
+              if (phrase !== null) {
+                await deps.runStore.recordAction(runId, {
+                  kind: ACTION_KIND.DISCOVER,
+                  detail: `source enregistrée · ${phrase}`,
+                });
+              }
+            } catch (error) {
+              await recordError(ACTION_KIND.DISCOVER, errorMessage(error));
+            }
           }
         }
       }

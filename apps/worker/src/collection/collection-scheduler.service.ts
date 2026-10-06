@@ -37,6 +37,7 @@ import {
 } from "../queue/queue.constants.js";
 import { createCycleDeps, createScrapedCycleDeps } from "./cycle-deps.js";
 import { createJobHandler } from "./job-handler.js";
+import { registerDiscoveryFromUrl } from "./register-discovery.js";
 import { runCycle } from "./run-cycle.js";
 import { runScrapedCycle } from "./run-scraped-cycle.js";
 
@@ -253,6 +254,14 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       sourceSelector: createLlmSourceSelector({ model }),
       // Un alias de redirection est reconnu avant d'être payé.
       resolveUrl: (url) => resolveFinalUrl(url),
+      /*
+       * Les découvertes de l'agent alimentent le registre. Sans ce branchement,
+       * une entreprise trouvée par l'agent — et payée en crawl et en extraction —
+       * n'est jamais recollectée : mesuré, 0 `CompanySource` créée par un run
+       * d'agent, alors que le cycle natif en tire un flux complet par simple
+       * reconnaissance d'URL.
+       */
+      discoverSource: (url) => registerDiscoveryFromUrl(this.prisma, url),
       sourceGate,
       ...(modelCost === undefined ? {} : { modelCost }),
       recoverPage: (url) => this.#recoverPage(url),

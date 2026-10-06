@@ -237,6 +237,7 @@ interface DepsInput {
   ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
   readonly sourceSelector?: SourceSelector;
   readonly resolveUrl?: (url: string) => Promise<string | null>;
+  readonly discoverSource?: (url: string) => Promise<string | null>;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -1480,5 +1481,140 @@ describe("runAgent - choix des sources", () => {
     expect(crawled).toEqual(["https://example.com/offres"]);
     const selection = fake.actions.find((action) => (action.detail ?? "").startsWith("sélection"));
     expect(selection?.detail).toContain("1 page(s) en erreur écartée(s)");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Enregistrement des sources découvertes (registre CompanySource)
+// ---------------------------------------------------------------------------
+
+describe("runAgent - enregistrement des sources découvertes", () => {
+  it("enregistre une source retenue et consigne la phrase rendue", async () => {
+    const fake = buildFakePrisma();
+    const registered: string[] = [];
+    const url = "https://boards.greenhouse.io/acme/jobs/4606134004";
+    const deps = buildDeps(fake, {
+      search: oneSource(url),
+      crawl: crawlOf(makePage(url)),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      discoverSource: (candidate) => {
+        registered.push(candidate);
+        return Promise.resolve("acme · connecteur greenhouse");
+      },
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(registered).toEqual([url]);
+    const enregistrement = fake.actions.find(
+      (action) =>
+        action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source enregistrée"),
+    );
+    expect(enregistrement?.detail).toBe("source enregistrée · acme · connecteur greenhouse");
+
+    // L'enregistrement précède la sélection : il ne dépend pas du choix de crawl.
+    const details = fake.actions.map((action) => action.detail ?? "");
+    const registeredAt = details.findIndex((detail) => detail.startsWith("source enregistrée"));
+    const selectionAt = details.findIndex((detail) => detail.startsWith("sélection"));
+    expect(registeredAt).toBeGreaterThanOrEqual(0);
+    expect(registeredAt).toBeLessThan(selectionAt);
+  });
+
+  it("n'enregistre pas une source écartée par le scoring", async () => {
+    const fake = buildFakePrisma();
+    const registered: string[] = [];
+    const search = makeSearch([
+      {
+        url: "https://jobs.lever.co/theodo/19acaa5d-159c-4ca9-a39c-f5a2ed5ffcd5",
+        title: "Développeur",
+        description: "Alternance",
+        host: "jobs.lever.co",
+      },
+      {
+        url: "https://openclassrooms.com/formations",
+        title: "Formation développeur web",
+        description: "Formation en alternance",
+        host: "openclassrooms.com",
+      },
+    ]);
+    const deps = buildDeps(fake, {
+      search,
+      crawl: (options) => Promise.resolve(successCrawl(options.startUrl)),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      discoverSource: (candidate) => {
+        registered.push(candidate);
+        return Promise.resolve("enregistrée");
+      },
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(registered).toEqual([
+      "https://jobs.lever.co/theodo/19acaa5d-159c-4ca9-a39c-f5a2ed5ffcd5",
+    ]);
+  });
+
+  it("consigne l'échec d'enregistrement sans casser le run", async () => {
+    const fake = buildFakePrisma();
+    const url = "https://boards.greenhouse.io/acme/jobs/4606134004";
+    const deps = buildDeps(fake, {
+      search: oneSource(url),
+      crawl: crawlOf(makePage(url)),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      discoverSource: () => Promise.reject(new Error("registre indisponible")),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(result.status).toBe("SUCCEEDED");
+    // Le crawl a bien eu lieu malgré l'échec du registre.
+    expect(result.sourceCount).toBe(1);
+    expect(fake.errors).toHaveLength(1);
+    expect(fake.errors[0]).toMatchObject({
+      kind: "DISCOVER",
+      message: "registre indisponible",
+    });
+    expect(
+      fake.actions.some((action) => (action.detail ?? "").startsWith("source enregistrée")),
+    ).toBe(false);
+  });
+
+  it("n'enregistre qu'une fois la même URL dans le run", async () => {
+    const fake = buildFakePrisma();
+    const registered: string[] = [];
+    const url = "https://boards.greenhouse.io/acme/jobs/4606134004";
+    const search = makeSearch([
+      {
+        url,
+        title: "Développeur full stack",
+        description: "Alternance",
+        host: "boards.greenhouse.io",
+      },
+      {
+        url,
+        title: "Développeur full stack",
+        description: "Alternance",
+        host: "boards.greenhouse.io",
+      },
+    ]);
+    const deps = buildDeps(fake, {
+      search,
+      crawl: (options) => Promise.resolve(successCrawl(options.startUrl)),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      discoverSource: (candidate) => {
+        registered.push(candidate);
+        return Promise.resolve("acme · connecteur greenhouse");
+      },
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(registered).toEqual([url]);
+    expect(
+      fake.actions.filter(
+        (action) =>
+          action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source enregistrée"),
+      ),
+    ).toHaveLength(1);
   });
 });

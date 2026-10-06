@@ -46,14 +46,14 @@ const slugify = (text: string): string =>
 export const registerDiscoveredSource = async (
   prisma: PrismaClient,
   source: DiscoveredSource,
-): Promise<{ registered: boolean }> => {
+): Promise<{ registered: boolean; created: boolean }> => {
   const connector = await prisma.connector.findUnique({
     where: { name: source.connectorName },
     select: { id: true, accessStatus: true },
   });
 
   if (connector === null) {
-    return { registered: false };
+    return { registered: false, created: false };
   }
 
   const slug = slugify(source.atsIdentifier) || source.atsIdentifier;
@@ -62,6 +62,17 @@ export const registerDiscoveredSource = async (
     where: { slug },
     update: {},
     create: { slug, name: source.atsIdentifier, normalizedName: slugify(source.atsIdentifier) },
+    select: { id: true },
+  });
+
+  /*
+   * `created` distingue une source NOUVELLE d'une source déjà connue qu'on met à
+   * jour. Sans cette distinction, un appelant annonce « enregistrée » aussi bien
+   * pour une entreprise découverte que pour la même revue dix fois — mesuré sur
+   * un run d'agent : 36 enregistrements annoncés, 10 sources réellement créées.
+   */
+  const existing = await prisma.companySource.findUnique({
+    where: { companyId_domain: { companyId: company.id, domain: source.atsHost } },
     select: { id: true },
   });
 
@@ -86,7 +97,7 @@ export const registerDiscoveredSource = async (
     },
   });
 
-  return { registered: true };
+  return { registered: true, created: existing === null };
 };
 
 /**
