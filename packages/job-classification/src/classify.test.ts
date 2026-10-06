@@ -105,6 +105,19 @@ describe("classifyJob", () => {
     }
   });
 
+  it("accepts a development title that only the domain names", () => {
+    // Relevé réel : « Stage - Ingénieur en Développement Web 3D Médical H/F ».
+    for (const title of [
+      "Stage - Ingénieur en Développement Web 3D Médical H/F",
+      "Alternance - Ingénieur Développement Logiciel H/F",
+    ]) {
+      expect(classifyJob({ title }), title).toMatchObject({
+        outcome: "ACCEPTED",
+        roleCategory: "OTHER_DEVELOPER",
+      });
+    }
+  });
+
   it("still accepts an engineering title that merely mentions business development", () => {
     expect(
       classifyJob({ title: "Stage - Software Engineer, Business Development Platform" }),

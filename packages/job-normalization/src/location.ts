@@ -168,10 +168,12 @@ export const resolveLocation = (label: string | null): LocationResolution => {
   let sawVagueFrance = false;
   let sawAmbiguousCommune: string | null = null;
 
-  // Le point-virgule sépare des lieux distincts, la virgule les précise.
+  // Le point-virgule sépare des lieux distincts ; la virgule, le tiret espacé et
+  // les parenthèses précisent un même lieu. « Montrouge - 92 » écrit la commune
+  // puis le département, et le tiret n'est pas un séparateur de communes.
   for (const segment of rest.split(";")) {
     const parts = segment
-      .split(",")
+      .split(/[,()]|\s+[-–—]\s+/u)
       .map((part) => part.trim())
       .filter((part) => part !== "");
 

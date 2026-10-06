@@ -22,6 +22,20 @@ describe("resolveLocation", () => {
     });
   });
 
+  it("reads a commune followed by its department number", () => {
+    // Formes relevées sur les offres : « Montrouge - 92 », « Vélizy-Villacoublay - 78 ».
+    expect(resolveLocation("Montrouge - 92")).toMatchObject({
+      inScope: true,
+      city: "Montrouge",
+      departmentCode: "92",
+    });
+    expect(resolveLocation("Vélizy-Villacoublay - 78")).toMatchObject({
+      inScope: true,
+      city: "Vélizy-Villacoublay",
+      departmentCode: "78",
+    });
+  });
+
   it("reads a commune however the source spells it", () => {
     for (const label of [
       "Boulogne-Billancourt",

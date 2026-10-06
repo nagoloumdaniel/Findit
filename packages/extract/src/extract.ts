@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = [
   "- Un champ absent de la page doit rester absent : ne le remplis pas.",
   "- Ignore les offres qui concernent une école, un organisme de formation, un bootcamp, un campus ou l'obtention d'un diplôme.",
   "- technologies liste les technologies ou compétences techniques nommées dans l'offre ; liste vide si aucune n'est nommée.",
-  "- publishedAt est une date au format ISO (AAAA-MM-JJ) si la page l'indique, sinon absent.",
+  "- publishedAt est la date de publication au format ISO (AAAA-MM-JJ). Si la page donne une date relative (« il y a 3 jours », « publié cette semaine »), convertis-la en te servant de la date du jour fournie ; sinon absent.",
   "- applicationUrl est l'URL de candidature si elle est distincte de la page, sinon absent.",
   "- S'il n'y a aucune offre d'emploi sur la page, réponds avec un tableau offers vide.",
 ].join("\n");
@@ -85,10 +85,11 @@ const trimmedOrUndefined = (value: string | undefined): string | undefined => {
 };
 
 /** Construit le prompt à partir du texte visible, ou du HTML en repli. */
-const buildPrompt = (page: CrawledPage): string => {
+const buildPrompt = (page: CrawledPage, now: Date): string => {
   const content = page.text.trim() !== "" ? page.text : page.html;
   const bounded = content.slice(0, MAX_CONTENT_CHARS);
-  return `Contenu de la page (${page.url}) :\n\n${bounded}`;
+  const today = now.toISOString().slice(0, 10);
+  return `Date du jour : ${today}\n\nContenu de la page (${page.url}) :\n\n${bounded}`;
 };
 
 /**
@@ -140,11 +141,12 @@ const toJobOffer = (extracted: ExtractedOffer, page: CrawledPage): JobOffer => {
 export const extractJobsFromPage = async (
   page: CrawledPage,
   model: ExtractModel,
+  now: Date = new Date(),
 ): Promise<ExtractionResult> => {
   const raw = await model.generateStructured<ExtractionResponse>({
     schema: extractionResponseSchema,
     system: SYSTEM_PROMPT,
-    prompt: buildPrompt(page),
+    prompt: buildPrompt(page, now),
   });
 
   // Revalidation défensive : un modèle, ou une doublure de test, peut ne pas

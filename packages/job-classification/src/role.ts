@@ -58,8 +58,29 @@ const ROLE_TOKENS: ReadonlyArray<readonly [JobRoleCategory, readonly string[]]> 
    * Le filet du développement, et rien d'autre. Une offre qui ne nomme aucun
    * métier du périmètre n'atterrit pas ici : elle est rejetée. Ces mots-là
    * disent « développement » sans dire lequel.
+   *
+   * Les formes « développement <domaine> » et « ingénieur développement » sont
+   * là parce que le seul mot « développeur » les laissait passer à côté - une
+   * offre « Ingénieur en Développement Web » était rejetée comme hors métier.
+   * Le développement commercial, lui, est écarté avant, par COMMERCIAL_PHRASES.
    */
-  ["OTHER_DEVELOPER", ["developpeur", "developpeuse", "developer", "programmeur", "web developer"]],
+  [
+    "OTHER_DEVELOPER",
+    [
+      "developpeur",
+      "developpeuse",
+      "developer",
+      "programmeur",
+      "web developer",
+      "developpement web",
+      "developpement logiciel",
+      "developpement informatique",
+      "developpement applicatif",
+      "developpement d applications",
+      "ingenieur developpement",
+      "ingenieur en developpement",
+    ],
+  ],
 ];
 
 /*
