@@ -67,8 +67,12 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   lesquelles visiter et dans quel ordre (phase 2, plafonné aux 12 meilleures), puis crawl et
     |   extraction (phase 3). Sans sélecteur : l'ordre du score. Seules des URL candidates reviennent,
     |   et une sortie vide ou hors schéma rend l'ordre du score.
-    |   Mémoire : les URL sont mémorisées sous une clé normalisée (hôte sans `www`, sans requête ni
-    |   slash final), sinon la même page se re-crawle d'un tour à l'autre sous deux variantes d'adresse.
+    |   Mémoire : les URL sont mémorisées sous une clé normalisée (casse, `www.`, fragment, slash
+    |   final et paramètres de suivi ignorés, **requête conservée** : elle porte l'identité de la page,
+    |   `?page=2` par exemple). Seules les pages entrées dans le budget du tour sont inscrites comme
+    |   visitées. Limite connue : un alias de redirection découvert après coup (mesuré sur Ivalua :
+    |   `/carrieres` et `/company/careers` mènent à la même page) n'est pas reconnu avant d'avoir été
+    |   crawlé.
     v
 @findit/agent : generateSearchQueries(objective)
     |   repli : requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle

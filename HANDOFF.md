@@ -58,11 +58,31 @@ pièges déjà payés.
   borné : 3 sélections, 6 pages visitées, 2 offres extraites, 0 insérée, **2 025 µ$**
   dont la moitié dans les décisions. Sans plafond de candidates, la seule première
   sélection coûtait 1 012 µ$ sur 29 sources — d'où la limite aux 12 meilleures.
-- **Clé de mémoire normalisée** : la mémoire comparait l'URL exacte, donc `?` ou un
-  slash final faisait re-crawler la même page (mesuré : trois fois sur un run). La
-  clé ignore requête, fragment, casse, `www.` et slash final. Réserve : sur un run
-  ultérieur, une même page finale est encore apparue deux fois, par deux chemins
-  différents (alias de redirection probable) — piste non prouvée à ce jour.
+- **Clé de mémoire normalisée, corrigée après revue adversariale** : la mémoire
+  comparait l'URL exacte, donc `?utm=…` ou un slash final faisait re-crawler la même
+  page (mesuré : trois fois sur un run). La clé ignore désormais casse, `www.`,
+  fragment, slash final et **paramètres de suivi** (`utm_*`, `gclid`, `fbclid`,
+  `msclkid`, `lever-source`) — mais **conserve la requête**, car elle porte souvent
+  l'identité de la page. Le premier jet l'effaçait : `?page=1` et `?page=2` avaient
+  alors la même clé, la seconde page était sautée, et la mémoire étant persistante
+  sans expiration la perte était définitive. Trouvé par revue adversariale, pas par
+  un test.
+- **Pages non traitées plus jamais mémorisées** : la mémoire inscrivait toutes les
+  pages rendues par le crawler, y compris celles jetées par la borne de budget du
+  tour ; leurs offres étaient ensuite sautées pour toujours. L'inscription se fait
+  maintenant page par page, une fois qu'elle entre dans le budget.
+- **Le crawler reçoit ce qui reste au tour** : il pouvait lire jusqu'à
+  `maxPagesPerSource` (20) pages pour un tour qui n'en comptait qu'une ou deux. Le
+  test `wideCrawl` le démontrait : 15 pages lues pour 6 comptées.
+- **Alias de redirection : prouvé, à moitié corrigé.** Mesuré sur Ivalua, cinq
+  adresses mènent à la même page : `/company/careers/`, `/company/careers`,
+  `/carrieres/`, `/carrieres` et `ivalua.com/company/careers/`. La clé normalisée
+  règle les variantes d'écriture, et l'agent mémorise désormais aussi l'URL
+  **finale** de chaque page atteinte : une source qui pointerait ensuite sur cette
+  URL finale est écartée. **Ce qui reste payant** : l'alias découvert APRÈS la page
+  finale, puisque rien ne relie encore `/carrieres` à `/company/careers` avant de
+  l'avoir crawlé. Le corriger demande de résoudre la redirection avant de crawler ;
+  l'agent ne le fait pas aujourd'hui.
 - **Le contrat entre guillemets dans les requêtes** : mesuré contre Brave sur
   `jobs.lever.co`, `développeur alternance` ramenait 1 titre du périmètre sur 10,
   `développeur "alternance"` en ramenait 6 ; `-CDI` n'apportait rien, et
