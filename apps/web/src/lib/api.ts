@@ -163,12 +163,25 @@ export type ModelCost = {
   perDay: ModelCostDay[];
 };
 
+/// Coût du matching CV : même forme que `ModelCost`, mais `callCount` remplace
+/// `runCount` — un appel de matching n'est pas un run d'agent.
+export type MatchingCost = {
+  callCount: number;
+  totalCostMicroUsd: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  perDay: ModelCostDay[];
+};
+
 export type AgentAnalytics = {
   publishedPerDay: { date: string; count: number }[];
   topSources: { name: string; pageCount: number }[];
   topCompanies: { name: string; jobCount: number }[];
   runStatuses: { succeeded: number; failed: number; stopped: number };
   modelCost: ModelCost;
+  /// Coût du matching CV, qui ne passe pas par un run d'agent : journalisé à part
+  /// (`ModelCall`) et donc lu à part.
+  matchingCost: MatchingCost;
 };
 
 export type SourceItem = {

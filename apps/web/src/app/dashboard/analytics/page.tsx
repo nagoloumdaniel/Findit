@@ -18,7 +18,8 @@ export default async function AnalyticsPage() {
     );
   }
 
-  const { publishedPerDay, topSources, topCompanies, runStatuses, modelCost } = result.data;
+  const { publishedPerDay, topSources, topCompanies, runStatuses, modelCost, matchingCost } =
+    result.data;
 
   const runStatusRows = [
     { label: "Succès", count: runStatuses.succeeded },
@@ -99,6 +100,15 @@ export default async function AnalyticsPage() {
             </li>
           ))}
       </ul>
+
+      {/* Le matching de CV n'est pas un run d'agent : sa dépense est journalisée
+          à part (`ModelCall`) et se lit donc séparément. */}
+      <h2>Coût du matching CV</h2>
+      <p className="dashboard-lead">
+        {matchingCost.callCount === 0
+          ? "Aucun matching sur la fenêtre."
+          : `${formatCount(matchingCost.callCount)} matching(s) · ${formatUsd(matchingCost.totalCostMicroUsd)} · ${formatCount(matchingCost.totalInputTokens)} tokens d’entrée, ${formatCount(matchingCost.totalOutputTokens)} de sortie.`}
+      </p>
     </>
   );
 }

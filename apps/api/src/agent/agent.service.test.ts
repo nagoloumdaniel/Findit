@@ -11,6 +11,12 @@ type AnalyticsDouble = {
   statusRows?: { status: string; _count: { _all: number } }[];
   runCosts?: { startedAt: Date; costMicroUsd: number }[];
   extractActions?: { detail: string | null; createdAt: Date }[];
+  matchingCalls?: {
+    createdAt: Date;
+    costMicroUsd: number;
+    inputTokens: number;
+    outputTokens: number;
+  }[];
 };
 
 /*
@@ -27,6 +33,7 @@ const createPrisma = (over: AnalyticsDouble = {}) => ({
     findMany: vi.fn().mockResolvedValue(over.runCosts ?? []),
   },
   agentAction: { findMany: vi.fn().mockResolvedValue(over.extractActions ?? []) },
+  modelCall: { findMany: vi.fn().mockResolvedValue(over.matchingCalls ?? []) },
 });
 
 describe("AgentService.analytics", () => {
@@ -160,6 +167,41 @@ describe("AgentService.analytics", () => {
       costMicroUsd: 50,
       inputTokens: 0,
       outputTokens: 0,
+    });
+  });
+
+  it("additionne le coût du matching CV, qui n'appartient à aucun run d'agent", async () => {
+    const prisma = createPrisma({
+      matchingCalls: [
+        {
+          createdAt: new Date("2026-10-06T08:00:00.000Z"),
+          costMicroUsd: 900,
+          inputTokens: 3000,
+          outputTokens: 400,
+        },
+        {
+          createdAt: new Date("2026-10-06T09:00:00.000Z"),
+          costMicroUsd: 600,
+          inputTokens: 2000,
+          outputTokens: 250,
+        },
+      ],
+    });
+    const service = new AgentService(prisma as never);
+
+    const analytics = await service.analytics(now);
+
+    expect(analytics.matchingCost).toMatchObject({
+      callCount: 2,
+      totalCostMicroUsd: 1500,
+      totalInputTokens: 5000,
+      totalOutputTokens: 650,
+    });
+    expect(analytics.matchingCost.perDay[13]).toEqual({
+      date: "2026-10-06",
+      costMicroUsd: 1500,
+      inputTokens: 5000,
+      outputTokens: 650,
     });
   });
 });

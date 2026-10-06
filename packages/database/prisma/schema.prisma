@@ -953,3 +953,32 @@ model Contact {
   @@unique([companyId, phone])
   @@index([companyId])
 }
+
+/// Journal d'un appel de modèle qui n'appartient pas à un run d'agent.
+///
+/// Le POURQUOI : le matching CV (`apps/api/src/matching/matching.service.ts`)
+/// appelle DeepSeek sans laisser de trace — ni jetons, ni coût. `AgentRun` et
+/// `AgentAction` sont sémantiquement réservés à l'agent, et `ConnectorRun` aux
+/// connecteurs : ce journal donne aux appels hors agent une ligne à eux, pour que
+/// la dépense de modèle soit mesurable partout.
+model ModelCall {
+  id String @id @default(uuid(7))
+
+  /// Ce que l'appel servait à faire : « cv-matching », par exemple.
+  purpose String
+  /// Modèle appelé, tel qu'annoncé à la requête.
+  model String
+
+  inputTokens  Int @default(0)
+  outputTokens Int @default(0)
+  /// Coût facturé, en micro-dollars entiers (0 quand le tarif n'est pas réglé).
+  costMicroUsd Int @default(0)
+
+  /// Relie les journaux d'une même exécution entre les processus.
+  correlationId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([purpose, createdAt])
+}
+

@@ -51,6 +51,13 @@ export const apiEnvSchema = z.object({
   /// Modèle DeepSeek. deepseek-flash par défaut ; deepseek-v4-pro pour le
   /// raisonnement fort (voir HANDOFF.md §6).
   DEEPSEEK_MODEL: z.string().min(1).default("deepseek-flash"),
+  /*
+   * Tarif DeepSeek, en dollars par million de tokens. L'API en a besoin depuis que
+   * le matching CV journalise son coût (`ModelCall`) : sans tarif, les jetons sont
+   * relevés mais le coût reste à zéro.
+   */
+  DEEPSEEK_INPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
+  DEEPSEEK_OUTPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
 });
 
 export const workerEnvSchema = z.object({

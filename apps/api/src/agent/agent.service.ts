@@ -107,6 +107,7 @@ export type AgentAnalytics = {
   topCompanies: CompanyJobCount[];
   runStatuses: RunStatusBreakdown;
   modelCost: ModelCost;
+  matchingCost: MatchingCost;
 };
 
 /// Coût et tokens d'un jour de la fenêtre. Le jour est la même clé UTC que
@@ -125,6 +126,15 @@ export type ModelCost = {
   totalInputTokens: number;
   totalOutputTokens: number;
   runCount: number;
+  perDay: ModelCostDay[];
+};
+
+/// Ce que le matching CV a coûté sur la fenêtre, hors runs d'agent.
+export type MatchingCost = {
+  callCount: number;
+  totalCostMicroUsd: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
   perDay: ModelCostDay[];
 };
 
@@ -248,40 +258,58 @@ export class AgentService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (ANALYTICS_DAYS - 1)),
     );
 
-    const [publishedRows, crawlJobs, companies, statusRows, runCosts, extractActions] =
-      await Promise.all([
-        this.prisma.job.findMany({
-          where: { status: JobStatus.PUBLISHED, publishedAt: { gte: since } },
-          select: { publishedAt: true },
-        }),
-        // Un crawl job porte déjà le nom de sa source : compter les pages par
-        // crawl job puis additionner en mémoire évite un groupBy sur une jointure,
-        // que Prisma ne sait pas faire proprement.
-        this.prisma.crawlJob.findMany({
-          select: {
-            source: { select: { name: true } },
-            _count: { select: { pages: true } },
-          },
-        }),
-        // Le tri par nombre d'offres se fait côté base, le top 5 est donc exact
-        // même si le nombre d'entreprises dépasse largement cinq.
-        this.prisma.company.findMany({
-          select: { name: true, _count: { select: { jobs: true } } },
-          orderBy: { jobs: { _count: "desc" } },
-          take: 5,
-        }),
-        this.prisma.agentRun.groupBy({ by: ["status"], _count: { _all: true } }),
-        // Le coût est porté par le run, les tokens par l'action d'extraction :
-        // chaque série suit l'horodatage de sa propre ligne.
-        this.prisma.agentRun.findMany({
-          where: { startedAt: { gte: since } },
-          select: { startedAt: true, costMicroUsd: true },
-        }),
-        this.prisma.agentAction.findMany({
-          where: { createdAt: { gte: since }, kind: "EXTRACT" },
-          select: { detail: true, createdAt: true },
-        }),
-      ]);
+    const [
+      publishedRows,
+      crawlJobs,
+      companies,
+      statusRows,
+      runCosts,
+      extractActions,
+      matchingCalls,
+    ] = await Promise.all([
+      this.prisma.job.findMany({
+        where: { status: JobStatus.PUBLISHED, publishedAt: { gte: since } },
+        select: { publishedAt: true },
+      }),
+      // Un crawl job porte déjà le nom de sa source : compter les pages par
+      // crawl job puis additionner en mémoire évite un groupBy sur une jointure,
+      // que Prisma ne sait pas faire proprement.
+      this.prisma.crawlJob.findMany({
+        select: {
+          source: { select: { name: true } },
+          _count: { select: { pages: true } },
+        },
+      }),
+      // Le tri par nombre d'offres se fait côté base, le top 5 est donc exact
+      // même si le nombre d'entreprises dépasse largement cinq.
+      this.prisma.company.findMany({
+        select: { name: true, _count: { select: { jobs: true } } },
+        orderBy: { jobs: { _count: "desc" } },
+        take: 5,
+      }),
+      this.prisma.agentRun.groupBy({ by: ["status"], _count: { _all: true } }),
+      // Le coût est porté par le run, les tokens par l'action d'extraction :
+      // chaque série suit l'horodatage de sa propre ligne.
+      this.prisma.agentRun.findMany({
+        where: { startedAt: { gte: since } },
+        select: { startedAt: true, costMicroUsd: true },
+      }),
+      this.prisma.agentAction.findMany({
+        where: { createdAt: { gte: since }, kind: "EXTRACT" },
+        select: { detail: true, createdAt: true },
+      }),
+      // Le matching CV ne passe pas par l'agent : ses appels ont leur propre
+      // journal (`ModelCall`), sans quoi cette dépense restait invisible.
+      this.prisma.modelCall.findMany({
+        where: { purpose: "cv-matching", createdAt: { gte: since } },
+        select: {
+          createdAt: true,
+          costMicroUsd: true,
+          inputTokens: true,
+          outputTokens: true,
+        },
+      }),
+    ]);
 
     const publishedByDay = new Map<string, number>();
     for (const row of publishedRows) {
@@ -362,6 +390,21 @@ export class AgentService {
       })),
       runStatuses,
       modelCost,
+      matchingCost: {
+        callCount: matchingCalls.length,
+        totalCostMicroUsd: matchingCalls.reduce((sum, call) => sum + call.costMicroUsd, 0),
+        totalInputTokens: matchingCalls.reduce((sum, call) => sum + call.inputTokens, 0),
+        totalOutputTokens: matchingCalls.reduce((sum, call) => sum + call.outputTokens, 0),
+        perDay: emptyDaySeries(now).map((day) => {
+          const dayCalls = matchingCalls.filter((call) => utcDayKey(call.createdAt) === day.date);
+          return {
+            date: day.date,
+            costMicroUsd: dayCalls.reduce((sum, call) => sum + call.costMicroUsd, 0),
+            inputTokens: dayCalls.reduce((sum, call) => sum + call.inputTokens, 0),
+            outputTokens: dayCalls.reduce((sum, call) => sum + call.outputTokens, 0),
+          };
+        }),
+      },
     };
   }
 }
