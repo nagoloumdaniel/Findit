@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { CrawledPage } from "@findit/crawler";
 
 import { ExtractError, extractJobsFromPage } from "./extract.js";
-import type { ExtractModel } from "./extract.js";
+import type { ExtractModel, ExtractStructuredRequest } from "./extract.js";
 
 const page = (overrides: Partial<CrawledPage> = {}): CrawledPage => ({
   url: "https://acme.example/jobs/1",
@@ -35,6 +35,24 @@ const validOffer = {
 };
 
 describe("extractJobsFromPage", () => {
+  it("consigne au modèle de ne retenir que les contrats du périmètre", async () => {
+    const systems: string[] = [];
+    const capturing: ExtractModel = {
+      generateStructured<T>(request: ExtractStructuredRequest<T>): Promise<T> {
+        systems.push(request.system ?? "");
+        return Promise.resolve({ offers: [] } as T);
+      },
+    };
+
+    await extractJobsFromPage(page({}), capturing);
+
+    // Mesuré : sans cette consigne, un board d'entreprise faisait extraire 156
+    // CDI que la validation rejetait ensuite, en payant leur sortie.
+    expect(systems[0]).toContain("alternance");
+    expect(systems[0]).toContain("CDI");
+    expect(systems[0]).toContain("c'est la validation qui tranche");
+  });
+
   it("extrait une offre valide et l'enrichit des métadonnées de la page", async () => {
     const result = await extractJobsFromPage(page({}), fakeModel({ offers: [validOffer] }));
 

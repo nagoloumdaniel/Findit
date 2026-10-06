@@ -65,9 +65,15 @@ const MAX_CONTENT_CHARS = 30_000;
 
 /**
  * Consigne système stricte. Elle interdit l'invention, impose qu'un champ
- * absent reste absent, et écarte d'emblée tout ce qui relève d'une école ou
- * d'une formation. C'est une consigne, pas une garantie : la revalidation Zod
- * et le garde-fou déterministe restent la vraie défense.
+ * absent reste absent, écarte tout ce qui relève d'une école ou d'une formation,
+ * et ne retient que les contrats du périmètre. C'est une consigne, pas une
+ * garantie : la revalidation Zod et les garde-fous déterministes restent la
+ * vraie défense.
+ *
+ * Le POURQUOI de la règle de contrat : mesuré sur un run réel, un board
+ * d'entreprise listant tous ses postes faisait extraire 178 offres dont 156 en
+ * CDI, toutes rejetées ensuite. On payait la sortie du modèle pour des offres
+ * que la validation refusait — le filtre est donc posé là où le coût naît.
  */
 const SYSTEM_PROMPT = [
   "Tu extrais des offres d'emploi à partir du contenu d'une page web.",
@@ -75,6 +81,8 @@ const SYSTEM_PROMPT = [
   "- N'invente jamais une information absente de la page.",
   "- Un champ absent de la page doit rester absent : ne le remplis pas.",
   "- Ignore les offres qui concernent une école, un organisme de formation, un bootcamp, un campus ou l'obtention d'un diplôme.",
+  "- Ne retiens que les contrats d'alternance (alternance, apprentissage, professionnalisation) et de stage (stage, internship). Ignore les CDI, les CDD qui ne sont pas des alternances, le freelance, l'intérim, le service civique et le bénévolat.",
+  "- Quand le contrat n'est pas nommé dans l'offre, garde-la : c'est la validation qui tranche, pas toi.",
   "- technologies liste les technologies ou compétences techniques nommées dans l'offre ; liste vide si aucune n'est nommée.",
   "- publishedAt est la date de publication au format ISO (AAAA-MM-JJ). Si la page donne une date relative (« il y a 3 jours », « publié cette semaine »), convertis-la en te servant de la date du jour fournie ; sinon absent.",
   "- applicationUrl est l'URL de candidature si elle est distincte de la page, sinon absent.",
