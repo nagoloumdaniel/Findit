@@ -44,7 +44,7 @@ describe("plafond nul", () => {
         source: "score",
       });
       const selector = createLlmSourceSelector({
-        model: modelReturning({ urls: [CONTEXT.candidates[2]!.url] }),
+        model: modelReturning({ choix: [3] }),
       });
       await expect(selector.select(context)).resolves.toEqual({ urls: [], source: "score" });
     }
@@ -65,10 +65,10 @@ describe("scoreOrderSelector", () => {
 
 describe("createLlmSourceSelector", () => {
   it("suit l'ordre du modèle parmi les candidates", async () => {
+    // Le modèle répond par des numéros (1 = première candidate), pas par des URL :
+    // recopier des adresses longues se paie en entrée et en sortie.
     const selector = createLlmSourceSelector({
-      model: modelReturning({
-        urls: ["https://boards.greenhouse.io/acme/jobs/123", "https://fr.linkedin.com/jobs/x"],
-      }),
+      model: modelReturning({ choix: [3, 1] }),
     });
 
     const selection = await selector.select(CONTEXT);
@@ -79,11 +79,9 @@ describe("createLlmSourceSelector", () => {
     });
   });
 
-  it("ignore une URL qui n'était pas candidate : le modèle ne fait pas visiter n'importe quoi", async () => {
+  it("ignore un numéro hors liste : le modèle ne fait pas visiter n'importe quoi", async () => {
     const selector = createLlmSourceSelector({
-      model: modelReturning({
-        urls: ["https://exemple-inconnu.test/page", "https://boards.greenhouse.io/acme/jobs/123"],
-      }),
+      model: modelReturning({ choix: [99, 0, -4, 3] }),
     });
 
     const selection = await selector.select(CONTEXT);
@@ -104,7 +102,7 @@ describe("createLlmSourceSelector", () => {
   });
 
   it("retombe sur l'ordre du score quand la sortie est vide ou hors schéma", async () => {
-    for (const output of [{ urls: [] }, { urls: "non" }, {}]) {
+    for (const output of [{ choix: [] }, { choix: ["1"] }, { urls: ["x"] }, {}]) {
       const selector = createLlmSourceSelector({ model: modelReturning(output) });
       await expect(selector.select(CONTEXT)).resolves.toMatchObject({ source: "score" });
     }

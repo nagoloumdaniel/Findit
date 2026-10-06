@@ -58,32 +58,37 @@ export const scoreOrderSelector: SourceSelector = {
 };
 
 const selectionSchema = z.object({
-  urls: z.array(z.string().min(1).max(500)).max(50),
+  /**
+   * Numéros des sources choisies, dans l'ordre de visite (1 = première de la
+   * liste). Des numéros plutôt que des URL : le modèle recopiait des adresses
+   * longues, payées en entrée **et** en sortie, alors que le numéro suffit.
+   */
+  choix: z.array(z.number().int()).max(50),
 });
 
 type SelectionResponse = z.infer<typeof selectionSchema>;
 
 const SYSTEM_PROMPT = [
   "Tu choisis, pour un agent de collecte d'offres d'emploi, les pages web qui valent une visite.",
-  "On te donne des sources déjà notées par des règles ; tu peux changer leur ordre et en écarter.",
+  "On te donne une liste numérotée de sources déjà notées par des règles ; tu peux changer leur ordre et en écarter.",
   "Règles strictes :",
-  "- Ne renvoie que des URL présentes dans la liste fournie, recopiées à l'identique.",
+  "- Ne renvoie que des numéros de la liste fournie.",
   "- Visite d'abord les pages d'offre à la source (URL profonde : identifiant d'offre, candidature) plutôt que les racines de board, qui listent tous les contrats.",
   "- Écarte les pages de recherche d'agrégateur : elles ne portent pas d'offre.",
   "- Écarte les sources dont le titre annonce un contrat hors périmètre (CDI, CDD, freelance).",
-  '- Réponds uniquement par un objet JSON de la forme {"urls":["..."]}, sans texte autour.',
+  '- Réponds uniquement par un objet JSON de la forme {"choix":[3,1]}, sans texte autour.',
 ].join("\n");
 
 const buildPrompt = (context: SourceSelectionContext): string => {
   const lines = [
     `Objectif : ${context.objective}`,
-    `Choisis au plus ${String(context.maxSources)} sources parmi :`,
+    `Choisis au plus ${String(context.maxSources)} sources, par leur numéro :`,
   ];
-  for (const candidate of context.candidates) {
+  context.candidates.forEach((candidate, index) => {
     lines.push(
-      `- ${candidate.url} | domaine ${candidate.domain} | score ${String(candidate.score)} | ${candidate.title.slice(0, 120)}`,
+      `${String(index + 1)}. [${String(candidate.score)}] ${candidate.domain} — ${candidate.title.slice(0, 70)}`,
     );
-  }
+  });
   return lines.join("\n");
 };
 
@@ -131,14 +136,20 @@ export const createLlmSourceSelector = (options: {
         return fallback.select(context);
       }
 
-      const allowed = new Map(context.candidates.map((candidate) => [candidate.url, true]));
+      /*
+       * Numéros hors liste, doublons et non-entiers sont ignorés : le modèle
+       * garde le droit de se tromper sans faire visiter une page qui n'était pas
+       * candidate, ni dépasser le plafond.
+       */
       const urls: string[] = [];
-      const seen = new Set<string>();
-      for (const url of parsed.data.urls) {
-        if (allowed.has(url) && !seen.has(url)) {
-          seen.add(url);
-          urls.push(url);
+      const seen = new Set<number>();
+      for (const rank of parsed.data.choix) {
+        const index = rank - 1;
+        if (index < 0 || index >= context.candidates.length || seen.has(index)) {
+          continue;
         }
+        seen.add(index);
+        urls.push(context.candidates[index]!.url);
         if (urls.length >= context.maxSources) {
           break;
         }
