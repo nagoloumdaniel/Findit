@@ -51,6 +51,18 @@ pièges déjà payés.
   que, dans le périmètre autorisé, les pages atteintes sont des CDI**. Les offres
   d'alternance et de stage vivent surtout sur les job boards enregistrés, que le
   cycle natif collecte déjà via leurs connecteurs.
+- **Le modèle choisit les sources à crawler** (section 5, `selector.ts`) : le tour
+  se fait en deux temps — recherche et scoring, puis choix des sources, puis crawl
+  et extraction. Seules des URL candidates peuvent revenir, le nombre est plafonné,
+  et toute sortie vide ou hors schéma rend l'ordre du score. Mesuré sur un run
+  borné : 3 sélections, 6 pages visitées, 2 offres extraites, 0 insérée, **2 025 µ$**
+  dont la moitié dans les décisions. Sans plafond de candidates, la seule première
+  sélection coûtait 1 012 µ$ sur 29 sources — d'où la limite aux 12 meilleures.
+- **Clé de mémoire normalisée** : la mémoire comparait l'URL exacte, donc `?` ou un
+  slash final faisait re-crawler la même page (mesuré : trois fois sur un run). La
+  clé ignore requête, fragment, casse, `www.` et slash final. Réserve : sur un run
+  ultérieur, une même page finale est encore apparue deux fois, par deux chemins
+  différents (alias de redirection probable) — piste non prouvée à ce jour.
 - **Le contrat entre guillemets dans les requêtes** : mesuré contre Brave sur
   `jobs.lever.co`, `développeur alternance` ramenait 1 titre du périmètre sur 10,
   `développeur "alternance"` en ramenait 6 ; `-CDI` n'apportait rien, et

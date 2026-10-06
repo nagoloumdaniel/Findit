@@ -63,6 +63,12 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   le modèle propose les requêtes (schéma Zod, bornées à `maxQueries`), le terme de contrat
     |   entre guillemets (mesuré : 6 titres du périmètre sur 10 avec, 1 sans) ; sortie invalide,
     |   vide ou modèle en panne rendent le plan déterministe — le run ne part jamais sans recherche
+    |   Sélection : le tour rassemble d'abord les sources notées (phase 1), puis le modèle choisit
+    |   lesquelles visiter et dans quel ordre (phase 2, plafonné aux 12 meilleures), puis crawl et
+    |   extraction (phase 3). Sans sélecteur : l'ordre du score. Seules des URL candidates reviennent,
+    |   et une sortie vide ou hors schéma rend l'ordre du score.
+    |   Mémoire : les URL sont mémorisées sous une clé normalisée (hôte sans `www`, sans requête ni
+    |   slash final), sinon la même page se re-crawle d'un tour à l'autre sous deux variantes d'adresse.
     v
 @findit/agent : generateSearchQueries(objective)
     |   repli : requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle
