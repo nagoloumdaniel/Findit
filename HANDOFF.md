@@ -108,17 +108,14 @@ analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification
   a produit** (requêtes exécutées, sources notées, offres retenues, pages
   visitées) et décide via `refine` s'il en faut un autre — `null` arrête. Chaque
   plan est consigné (`AgentAction` DISCOVER, coût compris) avec son numéro de
-  tour. Bornes : `maxPlanRounds` (3), plus les bornes de pages et de temps.
-  Restent fixes : le choix du crawl, de l'extraction et de l'arrêt.
+  tour. Bornes : `maxPlanRounds` (3), plus une **part du budget de pages par
+  tour** (`maxPages / maxPlanRounds`) et les bornes de temps. Restent fixes : le
+  choix du crawl, de l'extraction et de l'arrêt.
   Mesures : un plan qui commence par des requêtes génériques envoie le crawl sur
   des agrégateurs (403) — le prompt impose donc les `site:` d'abord (80 offres
-  extraites en 6 pages, 3 928 µ$) ; et avec 8 pages de budget, le premier tour
-  consomme tout et aucun second tour n'a lieu : les tours ne servent que si le
-  budget de pages le permet.
-- **`.env.example` désynchronisé du worker** : il ne déclare pas
-  `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`, alors que le
-  worker les lit (défauts dans `packages/config/src/env.ts`). Écart réel à
-  combler.
+  extraites en 6 pages, 3 928 µ$). Sans part de budget par tour, le premier tour
+  prenait les 8 pages et `refine` n'était jamais appelé ; avec elle, le même run a
+  fait 3 tours, le modèle affinant vers les `site:` ATS (12 866 µ$).
 - **CSS mort `.workspace*`** : `apps/web/src/app/globals.css` garde 24 règles
   `.workspace*`, plus référencées par aucun composant (`apps/web/src` ne les
   contient que dans ce fichier).

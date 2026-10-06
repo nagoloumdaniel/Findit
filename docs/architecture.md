@@ -98,9 +98,11 @@ AgentRun / AgentAction / AgentError en base
 - **Boucle de décision** (section 5) : après un tour, `runAgent` transmet au planificateur ce que le
   tour a produit — requêtes exécutées, sources notées, offres retenues, pages visitées — et appelle
   `refine`. Un plan rendu relance un tour, `null` arrête. Bornes : `maxQueries` par tour,
-  `maxPlanRounds` (3), et les bornes de pages ou de temps, qui coupent la boucle avant toute
-  révision. Conséquence mesurée : avec 8 pages de budget, le premier tour a consommé tout le budget et
-  aucun second tour n'a eu lieu — les tours ne servent que si le budget de pages le permet.
+  `maxPlanRounds` (3), et les bornes de pages ou de temps. Chaque tour reçoit une **part du budget de
+  pages** (`maxPages / maxPlanRounds`, arrondi au supérieur) : sans elle, un premier tour productif
+  consommait tout le run et `refine` n'était jamais appelé — mesuré avant correction : 8 pages prises
+  par le premier tour, un seul tour exécuté. Après correction, le même run a fait 3 tours et le modèle
+  a affiné ses requêtes vers les `site:` ATS. Un planificateur sans `refine` garde tout le budget.
 - Une page hors 2xx (réponse d'erreur servie) n'est ni relue ni extraite : c'est une réponse, pas une
   page d'offres. Le statut 0 reste traité par la relecture, puisque « jamais lue » n'est pas « erreur ».
 - Avant l'extraction, une **porte déterministe** lit le même contenu que le modèle recevrait : si la
