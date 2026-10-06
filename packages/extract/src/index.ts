@@ -3,6 +3,7 @@ export type {
   ExtractModel,
   ExtractStructuredRequest,
   ExtractionResult,
+  ModelUsage,
   RejectedOffer,
 } from "./extract.js";
 

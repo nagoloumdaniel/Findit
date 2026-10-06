@@ -122,6 +122,14 @@ export const workerEnvSchema = z.object({
   AGENT_OBJECTIVE: z.string().min(1).default("alternance et stage développeur en Île-de-France"),
 
   /*
+   * Tarif DeepSeek, en dollars par million de tokens. Facultatif : les tokens
+   * consommés sont relevés dans tous les cas, mais un coût ne se déduit pas sans
+   * tarif. Le renseigner depuis le compte, jamais depuis une supposition.
+   */
+  DEEPSEEK_INPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
+  DEEPSEEK_OUTPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
+
+  /*
    * France Travail (API officielle, francetravail.io). Facultatif : sans les
    * deux identifiants du compte partenaire, le cycle collecte simplement sans
    * cette source. Les identifiants restent côté serveur - jamais dans le

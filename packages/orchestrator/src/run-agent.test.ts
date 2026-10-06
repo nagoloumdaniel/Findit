@@ -1,6 +1,6 @@
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
 import type { CrawlResult, CrawledPage } from "@findit/crawler";
-import type { ExtractModel, ExtractionResult, JobOffer } from "@findit/extract";
+import type { ExtractModel, ExtractionResult, JobOffer, ModelUsage } from "@findit/extract";
 import type {
   WebSearchProvider,
   WebSearchProviderHealth,
@@ -226,6 +226,8 @@ interface DepsInput {
   readonly specializedExtract?: (page: CrawledPage) => ExtractionResult;
   readonly recoverPage?: (url: string) => Promise<CrawledPage | null>;
   readonly pageGate?: (page: CrawledPage) => boolean;
+  readonly model?: ExtractModel;
+  readonly modelCost?: (usage: ModelUsage) => number;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -617,5 +619,101 @@ describe("runAgent - porte déterministe", () => {
     const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
 
     expect(result).toMatchObject({ extractedCount: 1, errorCount: 0 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coût du modèle (CDC section 12)
+// ---------------------------------------------------------------------------
+
+/** Un modèle qui ne fait que rapporter l'usage accumulé par l'extraction. */
+const usageReportingModel = (read: () => ModelUsage): ExtractModel => ({
+  generateStructured: () => Promise.reject(new Error("Le modèle n'est pas appelé directement.")),
+  usage: read,
+});
+
+describe("runAgent - coût du modèle", () => {
+  it("attribue à l'action d'extraction le coût des tokens consommés", async () => {
+    const fake = buildFakePrisma();
+    let usage: ModelUsage = { inputTokens: 0, outputTokens: 0, calls: 0 };
+    const extract: ExtractJobs = () => {
+      usage = {
+        inputTokens: usage.inputTokens + 1000,
+        outputTokens: usage.outputTokens + 500,
+        calls: usage.calls + 1,
+      };
+      return Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] });
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      model: usageReportingModel(() => usage),
+      modelCost: (u) => u.inputTokens + 2 * u.outputTokens,
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    const action = fake.actions.find((a) => a.kind === "EXTRACT");
+    expect(action?.costMicroUsd).toBe(2000);
+    expect(action?.detail).toContain("1000+500 tok");
+    expect(fake.runs.get("run-1")?.costMicroUsd).toBe(2000);
+    expect(result).toMatchObject({ extractedCount: 1, errorCount: 0 });
+  });
+
+  it("trace les tokens sans inventer de coût quand le tarif manque", async () => {
+    const fake = buildFakePrisma();
+    let usage: ModelUsage = { inputTokens: 0, outputTokens: 0, calls: 0 };
+    const extract: ExtractJobs = () => {
+      usage = { inputTokens: 700, outputTokens: 80, calls: 1 };
+      return Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] });
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      model: usageReportingModel(() => usage),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    const action = fake.actions.find((a) => a.kind === "EXTRACT");
+    expect(action?.detail).toContain("700+80 tok");
+    expect(action?.costMicroUsd).toBe(0);
+  });
+
+  it("compte aussi les tentatives refusées, qui ont été facturées", async () => {
+    const fake = buildFakePrisma();
+    let usage: ModelUsage = { inputTokens: 0, outputTokens: 0, calls: 0 };
+    const extract: ExtractJobs = () => {
+      usage = {
+        inputTokens: usage.inputTokens + 300,
+        outputTokens: usage.outputTokens + 20,
+        calls: usage.calls + 1,
+      };
+      return Promise.reject(new Error("modèle indisponible"));
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract,
+      model: usageReportingModel(() => usage),
+      modelCost: (u) => u.inputTokens + u.outputTokens,
+      specializedExtract: () => {
+        throw new Error("aucun JobPosting lisible");
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    // Deux tentatives refusées : 600 tokens d'entrée et 40 de sortie.
+    const action = fake.actions.find((a) => a.kind === "EXTRACT");
+    expect(action?.detail).toContain("échec");
+    expect(action?.costMicroUsd).toBe(640);
+    expect(fake.runs.get("run-1")?.costMicroUsd).toBe(640);
+    expect(result).toMatchObject({ extractedCount: 0, errorCount: 1 });
   });
 });

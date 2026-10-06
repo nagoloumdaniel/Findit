@@ -1,8 +1,10 @@
 import { loadRootEnv, parseWorkerEnv } from "@findit/config";
 import { createPrismaClient } from "@findit/database";
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
-import { createDeepSeekModel } from "@findit/ai";
+import { createDeepSeekModel, computeCostMicroUsd } from "@findit/ai";
+import type { ModelUsage } from "@findit/ai";
 import { crawl } from "@findit/crawler";
+import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
@@ -36,6 +38,17 @@ const main = async (): Promise<void> => {
   console.log(`objectif : ${env.AGENT_OBJECTIVE}`);
   const startedAt = Date.now();
 
+  const inputPrice = env.DEEPSEEK_INPUT_USD_PER_MTOK;
+  const outputPrice = env.DEEPSEEK_OUTPUT_USD_PER_MTOK;
+  const modelCost =
+    inputPrice === undefined || outputPrice === undefined
+      ? undefined
+      : (usage: ModelUsage): number =>
+          computeCostMicroUsd(usage, {
+            inputUsdPerMillionTokens: inputPrice,
+            outputUsdPerMillionTokens: outputPrice,
+          });
+
   try {
     const result = await runAgent(env.AGENT_OBJECTIVE, {
       runStore: createAgentRunStore(prisma),
@@ -43,6 +56,20 @@ const main = async (): Promise<void> => {
       search,
       crawl,
       model,
+      ...(modelCost === undefined ? {} : { modelCost }),
+      recoverPage: async (url: string): Promise<CrawledPage | null> => {
+        const recovered = await crawl({
+          startUrl: url,
+          maxDepth: 0,
+          maxPages: 1,
+          maxRuntimeMs: 30_000,
+        });
+        const page = recovered.pages[0];
+        if (page === undefined || (page.text.trim() === "" && page.html.trim() === "")) {
+          return null;
+        }
+        return page;
+      },
       persist: (offers) => persistOffers(offers, { prisma }),
     });
 

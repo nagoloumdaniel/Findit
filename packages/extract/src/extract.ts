@@ -20,6 +20,13 @@ export interface ExtractionResult {
   readonly rejected: readonly RejectedOffer[];
 }
 
+/** Usage cumulé d'un client de modèle, tel qu'il sait le rapporter. */
+export interface ModelUsage {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly calls: number;
+}
+
 /**
  * Contrat minimal du modèle d'extraction. Il reflète `DeepSeekModel` de
  * `@findit/ai` : seul `generateStructured` est utilisé ici. Le modèle est donc
@@ -27,6 +34,11 @@ export interface ExtractionResult {
  */
 export interface ExtractModel {
   generateStructured: <T>(request: ExtractStructuredRequest<T>) => Promise<T>;
+  /**
+   * Tokens consommés depuis la création du client, quand le client sait les
+   * rapporter. Absent, l'appelant ne peut attribuer aucun coût — et le dit.
+   */
+  readonly usage?: () => ModelUsage;
 }
 
 /** Demande de sortie structurée, identique à celle de `@findit/ai`. */

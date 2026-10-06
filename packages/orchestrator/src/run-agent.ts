@@ -18,7 +18,7 @@ import {
   extractStructuredOffers,
   mentionsPerimeterContract,
 } from "@findit/extract";
-import type { ExtractModel, ExtractionResult } from "@findit/extract";
+import type { ExtractModel, ExtractionResult, ModelUsage } from "@findit/extract";
 import type { WebSearchProvider, WebSearchQuery, WebSearchResult } from "@findit/job-connectors";
 
 import { resolveOptions } from "./config.js";
@@ -68,6 +68,12 @@ export interface RunAgentDeps {
    * périmètre (`mentionsPerimeterContract`).
    */
   readonly pageGate?: (page: CrawledPage) => boolean;
+  /**
+   * Traduit un usage de modèle en micro-dollars. Absent, le coût reste à zéro
+   * alors que les tokens restent tracés dans le détail de l'action : sans tarif
+   * connu, on ne préfère pas inventer un prix.
+   */
+  readonly modelCost?: (usage: ModelUsage) => number;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -132,6 +138,29 @@ const toSearchQuery = (
 /** Rend le message d'une erreur inconnue, sans jamais inventer de détail. */
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : "Erreur inconnue.";
+
+/**
+ * Différence entre deux relevés d'usage, ou `null` quand le client ne rapporte
+ * rien. Un relevé négatif (client remplacé) est ramené à zéro plutôt que de
+ * produire un coût négatif.
+ */
+const usageDelta = (
+  before: ModelUsage | undefined,
+  after: ModelUsage | undefined,
+): ModelUsage | null => {
+  if (before === undefined || after === undefined) {
+    return null;
+  }
+  return {
+    inputTokens: Math.max(0, after.inputTokens - before.inputTokens),
+    outputTokens: Math.max(0, after.outputTokens - before.outputTokens),
+    calls: Math.max(0, after.calls - before.calls),
+  };
+};
+
+/** Rappel des tokens consommés, ajouté au détail d'une action d'extraction. */
+const usageSuffix = (usage: ModelUsage | null): string =>
+  usage === null ? "" : ` · ${String(usage.inputTokens)}+${String(usage.outputTokens)} tok`;
 
 /**
  * Construit les options de crawl d'une source. Le crawler reçoit le temps qui
@@ -356,7 +385,11 @@ export async function runAgent(
            * la lecture des données structurées est pure, elle ne tourne qu'une
            * fois, alors que l'appel au modèle est retenté. Si tout échoue, la
            * page est abandonnée avec sa raison, et la suivante continue.
+           *
+           * L'usage est relevé avant et après : les tokens consommés par les
+           * tentatives, y compris refusées, sont ainsi attribués à cette page.
            */
+          const usageBefore = deps.model.usage?.();
           const extraction = await runRecovery<ExtractionResult>([
             {
               strategy: RECOVERY_STRATEGY.SPECIALIZED,
@@ -376,12 +409,23 @@ export async function runAgent(
             },
           ]);
 
+          const modelUsage = usageDelta(usageBefore, deps.model.usage?.());
+          const modelCostMicroUsd =
+            modelUsage !== null && deps.modelCost !== undefined ? deps.modelCost(modelUsage) : 0;
+
           let result: ExtractionResult;
           if (extraction.found) {
             result = extraction.value;
           } else {
             const failure = extraction.attempts.find((attempt) => attempt.outcome === "error");
             if (failure !== undefined) {
+              // Les tentatives ratées ont été facturées : elles restent tracées.
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.EXTRACT,
+                detail: `${usable.url} · échec${usageSuffix(modelUsage)}`,
+                count: 0,
+                costMicroUsd: modelCostMicroUsd,
+              });
               await recordError(
                 ACTION_KIND.EXTRACT,
                 `${usable.url} : ${failure.error ?? "extraction impossible"}`,
@@ -396,9 +440,10 @@ export async function runAgent(
 
           await deps.runStore.recordAction(runId, {
             kind: ACTION_KIND.EXTRACT,
-            detail: `${usable.url} · ${extraction.found ? extraction.strategy : "aucune"}`,
+            detail: `${usable.url} · ${extraction.found ? extraction.strategy : "aucune"}${usageSuffix(modelUsage)}`,
             // Le compteur `extracted` compte les offres trouvées, pas les pages.
             count: result.offers.length,
+            costMicroUsd: modelCostMicroUsd,
           });
 
           // Validation puis déduplication par titre normalisé, dans ce run.

@@ -60,8 +60,9 @@ const validOutput = (): Omit<MatchResult, "skillMatch" | "locationMatch" | "cont
 const makeFakeModel = (output: unknown) => {
   const generateStructured = vi.fn(() => Promise.resolve(output)).mockName("generateStructured");
   const generateText = vi.fn(() => Promise.resolve("")).mockName("generateText");
+  const usage = vi.fn(() => ({ inputTokens: 0, outputTokens: 0, calls: 1 })).mockName("usage");
   return {
-    model: { generateStructured, generateText } as DeepSeekModel,
+    model: { generateStructured, generateText, usage } as DeepSeekModel,
     generateStructured,
   };
 };

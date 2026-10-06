@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { AiOutputError, AiUnavailableError } from "./errors.js";
+import { EMPTY_USAGE } from "./usage.js";
+import type { ModelUsage } from "./usage.js";
 
 /**
  * Transport HTTP, extrait en paramètre pour que le test injecte un faux `fetch`
@@ -49,6 +51,11 @@ export type DeepSeekModel = {
   generateStructured: <T>(request: StructuredRequest<T>) => Promise<T>;
   /** Rend du texte libre. Pas de schéma à valider. */
   generateText: (request: TextRequest) => Promise<string>;
+  /**
+   * Tokens consommés depuis la création du client, cumulés. Permet à l'appelant
+   * de mesurer ce qu'un lot d'appels a coûté en lisant la différence avant/après.
+   */
+  usage: () => ModelUsage;
 };
 
 type ChatMessage = { role: "user"; content: string };
@@ -70,6 +77,29 @@ const isTextBlock = (block: unknown): block is TextBlock => {
   }
   const candidate = block as { type?: unknown };
   return candidate.type === "text";
+};
+
+/**
+ * Lit les compteurs de tokens de la réponse. Un corps sans `usage` n'est pas une
+ * erreur : les compteurs valent alors zéro, et le coût n'est simplement pas
+ * attribué. Ces nombres viennent de l'API, ils ne sont jamais estimés.
+ */
+const readUsage = (payload: unknown): { inputTokens: number; outputTokens: number } => {
+  if (typeof payload !== "object" || payload === null || !("usage" in payload)) {
+    return { inputTokens: 0, outputTokens: 0 };
+  }
+
+  const usage = (payload as { usage?: unknown }).usage;
+  if (typeof usage !== "object" || usage === null) {
+    return { inputTokens: 0, outputTokens: 0 };
+  }
+
+  const input = (usage as { input_tokens?: unknown }).input_tokens;
+  const output = (usage as { output_tokens?: unknown }).output_tokens;
+  return {
+    inputTokens: typeof input === "number" && Number.isFinite(input) ? input : 0,
+    outputTokens: typeof output === "number" && Number.isFinite(output) ? output : 0,
+  };
 };
 
 /**
@@ -143,6 +173,13 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
   const transport: FetchLike = config.fetch ?? ((url, init) => fetch(url, init));
   const maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS;
 
+  /*
+   * Usage cumulé du client. Il est incrémenté dès que la réponse est lue, avant
+   * toute validation : un appel dont la sortie est refusée a quand même été
+   * facturé, et le taire ferait un coût faux.
+   */
+  let usage: ModelUsage = EMPTY_USAGE;
+
   const chat = async (
     messages: ChatMessage[],
     temperature: number,
@@ -189,6 +226,13 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
       });
     }
 
+    const call = readUsage(payload);
+    usage = {
+      inputTokens: usage.inputTokens + call.inputTokens,
+      outputTokens: usage.outputTokens + call.outputTokens,
+      calls: usage.calls + 1,
+    };
+
     const content = readContent(payload);
     if (content === null) {
       throw new AiOutputError(
@@ -199,6 +243,8 @@ export const createDeepSeekModel = (config: DeepSeekModelConfig): DeepSeekModel 
   };
 
   return {
+    usage: () => usage,
+
     async generateStructured<T>(request: StructuredRequest<T>): Promise<T> {
       // Le schéma est envoyé au modèle dans le prompt système, puis la sortie est
       // revalidée côté nous : une consigne n'est pas une garantie.

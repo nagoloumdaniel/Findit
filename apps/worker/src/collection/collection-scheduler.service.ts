@@ -1,7 +1,8 @@
 import type { WorkerEnv } from "@findit/config";
 import type { PrismaClient } from "@findit/database";
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
-import { createDeepSeekModel } from "@findit/ai";
+import { createDeepSeekModel, computeCostMicroUsd } from "@findit/ai";
+import type { ModelUsage } from "@findit/ai";
 import { crawl } from "@findit/crawler";
 import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider } from "@findit/job-connectors";
@@ -193,6 +194,21 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       model: this.env.DEEPSEEK_MODEL,
     });
 
+    /*
+     * Le tarif vient du compte, pas d'une supposition : sans les deux variables,
+     * le run trace les tokens mais laisse le coût à zéro.
+     */
+    const inputPrice = this.env.DEEPSEEK_INPUT_USD_PER_MTOK;
+    const outputPrice = this.env.DEEPSEEK_OUTPUT_USD_PER_MTOK;
+    const modelCost =
+      inputPrice === undefined || outputPrice === undefined
+        ? undefined
+        : (usage: ModelUsage): number =>
+            computeCostMicroUsd(usage, {
+              inputUsdPerMillionTokens: inputPrice,
+              outputUsdPerMillionTokens: outputPrice,
+            });
+
     const search: WebSearchProvider =
       this.env.BRAVE_SEARCH_API_KEY === undefined
         ? NO_SEARCH
@@ -207,6 +223,7 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       search,
       crawl,
       model,
+      ...(modelCost === undefined ? {} : { modelCost }),
       recoverPage: (url) => this.#recoverPage(url),
       persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
     });

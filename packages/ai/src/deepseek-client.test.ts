@@ -187,3 +187,46 @@ describe("createDeepSeekModel", () => {
     );
   });
 });
+
+describe("createDeepSeekModel.usage", () => {
+  it("part de zéro et cumule les tokens rendus par l'API", async () => {
+    const model = modelWith(
+      respondWith({
+        content: [{ type: "text", text: JSON.stringify({ nom: "Jean", competences: [] }) }],
+        usage: { input_tokens: 1200, output_tokens: 340 },
+      }),
+    );
+
+    expect(model.usage()).toEqual({ inputTokens: 0, outputTokens: 0, calls: 0 });
+
+    await model.generateStructured({ schema: Cv, prompt: "x" });
+    await model.generateStructured({ schema: Cv, prompt: "y" });
+
+    expect(model.usage()).toEqual({ inputTokens: 2400, outputTokens: 680, calls: 2 });
+  });
+
+  it("compte un appel dont la sortie est refusée : il a été facturé", async () => {
+    const model = modelWith(
+      respondWith({
+        content: [{ type: "text", text: "pas du json {" }],
+        usage: { input_tokens: 900, output_tokens: 50 },
+      }),
+    );
+
+    await expect(model.generateStructured({ schema: Cv, prompt: "x" })).rejects.toBeInstanceOf(
+      AiOutputError,
+    );
+    expect(model.usage()).toEqual({ inputTokens: 900, outputTokens: 50, calls: 1 });
+  });
+
+  it("ne devine pas de tokens quand l'API n'en rend pas", async () => {
+    const model = modelWith(
+      respondWith({
+        content: [{ type: "text", text: JSON.stringify({ nom: "Jean", competences: [] }) }],
+      }),
+    );
+
+    await model.generateStructured({ schema: Cv, prompt: "x" });
+    expect(model.usage()).toEqual({ inputTokens: 0, outputTokens: 0, calls: 1 });
+  });
+});
