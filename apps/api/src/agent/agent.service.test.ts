@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { AgentService } from "./agent.service.js";
+import { AgentService, parseUsageFromDetail } from "./agent.service.js";
 
 const now = new Date("2026-10-06T10:00:00.000Z");
 
@@ -9,10 +9,12 @@ type AnalyticsDouble = {
   crawlJobs?: { source: { name: string }; _count: { pages: number } }[];
   companies?: { name: string; _count: { jobs: number } }[];
   statusRows?: { status: string; _count: { _all: number } }[];
+  runCosts?: { startedAt: Date; costMicroUsd: number }[];
+  extractActions?: { detail: string | null; createdAt: Date }[];
 };
 
 /*
- * Double de Prisma limité aux quatre lectures de `analytics`. Chaque appel est
+ * Double de Prisma limité aux lectures de `analytics`. Chaque appel est
  * un mock qui renvoie ce que le test veut observer, sans base réelle : le
  * service ne doit dépendre d'aucune requête SQL.
  */
@@ -20,7 +22,11 @@ const createPrisma = (over: AnalyticsDouble = {}) => ({
   job: { findMany: vi.fn().mockResolvedValue(over.publishedRows ?? []) },
   crawlJob: { findMany: vi.fn().mockResolvedValue(over.crawlJobs ?? []) },
   company: { findMany: vi.fn().mockResolvedValue(over.companies ?? []) },
-  agentRun: { groupBy: vi.fn().mockResolvedValue(over.statusRows ?? []) },
+  agentRun: {
+    groupBy: vi.fn().mockResolvedValue(over.statusRows ?? []),
+    findMany: vi.fn().mockResolvedValue(over.runCosts ?? []),
+  },
+  agentAction: { findMany: vi.fn().mockResolvedValue(over.extractActions ?? []) },
 });
 
 describe("AgentService.analytics", () => {
@@ -111,5 +117,64 @@ describe("AgentService.analytics", () => {
     const analytics = await service.analytics(now);
 
     expect(analytics.runStatuses).toEqual({ succeeded: 4, failed: 2, stopped: 1 });
+  });
+
+  it("additionne le coût des runs et les tokens des actions, par jour", async () => {
+    const prisma = createPrisma({
+      runCosts: [
+        { startedAt: new Date("2026-10-06T08:00:00.000Z"), costMicroUsd: 1200 },
+        { startedAt: new Date("2026-10-06T09:00:00.000Z"), costMicroUsd: 300 },
+        { startedAt: new Date("2026-10-04T09:00:00.000Z"), costMicroUsd: 50 },
+      ],
+      extractActions: [
+        {
+          detail: "https://a.test · llm · 1000+500 tok",
+          createdAt: new Date("2026-10-06T08:05:00.000Z"),
+        },
+        { detail: "https://b.test · specialised", createdAt: new Date("2026-10-06T08:06:00.000Z") },
+        {
+          detail: "https://c.test · échec · 200+20 tok",
+          createdAt: new Date("2026-10-06T08:07:00.000Z"),
+        },
+      ],
+    });
+    const service = new AgentService(prisma as never);
+
+    const analytics = await service.analytics(now);
+
+    expect(analytics.modelCost).toMatchObject({
+      totalCostMicroUsd: 1550,
+      totalInputTokens: 1200,
+      totalOutputTokens: 520,
+      runCount: 3,
+    });
+    const lastDay = analytics.modelCost.perDay[13];
+    expect(lastDay).toEqual({
+      date: "2026-10-06",
+      costMicroUsd: 1500,
+      inputTokens: 1200,
+      outputTokens: 520,
+    });
+    expect(analytics.modelCost.perDay[11]).toEqual({
+      date: "2026-10-04",
+      costMicroUsd: 50,
+      inputTokens: 0,
+      outputTokens: 0,
+    });
+  });
+});
+
+describe("parseUsageFromDetail", () => {
+  it("lit le suffixe de tokens écrit par l'orchestrateur", () => {
+    expect(parseUsageFromDetail("https://a.test · llm · 8483+7120 tok")).toEqual({
+      inputTokens: 8483,
+      outputTokens: 7120,
+    });
+  });
+
+  it("rend null quand le détail n'en porte pas", () => {
+    expect(parseUsageFromDetail("https://a.test · specialised")).toBeNull();
+    expect(parseUsageFromDetail("https://a.test · hors contrat")).toBeNull();
+    expect(parseUsageFromDetail(null)).toBeNull();
   });
 });

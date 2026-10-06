@@ -106,6 +106,54 @@ export type AgentAnalytics = {
   topSources: SourcePageCount[];
   topCompanies: CompanyJobCount[];
   runStatuses: RunStatusBreakdown;
+  modelCost: ModelCost;
+};
+
+/// Coût et tokens d'un jour de la fenêtre. Le jour est la même clé UTC que
+/// `publishedPerDay`, pour que les deux séries se lisent côte à côte.
+export type ModelCostDay = {
+  date: string;
+  costMicroUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+/// Ce que le modèle a coûté sur la fenêtre. `runCount` compte les runs de la
+/// fenêtre, y compris ceux qui n'ont rien dépensé : c'est le dénominateur.
+export type ModelCost = {
+  totalCostMicroUsd: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  runCount: number;
+  perDay: ModelCostDay[];
+};
+
+/// Forme écrite par l'orchestrateur dans le détail d'une action d'extraction :
+/// « … · 1200+340 tok ».
+const USAGE_SUFFIX = /(\d+)\+(\d+) tok/u;
+
+/**
+ * Lit les tokens dans le détail d'une action d'extraction.
+ *
+ * Le POURQUOI de cette lecture d'un champ texte : les tokens n'ont pas encore de
+ * colonne, et ce format est écrit par `packages/orchestrator/src/run-agent.ts`.
+ * Le coût, lui, est structuré (`AgentAction.costMicroUsd`). Le jour où les
+ * tokens ont une colonne, cette fonction disparaît. Le format est testé, donc
+ * une dérive se voit.
+ */
+export const parseUsageFromDetail = (
+  detail: string | null,
+): { inputTokens: number; outputTokens: number } | null => {
+  const match = detail === null ? null : USAGE_SUFFIX.exec(detail);
+  if (match === null) {
+    return null;
+  }
+  const input = match[1];
+  const output = match[2];
+  if (input === undefined || output === undefined) {
+    return null;
+  }
+  return { inputTokens: Number(input), outputTokens: Number(output) };
 };
 
 /// Longueur de la fenêtre d'analytics : les deux dernières semaines. Assez
@@ -200,29 +248,40 @@ export class AgentService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (ANALYTICS_DAYS - 1)),
     );
 
-    const [publishedRows, crawlJobs, companies, statusRows] = await Promise.all([
-      this.prisma.job.findMany({
-        where: { status: JobStatus.PUBLISHED, publishedAt: { gte: since } },
-        select: { publishedAt: true },
-      }),
-      // Un crawl job porte déjà le nom de sa source : compter les pages par
-      // crawl job puis additionner en mémoire évite un groupBy sur une jointure,
-      // que Prisma ne sait pas faire proprement.
-      this.prisma.crawlJob.findMany({
-        select: {
-          source: { select: { name: true } },
-          _count: { select: { pages: true } },
-        },
-      }),
-      // Le tri par nombre d'offres se fait côté base, le top 5 est donc exact
-      // même si le nombre d'entreprises dépasse largement cinq.
-      this.prisma.company.findMany({
-        select: { name: true, _count: { select: { jobs: true } } },
-        orderBy: { jobs: { _count: "desc" } },
-        take: 5,
-      }),
-      this.prisma.agentRun.groupBy({ by: ["status"], _count: { _all: true } }),
-    ]);
+    const [publishedRows, crawlJobs, companies, statusRows, runCosts, extractActions] =
+      await Promise.all([
+        this.prisma.job.findMany({
+          where: { status: JobStatus.PUBLISHED, publishedAt: { gte: since } },
+          select: { publishedAt: true },
+        }),
+        // Un crawl job porte déjà le nom de sa source : compter les pages par
+        // crawl job puis additionner en mémoire évite un groupBy sur une jointure,
+        // que Prisma ne sait pas faire proprement.
+        this.prisma.crawlJob.findMany({
+          select: {
+            source: { select: { name: true } },
+            _count: { select: { pages: true } },
+          },
+        }),
+        // Le tri par nombre d'offres se fait côté base, le top 5 est donc exact
+        // même si le nombre d'entreprises dépasse largement cinq.
+        this.prisma.company.findMany({
+          select: { name: true, _count: { select: { jobs: true } } },
+          orderBy: { jobs: { _count: "desc" } },
+          take: 5,
+        }),
+        this.prisma.agentRun.groupBy({ by: ["status"], _count: { _all: true } }),
+        // Le coût est porté par le run, les tokens par l'action d'extraction :
+        // chaque série suit l'horodatage de sa propre ligne.
+        this.prisma.agentRun.findMany({
+          where: { startedAt: { gte: since } },
+          select: { startedAt: true, costMicroUsd: true },
+        }),
+        this.prisma.agentAction.findMany({
+          where: { createdAt: { gte: since }, kind: "EXTRACT" },
+          select: { detail: true, createdAt: true },
+        }),
+      ]);
 
     const publishedByDay = new Map<string, number>();
     for (const row of publishedRows) {
@@ -247,6 +306,47 @@ export class AgentService {
       }
     }
 
+    const costByDay = new Map<string, number>();
+    for (const run of runCosts) {
+      const key = utcDayKey(run.startedAt);
+      costByDay.set(key, (costByDay.get(key) ?? 0) + run.costMicroUsd);
+    }
+
+    const tokensByDay = new Map<string, { inputTokens: number; outputTokens: number }>();
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    for (const action of extractActions) {
+      const usage = parseUsageFromDetail(action.detail);
+      if (usage === null) {
+        continue;
+      }
+      totalInputTokens += usage.inputTokens;
+      totalOutputTokens += usage.outputTokens;
+
+      const key = utcDayKey(action.createdAt);
+      const day = tokensByDay.get(key) ?? { inputTokens: 0, outputTokens: 0 };
+      tokensByDay.set(key, {
+        inputTokens: day.inputTokens + usage.inputTokens,
+        outputTokens: day.outputTokens + usage.outputTokens,
+      });
+    }
+
+    const modelCost: ModelCost = {
+      totalCostMicroUsd: runCosts.reduce((sum, run) => sum + run.costMicroUsd, 0),
+      totalInputTokens,
+      totalOutputTokens,
+      runCount: runCosts.length,
+      perDay: emptyDaySeries(now).map((day) => {
+        const tokens = tokensByDay.get(day.date);
+        return {
+          date: day.date,
+          costMicroUsd: costByDay.get(day.date) ?? 0,
+          inputTokens: tokens?.inputTokens ?? 0,
+          outputTokens: tokens?.outputTokens ?? 0,
+        };
+      }),
+    };
+
     return {
       publishedPerDay: emptyDaySeries(now).map((day) => ({
         date: day.date,
@@ -261,6 +361,7 @@ export class AgentService {
         jobCount: company._count.jobs,
       })),
       runStatuses,
+      modelCost,
     };
   }
 }

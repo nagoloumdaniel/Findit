@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { fetchAgentRuns } from "../../../lib/api";
+import { formatUsd } from "../../../lib/format";
 import { EmptyState } from "../../../components/dashboard/empty-state";
 
 export const metadata: Metadata = { title: "Agent" };
@@ -36,6 +37,7 @@ export default async function AgentPage() {
             <span className="dashboard-row-title">{run.objective}</span>
             <span className="dashboard-row-meta">
               {run.status} · {run.inserted} insérée(s) · {run.pages} pages · {run.errors} erreur(s)
+              · {formatUsd(run.costMicroUsd)}
             </span>
             <span className="dashboard-row-meta">{run.startedAt}</span>
           </li>

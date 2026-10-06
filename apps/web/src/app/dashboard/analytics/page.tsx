@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { formatCount, formatUsd } from "../../../lib/format";
 import { fetchAgentAnalytics } from "../../../lib/api";
 
 export const metadata: Metadata = { title: "Analytics" };
@@ -17,7 +18,7 @@ export default async function AnalyticsPage() {
     );
   }
 
-  const { publishedPerDay, topSources, topCompanies, runStatuses } = result.data;
+  const { publishedPerDay, topSources, topCompanies, runStatuses, modelCost } = result.data;
 
   const runStatusRows = [
     { label: "Succès", count: runStatuses.succeeded },
@@ -71,6 +72,32 @@ export default async function AnalyticsPage() {
             <span className="dashboard-row-meta">{row.count}</span>
           </li>
         ))}
+      </ul>
+
+      <h2>Coût du modèle</h2>
+      <p className="dashboard-lead">
+        {modelCost.runCount === 0
+          ? "Aucun run sur la fenêtre."
+          : `${formatCount(modelCost.runCount)} run(s) · ${formatUsd(modelCost.totalCostMicroUsd)} · ${formatCount(modelCost.totalInputTokens)} tokens d’entrée, ${formatCount(modelCost.totalOutputTokens)} de sortie.`}
+      </p>
+      {modelCost.totalCostMicroUsd === 0 ? (
+        <p className="dashboard-lead">
+          Coût à zéro : renseigner DEEPSEEK_INPUT_USD_PER_MTOK et DEEPSEEK_OUTPUT_USD_PER_MTOK pour
+          l’estimer. Les tokens consommés sont enregistrés dans tous les cas.
+        </p>
+      ) : null}
+      <ul className="dashboard-list">
+        {modelCost.perDay
+          .filter((day) => day.costMicroUsd > 0 || day.inputTokens > 0 || day.outputTokens > 0)
+          .map((day) => (
+            <li className="dashboard-row" key={day.date}>
+              <span className="dashboard-row-title">{day.date}</span>
+              <span className="dashboard-row-meta">
+                {formatUsd(day.costMicroUsd)} · {formatCount(day.inputTokens)}+
+                {formatCount(day.outputTokens)} tok
+              </span>
+            </li>
+          ))}
       </ul>
     </>
   );

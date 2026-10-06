@@ -148,11 +148,27 @@ export type AgentStats = {
   publishedJobCount: number;
 };
 
+export type ModelCostDay = {
+  date: string;
+  costMicroUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type ModelCost = {
+  totalCostMicroUsd: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  runCount: number;
+  perDay: ModelCostDay[];
+};
+
 export type AgentAnalytics = {
   publishedPerDay: { date: string; count: number }[];
   topSources: { name: string; pageCount: number }[];
   topCompanies: { name: string; jobCount: number }[];
   runStatuses: { succeeded: number; failed: number; stopped: number };
+  modelCost: ModelCost;
 };
 
 export type SourceItem = {
