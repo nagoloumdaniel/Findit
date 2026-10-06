@@ -27,6 +27,8 @@ import { isValidOffer, normalizeTitle } from "./dedup.js";
 import { deterministicQueryPlanner } from "./planner.js";
 import type { ObservedSource, QueryPlanner } from "./planner.js";
 import { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
+import { scoreOrderSelector } from "./selector.js";
+import type { SourceCandidate, SourceSelector } from "./selector.js";
 
 /** Une source à crawler : l'URL de départ et ses bornes, confiées au crawler. */
 export type CrawlSource = (options: CrawlOptions) => Promise<CrawlResult>;
@@ -92,6 +94,12 @@ export interface RunAgentDeps {
   readonly sourceGate?: (
     url: string,
   ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
+  /**
+   * Choix des sources à crawler parmi celles que le scoring a retenues. Défaut :
+   * l'ordre du score, tronqué au budget de pages. Un sélecteur piloté par le
+   * modèle (section 5) se branche ici.
+   */
+  readonly sourceSelector?: SourceSelector;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -123,6 +131,30 @@ interface RunCounters {
   retainedCount: number;
   errorCount: number;
 }
+
+/**
+ * Clé d'identité d'une URL pour la mémoire. Le POURQUOI : une même page revient
+ * du moteur avec des variantes (`?`, `/` final, paramètre de suivi) ; mesuré, la
+ * même page a été crawlée aux trois tours d'un run parce que les chaînes
+ * différaient. La clé ignore donc requête, fragment, casse et slash final.
+ */
+const crawlKey = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/u, "");
+    return `${parsed.hostname.replace(/^www\./u, "").toLowerCase()}${path}`;
+  } catch {
+    return url.trim().toLowerCase();
+  }
+};
+
+/**
+ * Nombre de candidates envoyées au sélecteur. Mesuré : lui donner les 29 sources
+ * d'un tour coûtait 1 012 µ$ pour la seule sélection, soit 90 % du run ; le score
+ * a déjà classé les sources, le modèle n'a besoin que du haut de la liste pour
+ * choisir et ordonner.
+ */
+const MAX_SELECTION_CANDIDATES = 12;
 
 /** Hôte de l'URL (sans port), ou vide quand l'URL n'est pas analysable. */
 const sourceDomainOf = (url: string): string => {
@@ -255,8 +287,11 @@ export async function runAgent(
      * les bornes de pages ou de temps arrêtent la boucle comme le reste du run.
      */
     const planner = deps.planner ?? deterministicQueryPlanner;
+    const selector = deps.sourceSelector ?? scoreOrderSelector;
     const observedSources: ObservedSource[] = [];
     const executedQueries: string[] = [];
+    /** Clés des sources déjà crawlées dans ce run, variantes d'URL comprises. */
+    const crawledKeys = new Set<string>();
     let round = 0;
 
     /** Pages autorisées pour le tour en cours, recalculée à chaque tour. */
@@ -291,6 +326,12 @@ export async function runAgent(
           planUsage !== null && deps.modelCost !== undefined ? deps.modelCost(planUsage) : 0,
       });
 
+      /*
+       * Phase 1 : recherche et scoring. On rassemble les candidates du tour sans
+       * rien crawler : le choix vient après, une fois toutes les sources notées
+       * connues.
+       */
+      const candidatesByUrl = new Map<string, SourceCandidate>();
       for (const query of current.queries) {
         if (shouldStop() || roundExhausted()) {
           break;
@@ -324,248 +365,287 @@ export async function runAgent(
             kept: source.keep,
           });
 
+          if (source.keep && !candidatesByUrl.has(source.result.url)) {
+            candidatesByUrl.set(source.result.url, {
+              url: source.result.url,
+              domain: source.result.domain,
+              score: source.score,
+              title: `${source.result.title} ${source.result.description}`.trim(),
+            });
+          }
+        }
+      }
+
+      /*
+       * Phase 2 : le modèle choisit quoi crawler parmi les candidates — ou
+       * l'ordre du score s'il n'y a pas de sélecteur. La décision est consignée
+       * avec son coût, comme le plan.
+       */
+      const candidates = [...candidatesByUrl.values()]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_SELECTION_CANDIDATES);
+      const selectionUsageBefore = deps.model.usage?.();
+      const selection = await selector.select({
+        objective,
+        candidates,
+        maxSources: Math.max(1, config.maxPages - counters.pageCount),
+      });
+      const selectionUsage = usageDelta(selectionUsageBefore, deps.model.usage?.());
+      await deps.runStore.recordAction(runId, {
+        kind: ACTION_KIND.DISCOVER,
+        detail: `sélection ${selection.source} · ${String(selection.urls.length)} source(s) sur ${String(candidates.length)}`,
+        count: selection.urls.length,
+        costMicroUsd:
+          selectionUsage !== null && deps.modelCost !== undefined
+            ? deps.modelCost(selectionUsage)
+            : 0,
+      });
+
+      // Phase 3 : crawl et extraction, dans l'ordre choisi.
+      for (const sourceUrl of selection.urls) {
+        if (shouldStop() || roundExhausted()) {
+          break;
+        }
+
+        /*
+         * Conformité : le registre décide si cette source peut être visitée.
+         * Le refus est consigné, jamais silencieux — c'est ce qui permet de
+         * constater qu'une source a été écartée pour une raison de droit, et
+         * non parce qu'elle n'a rien rendu.
+         */
+        if (deps.sourceGate !== undefined) {
+          const verdict = await deps.sourceGate(sourceUrl);
+          if (!verdict.allowed) {
+            await deps.runStore.recordAction(runId, {
+              kind: ACTION_KIND.DISCOVER,
+              detail: `source refusée · ${sourceUrl} · ${verdict.reason}`,
+              count: 0,
+            });
+            continue;
+          }
+        }
+
+        // Mémoire : une URL déjà visitée n'est pas re-crawlée dans ce run.
+        const memoryKey = crawlKey(sourceUrl);
+        if (crawledKeys.has(memoryKey)) {
+          continue;
+        }
+        try {
+          if (await deps.memoryStore.alreadySeen(MEMORY_KIND.VISITED_URL, memoryKey)) {
+            continue;
+          }
+        } catch (error) {
+          await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+          continue;
+        }
+
+        // Crawl borné : un échec de source est consigné, le run continue.
+        let crawlResult: CrawlResult;
+        try {
+          crawlResult = await deps.crawl(crawlOptionsFor(sourceUrl, config, deadline));
+        } catch (error) {
+          await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+          continue;
+        }
+
+        try {
+          await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, memoryKey);
+        } catch (error) {
+          // La mémoire est une aide, pas un garde-fou : la borne de pages
+          // ci-dessous protège déjà la boucle. On consigne et on continue.
+          await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+        }
+        crawledKeys.add(memoryKey);
+
+        counters.sourceCount += 1;
+
+        for (const page of crawlResult.pages) {
           if (shouldStop() || roundExhausted()) {
             break;
           }
-          if (!source.keep) {
-            continue;
-          }
 
-          const sourceUrl = source.result.url;
+          // La page compte dans la borne, qu'elle soit lisible ou non.
+          counters.pageCount += 1;
+          // Son URL finale aussi : deux sources peuvent mener à la même page.
+          crawledKeys.add(crawlKey(page.url));
+          await deps.runStore.recordAction(runId, {
+            kind: ACTION_KIND.CRAWL,
+            detail: page.url,
+          });
 
           /*
-           * Conformité : le registre décide si cette source peut être visitée.
-           * Le refus est consigné, jamais silencieux — c'est ce qui permet de
-           * constater qu'une source a été écartée pour une raison de droit, et
-           * non parce qu'elle n'a rien rendu.
+           * Statut hors 2xx : la réponse est une erreur, pas une page d'offres.
+           * On ne paie ni relecture ni extraction pour elle. Le statut 0 est
+           * exclu : il signifie « jamais lue » (réseau), pas « erreur servie »,
+           * et c'est la relecture qui le traite.
            */
-          if (deps.sourceGate !== undefined) {
-            const verdict = await deps.sourceGate(sourceUrl);
-            if (!verdict.allowed) {
-              await deps.runStore.recordAction(runId, {
-                kind: ACTION_KIND.DISCOVER,
-                detail: `source refusée · ${sourceUrl} · ${verdict.reason}`,
-                count: 0,
-              });
-              continue;
-            }
-          }
-
-          // Mémoire : une URL déjà visitée n'est pas re-crawlée dans ce run.
-          try {
-            if (await deps.memoryStore.alreadySeen(MEMORY_KIND.VISITED_URL, sourceUrl)) {
-              continue;
-            }
-          } catch (error) {
-            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
-            continue;
-          }
-
-          // Crawl borné : un échec de source est consigné, le run continue.
-          let crawlResult: CrawlResult;
-          try {
-            crawlResult = await deps.crawl(crawlOptionsFor(sourceUrl, config, deadline));
-          } catch (error) {
-            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
-            continue;
-          }
-
-          try {
-            await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, sourceUrl);
-          } catch (error) {
-            // La mémoire est une aide, pas un garde-fou : la borne de pages
-            // ci-dessous protège déjà la boucle. On consigne et on continue.
-            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
-          }
-
-          counters.sourceCount += 1;
-
-          for (const page of crawlResult.pages) {
-            if (shouldStop() || roundExhausted()) {
-              break;
-            }
-
-            // La page compte dans la borne, qu'elle soit lisible ou non.
-            counters.pageCount += 1;
+          if (page.status !== 0 && (page.status < 200 || page.status >= 300)) {
             await deps.runStore.recordAction(runId, {
-              kind: ACTION_KIND.CRAWL,
-              detail: page.url,
+              kind: ACTION_KIND.EXTRACT,
+              detail: `${page.url} · statut ${String(page.status)}`,
+              count: 0,
             });
+            continue;
+          }
 
-            /*
-             * Statut hors 2xx : la réponse est une erreur, pas une page d'offres.
-             * On ne paie ni relecture ni extraction pour elle. Le statut 0 est
-             * exclu : il signifie « jamais lue » (réseau), pas « erreur servie »,
-             * et c'est la relecture qui le traite.
-             */
-            if (page.status !== 0 && (page.status < 200 || page.status >= 300)) {
-              await deps.runStore.recordAction(runId, {
-                kind: ACTION_KIND.EXTRACT,
-                detail: `${page.url} · statut ${String(page.status)}`,
-                count: 0,
-              });
+          /*
+           * Une page sans contenu a épuisé les étapes 1 et 2 du cascade : le
+           * crawler a déjà tenté HTTP, puis le navigateur quand le HTML le
+           * demandait. On lui offre une dernière relecture bornée, puis on
+           * abandonne en consignant l'échec — jamais en silence. Un refus
+           * `robots.txt` n'est pas une erreur : la page n'a pas le droit d'être
+           * lue, on la saute. Sans fonction de relecture, ou borne atteinte, le
+           * comportement d'origine est conservé : la page vide est ignorée.
+           */
+          let usable = page;
+          if (page.text.trim() === "" && page.html.trim() === "") {
+            if (page.robotsDenied) {
+              continue;
+            }
+            if (deps.recoverPage === undefined || recoveriesUsed >= config.maxRecoveries) {
               continue;
             }
 
-            /*
-             * Une page sans contenu a épuisé les étapes 1 et 2 du cascade : le
-             * crawler a déjà tenté HTTP, puis le navigateur quand le HTML le
-             * demandait. On lui offre une dernière relecture bornée, puis on
-             * abandonne en consignant l'échec — jamais en silence. Un refus
-             * `robots.txt` n'est pas une erreur : la page n'a pas le droit d'être
-             * lue, on la saute. Sans fonction de relecture, ou borne atteinte, le
-             * comportement d'origine est conservé : la page vide est ignorée.
-             */
-            let usable = page;
-            if (page.text.trim() === "" && page.html.trim() === "") {
-              if (page.robotsDenied) {
-                continue;
-              }
-              if (deps.recoverPage === undefined || recoveriesUsed >= config.maxRecoveries) {
-                continue;
-              }
-
-              recoveriesUsed += 1;
-              const read = await runRecovery<CrawledPage>([
-                {
-                  strategy: RECOVERY_STRATEGY.READ,
-                  maxAttempts: 2,
-                  run: () => deps.recoverPage?.(page.url) ?? Promise.resolve(null),
-                },
-              ]);
-
-              if (read.found) {
-                usable = read.value;
-                // Une relecture est un fait de collecte, pas une page de plus :
-                // le compte `pages` ne bouge pas, la trace reste.
-                await deps.runStore.recordAction(runId, {
-                  kind: ACTION_KIND.CRAWL,
-                  detail: `${page.url} · relecture (${RECOVERY_STRATEGY.READ})`,
-                  count: 0,
-                });
-              } else {
-                const failure = read.attempts.find((attempt) => attempt.outcome === "error");
-                await recordError(
-                  ACTION_KIND.CRAWL,
-                  `${page.url} : page illisible après relecture${
-                    failure?.error === undefined ? "" : ` (${failure.error})`
-                  }`,
-                  true,
-                );
-                continue;
-              }
-            }
-
-            /*
-             * Porte déterministe : une page qui ne nomme aucun contrat du
-             * périmètre ne peut pas porter d'offre du périmètre. Le modèle n'est
-             * donc pas appelé — mesuré sur un run réel, un board hors périmètre
-             * coûtait un appel par page pour des offres toutes rejetées ensuite.
-             * La racine d'un board d'ATS est écartée elle aussi : elle liste tous
-             * les contrats, et ses pages d'offre seront extraites à leur tour.
-             */
-            if (!pageGate(usable)) {
-              const reason =
-                deps.pageGate !== undefined
-                  ? "hors porte"
-                  : isAtsBoardListing(usable.url)
-                    ? "liste ATS"
-                    : "hors contrat";
-              await deps.runStore.recordAction(runId, {
-                kind: ACTION_KIND.EXTRACT,
-                detail: `${usable.url} · ${reason}`,
-                count: 0,
-              });
-              continue;
-            }
-
-            /*
-             * Extraction en cascade (section 4.7) : l'extraction spécialisée
-             * d'abord, déterministe et gratuite ; le modèle ensuite, seule étape
-             * payante. Un étage qui ne trouve rien passe la main au suivant. Seul
-             * un échec est relancé, et seulement là où il peut être transitoire :
-             * la lecture des données structurées est pure, elle ne tourne qu'une
-             * fois, alors que l'appel au modèle est retenté. Si tout échoue, la
-             * page est abandonnée avec sa raison, et la suivante continue.
-             *
-             * L'usage est relevé avant et après : les tokens consommés par les
-             * tentatives, y compris refusées, sont ainsi attribués à cette page.
-             */
-            const usageBefore = deps.model.usage?.();
-            const extraction = await runRecovery<ExtractionResult>([
+            recoveriesUsed += 1;
+            const read = await runRecovery<CrawledPage>([
               {
-                strategy: RECOVERY_STRATEGY.SPECIALIZED,
-                maxAttempts: 1,
-                run: () => {
-                  const structured = specializedExtract(usable);
-                  return Promise.resolve(structured.offers.length > 0 ? structured : null);
-                },
-              },
-              {
-                strategy: RECOVERY_STRATEGY.LLM,
+                strategy: RECOVERY_STRATEGY.READ,
                 maxAttempts: 2,
-                run: async () => {
-                  const result = await extract(usable, deps.model);
-                  return result.offers.length > 0 ? result : null;
-                },
+                run: () => deps.recoverPage?.(page.url) ?? Promise.resolve(null),
               },
             ]);
 
-            const modelUsage = usageDelta(usageBefore, deps.model.usage?.());
-            const modelCostMicroUsd =
-              modelUsage !== null && deps.modelCost !== undefined ? deps.modelCost(modelUsage) : 0;
-
-            let result: ExtractionResult;
-            if (extraction.found) {
-              result = extraction.value;
+            if (read.found) {
+              usable = read.value;
+              // Une relecture est un fait de collecte, pas une page de plus :
+              // le compte `pages` ne bouge pas, la trace reste.
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.CRAWL,
+                detail: `${page.url} · relecture (${RECOVERY_STRATEGY.READ})`,
+                count: 0,
+              });
             } else {
-              const failure = extraction.attempts.find((attempt) => attempt.outcome === "error");
-              if (failure !== undefined) {
-                // Les tentatives ratées ont été facturées : elles restent tracées.
-                await deps.runStore.recordAction(runId, {
-                  kind: ACTION_KIND.EXTRACT,
-                  detail: `${usable.url} · échec${usageSuffix(modelUsage)}`,
-                  count: 0,
-                  costMicroUsd: modelCostMicroUsd,
-                });
-                await recordError(
-                  ACTION_KIND.EXTRACT,
-                  `${usable.url} : ${failure.error ?? "extraction impossible"}`,
-                  true,
-                );
-                continue;
-              }
-              // Aucune stratégie n'a rien trouvé, et aucune n'a échoué : la page
-              // ne porte pas d'offre. C'est un fait, pas une erreur.
-              result = { offers: [], rejected: [] };
+              const failure = read.attempts.find((attempt) => attempt.outcome === "error");
+              await recordError(
+                ACTION_KIND.CRAWL,
+                `${page.url} : page illisible après relecture${
+                  failure?.error === undefined ? "" : ` (${failure.error})`
+                }`,
+                true,
+              );
+              continue;
             }
+          }
 
+          /*
+           * Porte déterministe : une page qui ne nomme aucun contrat du
+           * périmètre ne peut pas porter d'offre du périmètre. Le modèle n'est
+           * donc pas appelé — mesuré sur un run réel, un board hors périmètre
+           * coûtait un appel par page pour des offres toutes rejetées ensuite.
+           * La racine d'un board d'ATS est écartée elle aussi : elle liste tous
+           * les contrats, et ses pages d'offre seront extraites à leur tour.
+           */
+          if (!pageGate(usable)) {
+            const reason =
+              deps.pageGate !== undefined
+                ? "hors porte"
+                : isAtsBoardListing(usable.url)
+                  ? "liste ATS"
+                  : "hors contrat";
             await deps.runStore.recordAction(runId, {
               kind: ACTION_KIND.EXTRACT,
-              detail: `${usable.url} · ${extraction.found ? extraction.strategy : "aucune"}${usageSuffix(modelUsage)}`,
-              // Le compteur `extracted` compte les offres trouvées, pas les pages.
-              count: result.offers.length,
-              costMicroUsd: modelCostMicroUsd,
+              detail: `${usable.url} · ${reason}`,
+              count: 0,
             });
+            continue;
+          }
 
-            // Validation puis déduplication par titre normalisé, dans ce run.
-            for (const offer of result.offers) {
-              counters.extractedCount += 1;
-              if (!isValidOffer(offer)) {
-                continue;
-              }
-              const key = normalizeTitle(offer.title);
-              if (seenTitles.has(key)) {
-                await deps.runStore.recordAction(runId, {
-                  kind: ACTION_KIND.DEDUP,
-                  detail: offer.title,
-                });
-                continue;
-              }
-              seenTitles.add(key);
-              counters.retainedCount += 1;
-              retainedOffers.push(offer);
+          /*
+           * Extraction en cascade (section 4.7) : l'extraction spécialisée
+           * d'abord, déterministe et gratuite ; le modèle ensuite, seule étape
+           * payante. Un étage qui ne trouve rien passe la main au suivant. Seul
+           * un échec est relancé, et seulement là où il peut être transitoire :
+           * la lecture des données structurées est pure, elle ne tourne qu'une
+           * fois, alors que l'appel au modèle est retenté. Si tout échoue, la
+           * page est abandonnée avec sa raison, et la suivante continue.
+           *
+           * L'usage est relevé avant et après : les tokens consommés par les
+           * tentatives, y compris refusées, sont ainsi attribués à cette page.
+           */
+          const usageBefore = deps.model.usage?.();
+          const extraction = await runRecovery<ExtractionResult>([
+            {
+              strategy: RECOVERY_STRATEGY.SPECIALIZED,
+              maxAttempts: 1,
+              run: () => {
+                const structured = specializedExtract(usable);
+                return Promise.resolve(structured.offers.length > 0 ? structured : null);
+              },
+            },
+            {
+              strategy: RECOVERY_STRATEGY.LLM,
+              maxAttempts: 2,
+              run: async () => {
+                const result = await extract(usable, deps.model);
+                return result.offers.length > 0 ? result : null;
+              },
+            },
+          ]);
+
+          const modelUsage = usageDelta(usageBefore, deps.model.usage?.());
+          const modelCostMicroUsd =
+            modelUsage !== null && deps.modelCost !== undefined ? deps.modelCost(modelUsage) : 0;
+
+          let result: ExtractionResult;
+          if (extraction.found) {
+            result = extraction.value;
+          } else {
+            const failure = extraction.attempts.find((attempt) => attempt.outcome === "error");
+            if (failure !== undefined) {
+              // Les tentatives ratées ont été facturées : elles restent tracées.
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.EXTRACT,
+                detail: `${usable.url} · échec${usageSuffix(modelUsage)}`,
+                count: 0,
+                costMicroUsd: modelCostMicroUsd,
+              });
+              await recordError(
+                ACTION_KIND.EXTRACT,
+                `${usable.url} : ${failure.error ?? "extraction impossible"}`,
+                true,
+              );
+              continue;
             }
+            // Aucune stratégie n'a rien trouvé, et aucune n'a échoué : la page
+            // ne porte pas d'offre. C'est un fait, pas une erreur.
+            result = { offers: [], rejected: [] };
+          }
+
+          await deps.runStore.recordAction(runId, {
+            kind: ACTION_KIND.EXTRACT,
+            detail: `${usable.url} · ${extraction.found ? extraction.strategy : "aucune"}${usageSuffix(modelUsage)}`,
+            // Le compteur `extracted` compte les offres trouvées, pas les pages.
+            count: result.offers.length,
+            costMicroUsd: modelCostMicroUsd,
+          });
+
+          // Validation puis déduplication par titre normalisé, dans ce run.
+          for (const offer of result.offers) {
+            counters.extractedCount += 1;
+            if (!isValidOffer(offer)) {
+              continue;
+            }
+            const key = normalizeTitle(offer.title);
+            if (seenTitles.has(key)) {
+              await deps.runStore.recordAction(runId, {
+                kind: ACTION_KIND.DEDUP,
+                detail: offer.title,
+              });
+              continue;
+            }
+            seenTitles.add(key);
+            counters.retainedCount += 1;
+            retainedOffers.push(offer);
           }
         }
       }

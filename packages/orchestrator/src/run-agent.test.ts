@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { runAgent } from "./run-agent.js";
 import type { CrawlSource, ExtractJobs } from "./run-agent.js";
 import type { PlannerObservation, QueryPlanner } from "./planner.js";
+import type { SourceSelector } from "./selector.js";
 
 /** Une offre minimale et valide (titre, entreprise, URL de candidature). */
 const makeOffer = (title: string, company: string): JobOffer => ({
@@ -233,6 +234,7 @@ interface DepsInput {
   readonly sourceGate?: (
     url: string,
   ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
+  readonly sourceSelector?: SourceSelector;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -298,11 +300,13 @@ describe("runAgent", () => {
       errorCount: 0,
     });
 
-    // L'enchaînement : planification, puis recherche, crawl et extraction par
-    // source, puis déduplication du doublon, puis stockage du compte.
+    // L'enchaînement : planification, puis la recherche du tour, puis le choix
+    // des sources, puis crawl et extraction par source, déduplication du doublon,
+    // stockage du compte.
     expect(fake.actions.map((action) => action.kind)).toEqual([
       "DISCOVER",
       "SEARCH",
+      "DISCOVER",
       "CRAWL",
       "EXTRACT",
       "CRAWL",
@@ -329,10 +333,11 @@ describe("runAgent", () => {
     });
 
     // La source école est notée sous le seuil : elle n'est pas crawlée.
-    expect(fake.memories.has("VISITED_URL:https://ecole-informatique.fr/formations")).toBe(false);
-    // Les deux sources gardées ont été mémorisées après leur crawl.
-    expect(fake.memories.has("VISITED_URL:https://boards.greenhouse.io/acme/jobs")).toBe(true);
-    expect(fake.memories.has("VISITED_URL:https://example.com/jobs")).toBe(true);
+    expect(fake.memories.has("VISITED_URL:ecole-informatique.fr/formations")).toBe(false);
+    // Les deux sources gardées ont été mémorisées après leur crawl, sous leur clé
+    // normalisée (hôte sans www, sans requête ni slash final).
+    expect(fake.memories.has("VISITED_URL:boards.greenhouse.io/acme/jobs")).toBe(true);
+    expect(fake.memories.has("VISITED_URL:example.com/jobs")).toBe(true);
   });
 
   it("consigne une source qui échoue sans casser le run", async () => {
@@ -874,7 +879,9 @@ describe("runAgent - tours de planification", () => {
     });
 
     expect(
-      fake.actions.filter((action) => action.kind === "DISCOVER").map((action) => action.detail),
+      fake.actions
+        .filter((action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("plan"))
+        .map((action) => action.detail),
     ).toEqual(["plan llm · 1 requête(s)", "plan llm · 1 requête(s) · tour 2"]);
     expect(result.searchCount).toBe(2);
 
@@ -908,7 +915,11 @@ describe("runAgent - tours de planification", () => {
     await runAgent("alternance développeur", deps, { maxQueries: 1, maxPlanRounds: 1 });
 
     expect(refineCalls).toBe(0);
-    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
+    expect(
+      fake.actions.filter(
+        (action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("plan"),
+      ),
+    ).toHaveLength(1);
   });
 
   it("s'arrête quand le planificateur ne propose plus rien", async () => {
@@ -933,7 +944,11 @@ describe("runAgent - tours de planification", () => {
     await runAgent("alternance développeur", deps, { maxQueries: 1, maxPlanRounds: 3 });
 
     expect(refineCalls).toBe(1);
-    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
+    expect(
+      fake.actions.filter(
+        (action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("plan"),
+      ),
+    ).toHaveLength(1);
   });
 
   /** Une recherche qui rend une source différente à chaque requête. */
@@ -993,7 +1008,9 @@ describe("runAgent - tours de planification", () => {
     expect(result.pageCount).toBe(6);
     expect(refineCalls).toBe(2);
     expect(
-      fake.actions.filter((action) => action.kind === "DISCOVER").map((action) => action.detail),
+      fake.actions
+        .filter((action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("plan"))
+        .map((action) => action.detail),
     ).toEqual([
       "plan llm · 1 requête(s)",
       "plan llm · 1 requête(s) · tour 2",
@@ -1016,6 +1033,132 @@ describe("runAgent - tours de planification", () => {
 
     // Un seul tour : les cinq pages de la source passent, comme avant.
     expect(result.pageCount).toBe(5);
-    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
+    expect(
+      fake.actions.filter(
+        (action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("plan"),
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Choix des sources (section 5)
+// ---------------------------------------------------------------------------
+
+describe("runAgent - choix des sources", () => {
+  it("crawle les sources dans l'ordre choisi, pas celui du score", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    const search = makeSearch([
+      {
+        url: "https://example.com/premiere",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/seconde",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+    const selector: SourceSelector = {
+      select: ({ candidates }) =>
+        Promise.resolve({
+          urls: [...candidates].reverse().map((candidate) => candidate.url),
+          source: "llm",
+        }),
+    };
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      sourceSelector: selector,
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    // Le modèle a renversé l'ordre : la seconde source passe d'abord.
+    expect(crawled).toEqual(["https://example.com/seconde", "https://example.com/premiere"]);
+    const selection = fake.actions.find((action) => (action.detail ?? "").startsWith("sélection"));
+    expect(selection?.detail).toBe("sélection llm · 2 source(s) sur 2");
+  });
+
+  it("suit l'ordre du score sans sélecteur", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    const search = makeSearch([
+      {
+        url: "https://example.com/premiere",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/seconde",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual(["https://example.com/premiere", "https://example.com/seconde"]);
+    expect(
+      fake.actions.find((action) => (action.detail ?? "").startsWith("sélection"))?.detail,
+    ).toContain("sélection score");
+  });
+
+  it("ne crawle pas deux fois la même page sous deux variantes d'URL", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    // Le moteur rend la même page avec un paramètre de suivi, puis sans : mesuré
+    // sur un run réel, ces variantes faisaient crawler trois fois la même page.
+    const search = makeSearch([
+      {
+        url: "https://example.com/offres?utm_source=brave",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/offres",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual(["https://example.com/offres?utm_source=brave"]);
+    expect(result.pageCount).toBe(1);
   });
 });

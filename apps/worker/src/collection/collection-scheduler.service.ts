@@ -8,7 +8,7 @@ import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider, decideDiscoveredSourceAccess } from "@findit/job-connectors";
 import type { SourceAccessVerdict, WebSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
-import { createLlmQueryPlanner } from "@findit/orchestrator";
+import { createLlmQueryPlanner, createLlmSourceSelector } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
 import { TelegramSender, notifyAgentRun } from "@findit/notifications";
 import {
@@ -249,6 +249,8 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       // Section 5 : le modèle choisit les recherches, le plan déterministe sert
       // de repli automatique si sa réponse est inutilisable.
       planner: createLlmQueryPlanner({ model }),
+      // Section 5 : le modèle choisit aussi quelles sources visiter.
+      sourceSelector: createLlmSourceSelector({ model }),
       sourceGate,
       ...(modelCost === undefined ? {} : { modelCost }),
       recoverPage: (url) => this.#recoverPage(url),

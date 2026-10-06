@@ -36,6 +36,14 @@ export type {
   RefineContext,
 } from "./planner.js";
 
+export { createLlmSourceSelector, scoreOrderSelector } from "./selector.js";
+export type {
+  SourceCandidate,
+  SourceSelection,
+  SourceSelectionContext,
+  SourceSelector,
+} from "./selector.js";
+
 export { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 export type {
   RecoveryAttempt,

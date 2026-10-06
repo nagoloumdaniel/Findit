@@ -7,7 +7,7 @@ import { crawl } from "@findit/crawler";
 import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider, decideDiscoveredSourceAccess } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
-import { createLlmQueryPlanner } from "@findit/orchestrator";
+import { createLlmQueryPlanner, createLlmSourceSelector } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
 
 /*
@@ -58,6 +58,7 @@ const main = async (): Promise<void> => {
       crawl,
       model,
       planner: createLlmQueryPlanner({ model }),
+      sourceSelector: createLlmSourceSelector({ model }),
       // Même porte de conformité que le worker : le registre décide.
       sourceGate: (url) => decideDiscoveredSourceAccess(prisma, url, new Date()),
       ...(modelCost === undefined ? {} : { modelCost }),
