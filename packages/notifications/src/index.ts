@@ -7,6 +7,14 @@ export type { TelegramConfig, SendResult } from "./telegram-sender.js";
 export { notifyNewJobs, notificationKey } from "./notify.js";
 export type { NotifiableJobWithId, NotifyOptions, NotifySummary } from "./notify.js";
 
+export { formatAgentRunMessage, notifyAgentRun } from "./agent-run.js";
+export type {
+  AgentRunCounts,
+  AgentRunOffer,
+  NotifyAgentRunDeps,
+  NotifyAgentRunSummary,
+} from "./agent-run.js";
+
 export {
   buildHelpReply,
   buildLatestReply,

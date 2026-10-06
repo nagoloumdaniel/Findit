@@ -55,6 +55,19 @@ const createFakePrisma = () => {
         const mapKey = `${kind}:${key}`;
         return rows.has(mapKey) ? { id: mapKey } : null;
       },
+      findMany: (args: {
+        readonly where: { readonly kind: string };
+        readonly select: { readonly key: true };
+      }) => {
+        // Ne rend que les clés du type demandé, comme le ferait le filtre SQL.
+        const keys: string[] = [];
+        for (const row of rows.values()) {
+          if (row.kind === args.where.kind) {
+            keys.push(row.key);
+          }
+        }
+        return keys.map((key) => ({ key }));
+      },
     },
   };
 
@@ -104,5 +117,48 @@ describe("createAgentMemoryStore", () => {
     await store.remember(MEMORY_KIND.SOURCE_PATTERN, "pattern:acme");
 
     expect(rows.get("SOURCE_PATTERN:pattern:acme")?.value).toEqual({ ats: "greenhouse" });
+  });
+
+  it("hasSeenUrl renvoie false pour une URL jamais vue", async () => {
+    const { prisma } = createFakePrisma();
+    const store = createAgentMemoryStore(prisma as unknown as PrismaClient);
+
+    expect(await store.hasSeenUrl("https://example.com/a")).toBe(false);
+  });
+
+  it("hasSeenUrl renvoie true après remember d'une URL visitée", async () => {
+    const { prisma } = createFakePrisma();
+    const store = createAgentMemoryStore(prisma as unknown as PrismaClient);
+
+    await store.remember(MEMORY_KIND.VISITED_URL, "https://example.com/a");
+
+    expect(await store.hasSeenUrl("https://example.com/a")).toBe(true);
+  });
+
+  it("knownSourcePatterns renvoie une liste vide quand rien n'est connu", async () => {
+    const { prisma } = createFakePrisma();
+    const store = createAgentMemoryStore(prisma as unknown as PrismaClient);
+
+    expect(await store.knownSourcePatterns()).toEqual([]);
+  });
+
+  it("knownSourcePatterns renvoie les motifs déjà enregistrés, triés", async () => {
+    const { prisma } = createFakePrisma();
+    const store = createAgentMemoryStore(prisma as unknown as PrismaClient);
+
+    await store.remember(MEMORY_KIND.SOURCE_PATTERN, "pattern:beta");
+    await store.remember(MEMORY_KIND.SOURCE_PATTERN, "pattern:acme", { ats: "greenhouse" });
+
+    expect(await store.knownSourcePatterns()).toEqual(["pattern:acme", "pattern:beta"]);
+  });
+
+  it("knownSourcePatterns ignore les autres types de mémoire", async () => {
+    const { prisma } = createFakePrisma();
+    const store = createAgentMemoryStore(prisma as unknown as PrismaClient);
+
+    await store.remember(MEMORY_KIND.SOURCE_PATTERN, "pattern:acme");
+    await store.remember(MEMORY_KIND.VISITED_URL, "https://example.com/a");
+
+    expect(await store.knownSourcePatterns()).toEqual(["pattern:acme"]);
   });
 });

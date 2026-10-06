@@ -1,7 +1,13 @@
 import { Controller, Get, Inject, NotFoundException, Param } from "@nestjs/common";
 
 import { AgentService } from "./agent.service.js";
-import type { AgentRunDetail, AgentRunSummary, AgentStats, SourceItem } from "./agent.service.js";
+import type {
+  AgentAnalytics,
+  AgentRunDetail,
+  AgentRunSummary,
+  AgentStats,
+  SourceItem,
+} from "./agent.service.js";
 
 @Controller("api/agent")
 export class AgentController {
@@ -19,6 +25,11 @@ export class AgentController {
   @Get("stats")
   stats(): Promise<AgentStats> {
     return this.agent.stats();
+  }
+
+  @Get("analytics")
+  analytics(): Promise<AgentAnalytics> {
+    return this.agent.analytics();
   }
 
   @Get("sources")

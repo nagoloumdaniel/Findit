@@ -20,6 +20,8 @@ export interface StructuredCv {
   readonly languages: readonly string[];
   /** Certifications et diplômes. Texte libre. */
   readonly certifications: readonly string[];
+  /** Localisation du candidat : ville ou région, ex. « Paris ». Chaîne vide si absente. */
+  readonly location: string;
 }
 
 /** Offre d'emploi allégée, telle qu'elle sort du pipeline d'ingestion. */
@@ -57,4 +59,10 @@ export interface MatchResult {
   readonly weaknesses: readonly string[];
   /** Conseil de suite en français, rappel du caractère indicatif inclus. */
   readonly recommendation: string;
+  /** Part des compétences requises présentes dans le CV, 0-100. Déterministe. */
+  readonly skillMatch: number;
+  /** Concordance de localisation, 0-100. Déterministe. */
+  readonly locationMatch: number;
+  /** Concordance du type de contrat, 0 ou 100. Déterministe. */
+  readonly contractMatch: number;
 }

@@ -13,6 +13,7 @@ const cv = (overrides: Partial<StructuredCv> = {}): StructuredCv => ({
   skills: ["TypeScript", "React", "Node.js"],
   languages: ["français", "anglais courant"],
   certifications: ["Licence informatique"],
+  location: "",
   ...overrides,
 });
 
@@ -39,7 +40,7 @@ const emptyOffer = (): JobOfferLite =>
   offer({ title: "", description: "", requiredSkills: [], contract: "", location: "" });
 
 /** Sortie valide d'un modèle, toutes compétences ancrées dans le CV ou l'offre. */
-const validOutput = (): MatchResult => ({
+const validOutput = (): Omit<MatchResult, "skillMatch" | "locationMatch" | "contractMatch"> => ({
   score: 72,
   relevance: "Bon profil pour le poste",
   matchedSkills: ["TypeScript", "React"],
@@ -112,6 +113,40 @@ describe("computeMatch", () => {
     expect(result.score).toBe(0);
     expect(result.recommendation).toContain("matière");
     expect(generateStructured).not.toHaveBeenCalled();
+  });
+
+  it("calcule des sous-scores déterministes indépendants du modèle", async () => {
+    const { model } = makeFakeModel(validOutput());
+
+    const result = await computeMatch(
+      cv({
+        identity: "Développeuse en alternance",
+        location: "Paris",
+        skills: ["TypeScript", "React"],
+      }),
+      offer({
+        requiredSkills: ["TypeScript", "React", "Docker"],
+        contract: "alternance",
+        location: "Paris",
+      }),
+      model,
+    );
+
+    // 2 compétences sur 3 ; localisation identique ; « alternance » dans le CV.
+    expect(result.skillMatch).toBe(67);
+    expect(result.locationMatch).toBe(100);
+    expect(result.contractMatch).toBe(100);
+    // Le score LLM reste indépendant des sous-scores.
+    expect(result.score).toBe(72);
+  });
+
+  it("rend 0 pour les sous-scores quand rien ne concorde", async () => {
+    const { model } = makeFakeModel(validOutput());
+
+    const result = await computeMatch(cv(), offer(), model);
+
+    expect(result.locationMatch).toBe(0);
+    expect(result.contractMatch).toBe(0);
   });
 
   it("propage l'erreur quand la sortie ne respecte pas le schéma", async () => {

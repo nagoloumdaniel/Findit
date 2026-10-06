@@ -7,7 +7,7 @@ import { BraveSearchProvider } from "@findit/job-connectors";
 import type { WebSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
-import { TelegramSender } from "@findit/notifications";
+import { TelegramSender, notifyAgentRun } from "@findit/notifications";
 import {
   Inject,
   Injectable,
@@ -203,6 +203,8 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
     });
 
+    const notified = await this.#notifyAgentRun(result.runId);
+
     console.log(
       JSON.stringify({
         event: "agent-run",
@@ -215,6 +217,7 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
         extractedCount: result.extractedCount,
         retainedCount: result.retainedCount,
         errorCount: result.errorCount,
+        notified,
       }),
     );
 
@@ -255,6 +258,38 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
         maxJobsPerMessage: this.env.TELEGRAM_MAX_JOBS_PER_MESSAGE,
         maxJobsPerRun: this.env.TELEGRAM_MAX_JOBS_PER_RUN,
       },
+    });
+
+    return { sent: summary.sent, simulated: summary.simulated };
+  }
+
+  /**
+   * Notifie le résumé d'un run de l'agent, sous les mêmes interrupteurs que
+   * `#notify`. Sans token ni chat, rien ne part - exactement comme les cycles.
+   */
+  async #notifyAgentRun(runId: string): Promise<{ sent: number; simulated: number } | "disabled"> {
+    const { TELEGRAM_NOTIFICATIONS_ENABLED, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = this.env;
+
+    if (
+      !TELEGRAM_NOTIFICATIONS_ENABLED ||
+      TELEGRAM_BOT_TOKEN === undefined ||
+      TELEGRAM_CHAT_ID === undefined
+    ) {
+      return "disabled";
+    }
+
+    const sender = new TelegramSender({
+      botToken: TELEGRAM_BOT_TOKEN,
+      chatId: TELEGRAM_CHAT_ID,
+      dryRun: this.env.TELEGRAM_DRY_RUN,
+      fetch: globalThis.fetch,
+    });
+
+    const summary = await notifyAgentRun({
+      prisma: this.prisma,
+      sender,
+      runId,
+      appUrl: this.env.APP_URL ?? null,
     });
 
     return { sent: summary.sent, simulated: summary.simulated };

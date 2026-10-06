@@ -17,6 +17,7 @@ const StructuredCvSchema = z.object({
   skills: z.array(z.string()),
   languages: z.array(z.string()),
   certifications: z.array(z.string()),
+  location: z.string(),
 });
 
 /**
@@ -29,8 +30,9 @@ const StructuredCvSchema = z.object({
 const SYSTEM_PROMPT =
   "Tu extrais les faits d'un CV en JSON. Règles impératives : n'invente rien, " +
   "un fait absent reste un champ vide ou une liste vide ; `skills` est une liste " +
-  "de compétences courtes (ex. « React », « Node.js ») ; chaque expérience, " +
-  "projet, langue et certification est une chaîne de texte libre.";
+  "de compétences courtes (ex. « React », « Node.js ») ; `location` est la ville " +
+  "ou la région du candidat (ex. « Paris »), chaîne vide si absente ; chaque " +
+  "expérience, projet, langue et certification est une chaîne de texte libre.";
 
 /**
  * Structure un CV brut en faits exploitables pour le matching.

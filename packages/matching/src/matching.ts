@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { DeepSeekModel } from "@findit/ai";
 
+import { contractMatch, locationMatch, skillMatch } from "./scores.js";
 import type { JobOfferLite, MatchResult, StructuredCv } from "./types.js";
 
 /**
@@ -158,12 +159,20 @@ const buildPrompt = (cv: StructuredCv, offer: JobOfferLite): string =>
  * Le score rendu est indicatif : il ne décide rien à la place d'un employeur.
  * Deux garde-fous déterministes encadrent le modèle : un court-circuit quand le
  * CV ou l'offre n'a pas de matière, et un filtrage des compétences inventées.
+ * Les sous-scores déterministes (compétences, localisation, contrat) sont
+ * calculés à part et rendus à côté du score, sans être mélangés à lui.
  */
 export const computeMatch = async (
   cv: StructuredCv,
   offer: JobOfferLite,
   model: DeepSeekModel,
 ): Promise<MatchResult> => {
+  // Les sous-scores ne dépendent pas du modèle : on les calcule une fois pour
+  // les rendre dans tous les chemins, y compris le court-circuit sans matière.
+  const skillScore = skillMatch(cv, offer);
+  const locationScore = locationMatch(cv, offer);
+  const contractScore = contractMatch(cv, offer);
+
   if (!cvHasMatter(cv) || !offerHasMatter(offer)) {
     return {
       score: 0,
@@ -173,6 +182,9 @@ export const computeMatch = async (
       strengths: [],
       weaknesses: [],
       recommendation: `Avertissement : le CV ou l'offre ne contient pas assez de matière pour un score fiable. ${SCORE_INDICATIF}`,
+      skillMatch: skillScore,
+      locationMatch: locationScore,
+      contractMatch: contractScore,
     };
   }
 
@@ -192,5 +204,8 @@ export const computeMatch = async (
     strengths: checked.strengths,
     weaknesses: checked.weaknesses,
     recommendation: `${checked.recommendation}\n\n${SCORE_INDICATIF}`,
+    skillMatch: skillScore,
+    locationMatch: locationScore,
+    contractMatch: contractScore,
   };
 };

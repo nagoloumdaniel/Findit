@@ -148,6 +148,13 @@ export type AgentStats = {
   publishedJobCount: number;
 };
 
+export type AgentAnalytics = {
+  publishedPerDay: { date: string; count: number }[];
+  topSources: { name: string; pageCount: number }[];
+  topCompanies: { name: string; jobCount: number }[];
+  runStatuses: { succeeded: number; failed: number; stopped: number };
+};
+
 export type SourceItem = {
   id: string;
   name: string;
@@ -163,6 +170,9 @@ export type SourceItem = {
 
 export const fetchAgentStats = (): Promise<ApiResult<AgentStats>> =>
   request<AgentStats>("/api/agent/stats");
+
+export const fetchAgentAnalytics = (): Promise<ApiResult<AgentAnalytics>> =>
+  request<AgentAnalytics>("/api/agent/analytics");
 
 export const fetchAgentRuns = (): Promise<ApiResult<AgentRunSummary[]>> =>
   request<AgentRunSummary[]>("/api/agent/runs");
