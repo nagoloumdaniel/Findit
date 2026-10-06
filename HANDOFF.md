@@ -42,6 +42,18 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Recouvrement mesuré proprement, et plafonds resserrés en conséquence.** Deux
+  cycles **identiques dos à dos** aux mêmes plafonds : les deux ont découvert
+  **57** offres, accepté **13**, ajouté **0 offre nouvelle**, et coûté 0,052 $ puis
+  0,064 $. Les résultats par board sont identiques au détail près (WTTJ 7/2,
+  HelloWork 40/8, Indeed 10/3). Dans la journée, les boards rendent les mêmes
+  offres : répéter un cycle ne rapporte rien, et payer des pages profondes revient
+  à racheter ce qu'on a déjà — HelloWork accepte 7 offres sur 8 quand on lui en
+  demande 8, mais 8 sur 40 quand on lui en demande 40.
+  Les plafonds par défaut passent donc à **15 / 15 / 20** (WTTJ / HelloWork /
+  Indeed), au lieu de 30 / 40 / 100, avec la mesure en commentaire dans
+  `packages/config/src/env.ts`. Le levier reste la **cadence** (un cycle par jour),
+  pas le volume.
 - **Cycle aux plafonds réels : le rendement marginal est de l'overlap.** Mesure
   d'un cycle aux plafonds configurés (WTTJ 30, HelloWork 40, Indeed 100) :
   **57 offres découvertes, 13 acceptées, 0,06 $**, et seulement **+1 offre
