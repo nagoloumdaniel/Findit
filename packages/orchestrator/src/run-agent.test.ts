@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { runAgent } from "./run-agent.js";
 import type { CrawlSource, ExtractJobs } from "./run-agent.js";
+import type { QueryPlanner } from "./planner.js";
 
 /** Une offre minimale et valide (titre, entreprise, URL de candidature). */
 const makeOffer = (title: string, company: string): JobOffer => ({
@@ -228,6 +229,7 @@ interface DepsInput {
   readonly pageGate?: (page: CrawledPage) => boolean;
   readonly model?: ExtractModel;
   readonly modelCost?: (usage: ModelUsage) => number;
+  readonly planner?: QueryPlanner;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -293,9 +295,10 @@ describe("runAgent", () => {
       errorCount: 0,
     });
 
-    // L'enchaînement : recherche, puis crawl et extraction par source, puis
-    // déduplication du doublon, puis stockage du compte.
+    // L'enchaînement : planification, puis recherche, crawl et extraction par
+    // source, puis déduplication du doublon, puis stockage du compte.
     expect(fake.actions.map((action) => action.kind)).toEqual([
+      "DISCOVER",
       "SEARCH",
       "CRAWL",
       "EXTRACT",
@@ -715,5 +718,57 @@ describe("runAgent - coût du modèle", () => {
     expect(action?.costMicroUsd).toBe(640);
     expect(fake.runs.get("run-1")?.costMicroUsd).toBe(640);
     expect(result).toMatchObject({ extractedCount: 0, errorCount: 1 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Planificateur de recherches (section 5)
+// ---------------------------------------------------------------------------
+
+describe("runAgent - planificateur", () => {
+  it("consigne le plan du modèle et lui attribue son coût", async () => {
+    const fake = buildFakePrisma();
+    let usage: ModelUsage = { inputTokens: 0, outputTokens: 0, calls: 0 };
+    const planner: QueryPlanner = {
+      plan: () => {
+        usage = { inputTokens: 400, outputTokens: 60, calls: 1 };
+        return Promise.resolve({
+          queries: [{ query: "alternance développeur", engine: "brave" }],
+          source: "llm",
+        });
+      },
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] }),
+      model: usageReportingModel(() => usage),
+      modelCost: (u) => u.inputTokens + u.outputTokens,
+      planner,
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    const discover = fake.actions.find((action) => action.kind === "DISCOVER");
+    expect(discover?.detail).toContain("plan llm");
+    expect(discover?.costMicroUsd).toBe(460);
+    expect(fake.runs.get("run-1")?.costMicroUsd).toBe(460);
+    expect(result).toMatchObject({ searchCount: 1, errorCount: 0 });
+  });
+
+  it("ne paie rien quand le plan reste déterministe", async () => {
+    const fake = buildFakePrisma();
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance et stage développeur en Île-de-France", deps, { maxQueries: 3 });
+
+    const discover = fake.actions.find((action) => action.kind === "DISCOVER");
+    expect(discover?.detail).toContain("plan deterministic");
+    expect(discover?.costMicroUsd).toBe(0);
   });
 });

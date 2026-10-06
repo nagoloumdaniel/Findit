@@ -23,6 +23,9 @@ export type { RunAgentOptions } from "./config.js";
 
 export { isHttpUrl, isValidOffer, normalizeTitle } from "./dedup.js";
 
+export { createLlmQueryPlanner, deterministicQueryPlanner } from "./planner.js";
+export type { PlannerModel, QueryPlan, QueryPlanContext, QueryPlanner } from "./planner.js";
+
 export { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 export type {
   RecoveryAttempt,

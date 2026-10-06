@@ -1,10 +1,4 @@
-import {
-  ACTION_KIND,
-  AGENT_RUN_STATUS,
-  MEMORY_KIND,
-  generateSearchQueries,
-  scoreSources,
-} from "@findit/agent";
+import { ACTION_KIND, AGENT_RUN_STATUS, MEMORY_KIND, scoreSources } from "@findit/agent";
 import type {
   AgentMemoryStore,
   AgentRunStore,
@@ -24,6 +18,8 @@ import type { WebSearchProvider, WebSearchQuery, WebSearchResult } from "@findit
 import { resolveOptions } from "./config.js";
 import type { ResolvedOptions, RunAgentOptions } from "./config.js";
 import { isValidOffer, normalizeTitle } from "./dedup.js";
+import { deterministicQueryPlanner } from "./planner.js";
+import type { QueryPlanner } from "./planner.js";
 import { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 
 /** Une source à crawler : l'URL de départ et ses bornes, confiées au crawler. */
@@ -74,6 +70,13 @@ export interface RunAgentDeps {
    * connu, on ne préfère pas inventer un prix.
    */
   readonly modelCost?: (usage: ModelUsage) => number;
+  /**
+   * Planificateur des recherches. Défaut : le plan déterministe, déduit de
+   * l'objectif par règles. Un planificateur piloté par le modèle (section 5 du
+   * cahier des charges) se branche ici, et retombe sur le déterministe en cas
+   * d'échec.
+   */
+  readonly planner?: QueryPlanner;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -220,8 +223,27 @@ export async function runAgent(
   const retainedOffers: ExtractionResult["offers"][number][] = [];
 
   try {
-    // Génération des requêtes, bornée au nombre autorisé par run.
-    const queries = generateSearchQueries(objective).slice(0, config.maxQueries);
+    /*
+     * Planification (section 5) : le modèle peut choisir les recherches, sinon
+     * le plan déterministe s'applique. Le plan est borné par `maxQueries`, et la
+     * décision elle-même est consignée — y compris son coût, quand le modèle a
+     * été appelé.
+     */
+    const planUsageBefore = deps.model.usage?.();
+    const plan = await (deps.planner ?? deterministicQueryPlanner).plan({
+      objective,
+      maxQueries: config.maxQueries,
+    });
+    const planUsage = usageDelta(planUsageBefore, deps.model.usage?.());
+    await deps.runStore.recordAction(runId, {
+      kind: ACTION_KIND.DISCOVER,
+      detail: `plan ${plan.source} · ${String(plan.queries.length)} requête(s)`,
+      count: plan.queries.length,
+      costMicroUsd:
+        planUsage !== null && deps.modelCost !== undefined ? deps.modelCost(planUsage) : 0,
+    });
+
+    const queries = plan.queries;
 
     for (const query of queries) {
       if (shouldStop()) {

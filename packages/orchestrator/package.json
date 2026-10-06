@@ -19,6 +19,7 @@
     "@findit/agent": "workspace:*",
     "@findit/crawler": "workspace:*",
     "@findit/extract": "workspace:*",
-    "@findit/job-connectors": "workspace:*"
+    "@findit/job-connectors": "workspace:*",
+    "zod": "4.4.3"
   }
 }

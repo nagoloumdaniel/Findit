@@ -7,6 +7,7 @@ import { crawl } from "@findit/crawler";
 import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
+import { createLlmQueryPlanner } from "@findit/orchestrator";
 import { persistOffers } from "@findit/persist";
 
 /*
@@ -56,6 +57,7 @@ const main = async (): Promise<void> => {
       search,
       crawl,
       model,
+      planner: createLlmQueryPlanner({ model }),
       ...(modelCost === undefined ? {} : { modelCost }),
       recoverPage: async (url: string): Promise<CrawledPage | null> => {
         const recovered = await crawl({
