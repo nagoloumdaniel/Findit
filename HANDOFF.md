@@ -42,6 +42,19 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Cycle aux plafonds réels : le rendement marginal est de l'overlap.** Mesure
+  d'un cycle aux plafonds configurés (WTTJ 30, HelloWork 40, Indeed 100) :
+  **57 offres découvertes, 13 acceptées, 0,06 $**, et seulement **+1 offre
+  nouvelle** en base (23 → 24). Vingt minutes plus tôt, un cycle à 8 offres par
+  board avait apporté 5 offres nouvelles pour 0,014 $.
+  Lecture : ce qui est « accepté » est en majorité **déjà connu** (12 mises à jour
+  sur 13), et la première page concentre la fraîcheur — HelloWork accepte 7 offres
+  sur 8 à 8 items, mais 8 sur 40 à 40 items. Le bon réglage est donc la
+  **cadence** (un cycle par jour), pas des plafonds élevés : à 0,06 $ le cycle, la
+  journée coûte ~1,80 $/mois, sous le plafond de 4,5 $.
+  **Réserve** : les deux mesures sont à vingt minutes d'écart, donc le taux de
+  recouvrement mêle l'overlap et l'ordre des résultats ; une répétition stricte
+  (mêmes plafonds, deux fois de suite) n'a pas été faite.
 - **Où l'alternance vit vraiment — mesuré, classe de source par classe.** Même
   pipeline d'ingestion, trois familles de sources :
 
