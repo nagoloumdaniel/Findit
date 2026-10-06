@@ -22,10 +22,10 @@ lien de candidature employeur, et Welcome to the Jungle dans un cycle quotidien
 
 Trois réserves à connaître avant de continuer : ces briques attendent encore la
 validation du propriétaire (aucune case de la roadmap n'est cochée) ; **aucun
-connecteur de job board n'est monté dans le cycle**, seul l'outil
-`pnpm board:proof` les exécute, donc la garde de budget n'est pas encore appelée
-par le cycle réel ; et la règle d'affichage public d'une offre de job board
-n'est pas tranchée.
+connecteur de job board ne tourne**, l'interrupteur `SCRAPED_SOURCES_ENABLED`
+étant éteint, donc seul l'outil `pnpm board:proof` exécute Welcome to the
+Jungle - la garde de budget, elle, est déjà câblée dans les deux cycles ; et la
+règle d'affichage public d'une offre de job board n'est pas tranchée.
 
 La base est passée **en ligne** (Neon, TLS obligatoire) ; Redis reste local. Le
 rôle applicatif n'est pas propriétaire du schéma, ce qui a déjà cassé
@@ -479,7 +479,83 @@ protection anti-bot imposerait de la contourner, ce qui reste interdit.
 
 ---
 
-## 8. Pièges déjà payés
+## 8. Claude Code branche sur le compte DeepSeek (outillage)
+
+Depuis le 2026-10-06, Claude Code est relie a DeepSeek pour que l'agent puisse lui
+deleguer des taches isolees : le bundle `@deepseek-ai/dsh-subagent-claude-code` est
+installe dans le profil `desktop`, et le profil declare la ligne d'outil
+`subagent_claude_code`. Le montage suit la documentation DeepSeek
+(« Integrate with Claude Code »), appliquee a l'environnement du sous-agent dans
+`~/.dsh/profiles/desktop/cordis.patch.yml` :
+
+```yaml
+env:
+  ANTHROPIC_BASE_URL: "https://api.deepseek.com/anthropic"
+  ANTHROPIC_AUTH_TOKEN: "<cle API DeepSeek>" # platform.deepseek.com
+  ANTHROPIC_MODEL: "deepseek-flash[1m]"
+  ANTHROPIC_DEFAULT_OPUS_MODEL: "deepseek-v4-pro"
+  ANTHROPIC_DEFAULT_SONNET_MODEL: "deepseek-flash[1m]"
+  ANTHROPIC_DEFAULT_HAIKU_MODEL: "deepseek-flash"
+  CLAUDE_CODE_SUBAGENT_MODEL: "deepseek-flash"
+  CLAUDE_CODE_EFFORT_LEVEL: "max"
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW: "786432"
+```
+
+### Aucun modele Claude n'est servi
+
+C'est le point a ne pas se raconter : l'API DeepSeek **redirige** les noms de
+modeles Claude vers les siens. Il n'y a donc pas d'acces a Opus, Sonnet ou Haiku.
+
+| Demande                              | Modele reellement servi |
+| ------------------------------------ | ----------------------- |
+| `claude-opus-*` (alias `opus`)       | `deepseek-v4-pro`       |
+| `claude-sonnet-*` (alias `sonnet`)   | `deepseek-flash`        |
+| `claude-haiku-*` (alias `haiku`)     | `deepseek-flash`        |
+| tout autre nom (`claude-fable-5`...) | `deepseek-flash`        |
+
+Difference a connaitre avant d'envoyer une image : **`deepseek-v4-pro` ne supporte
+pas la vision**, `deepseek-flash` oui. Les deux ont 1M de contexte et 384K de
+sortie maximale. `v4-pro` coute environ 4 fois plus cher que `flash` et repond
+plus lentement (mesure : 1,5 s contre 0,5 s sur une requete courte).
+
+Le sous-agent reste **fixe sur `deepseek-flash`** : `CLAUDE_CODE_SUBAGENT_MODEL`
+et le champ `model` de la ligne du provider le forcent. `ANTHROPIC_DEFAULT_OPUS_MODEL`
+est pose pour que le tier haut existe si on l'ouvre un jour.
+
+Trois constats verifies contre l'API reelle, qui evitent de repayer l'enquete :
+
+- **Le jeton de compte n'est pas une cle API.** Il rend 401 « api key invalid » en
+  `Authorization: Bearer` ; il n'est accepte que dans l'en-tete `x-dsh-auth-token`.
+  Une cle de plateforme est donc obligatoire pour cette voie, et elle est facturee
+  a l'usage. Le montage par jeton de compte, mis au point et prouve le 2026-10-06,
+  a ete retire : il dependait d'un en-tete non documente et d'un proxy local.
+- **Le mapping des modeles est fait par le serveur** : `claude-opus-5-5` envoye tel
+  quel rend 200 avec `deepseek-v4-pro` comme modele servi. Aucun proxy local, aucune
+  reecriture de nom de modele n'est necessaire.
+- **La cle n'est pas heritee de l'exterieur** : le provider ecrit cet environnement
+  dans la requete du SDK, et l'environnement ambiant est purge de ses variables
+  `ANTHROPIC_*` avant l'application.
+
+Prouve sur le reel : une delegation `subagent_claude_code` a lu `package.json` du
+depot et rendu `NOM=findit VERSION=0.1.0 SCRIPTS=16`, chiffres verifies a la main
+contre le fichier, avec le proxy local arrete.
+
+**Version du bundle** : elle doit correspondre a celle de l'application
+(`0.2.0-rc.2` aujourd'hui). Ce bundle est publie en versions pre-liminaires, et une
+plage de versions npm ignore les pre-versions : `0.0.1-rc.1`, qui ne declare aucun
+bundle de profil, serait choisie a la place. Apres une mise a jour de DeepSeek
+Harness, lancer
+[scripts/update-claude-subagent.cjs](scripts/update-claude-subagent.cjs), qui lit
+la version de l'application, verifie que le bundle correspondant existe au registre
+et declare bien un patch, puis installe et selectionne.
+
+La session one-shot est **unattended** : `AskUserQuestion` est desactive et les
+demandes de permission sont refusees hors mode `bypassPermissions`. Le mode retenu
+est `acceptEdits`.
+
+---
+
+## 9. Pièges déjà payés
 
 Chacun a coûté du temps. Les relire évite de les repayer.
 
@@ -530,7 +606,7 @@ Chacun a coûté du temps. Les relire évite de les repayer.
 
 ---
 
-## 9. La couche IA en pratique
+## 10. La couche IA en pratique
 
 Paquet `@findit/ai` ([packages/ai/src/](packages/ai/src/)).
 
@@ -565,7 +641,7 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ---
 
-## 10. Prochaines briques, dans l'ordre
+## 11. Prochaines briques, dans l'ordre
 
 Mise à jour du 2026-10-06. Le chantier de scraping des 2026-10-05 et 2026-10-06
 est écrit, testé et poussé, mais **attend la validation du propriétaire** : tant
@@ -580,9 +656,9 @@ Suivant ce que le propriétaire ordonne :
 2. **Trancher ce qui bloque** : la règle d'affichage public d'une offre de job
    board (seul obstacle à l'allumage de Welcome to the Jungle), Q-1 (le privé
    peut-il aller en base en ligne ?) et Q-6 (où héberger le worker).
-3. **Brancher la garde de budget dans le cycle** : elle existe et elle est
-   prouvée, mais aucun connecteur de job board n'est monté, donc le cycle réel
-   ne l'appelle jamais.
+3. **Allumer le cycle des sources scrapées** : tout est câblé, garde de budget
+   comprise, mais `SCRAPED_SOURCES_ENABLED` vaut `false`, donc aucun job board
+   ne tourne en production.
 4. **Poursuivre la phase 22** : HelloWork, puis Indeed, Glassdoor et LinkedIn,
    un site par brique et sur ordre explicite.
 
@@ -601,7 +677,7 @@ binaire des CV sources, et l'export DOCX des documents générés.
 
 ---
 
-## 11. Vérifier son travail
+## 12. Vérifier son travail
 
 ```bash
 pnpm format:check   # Prettier ; rejoué par le hook de pré-push
