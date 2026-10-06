@@ -1,12 +1,7 @@
 import { Controller, Get, Inject, NotFoundException, Param } from "@nestjs/common";
 
 import { AgentService } from "./agent.service.js";
-import type {
-  AgentRunDetail,
-  AgentRunSummary,
-  AgentStats,
-  SourceItem,
-} from "./agent.service.js";
+import type { AgentRunDetail, AgentRunSummary, AgentStats, SourceItem } from "./agent.service.js";
 
 @Controller("api/agent")
 export class AgentController {

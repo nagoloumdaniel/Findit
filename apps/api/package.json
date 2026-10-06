@@ -14,8 +14,10 @@
   "dependencies": {
     "@fastify/cors": "11.3.0",
     "@fastify/helmet": "13.1.0",
+    "@findit/ai": "workspace:*",
     "@findit/config": "workspace:*",
     "@findit/database": "workspace:*",
+    "@findit/matching": "workspace:*",
     "@findit/shared": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",

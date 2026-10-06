@@ -47,12 +47,18 @@ importers:
       '@fastify/helmet':
         specifier: 13.1.0
         version: 13.1.0
+      '@findit/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@findit/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@findit/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@findit/matching':
+        specifier: workspace:*
+        version: link:../../packages/matching
       '@findit/shared':
         specifier: workspace:*
         version: link:../../packages/shared

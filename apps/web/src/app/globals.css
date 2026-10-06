@@ -1624,6 +1624,50 @@ button.filters-toggle-button {
   overflow-wrap: anywhere;
 }
 
+.matching-form {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  max-width: var(--measure-prose);
+}
+
+.matching-label {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.matching-textarea {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  line-height: var(--leading-relaxed);
+  resize: vertical;
+}
+
+.matching-button {
+  justify-self: start;
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.matching-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 48rem) {
   .dashboard-shell {
     grid-template-columns: 1fr;
