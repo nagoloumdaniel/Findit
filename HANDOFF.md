@@ -42,6 +42,18 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Agrégateurs déguisés en entreprises écartés** : un locataire d'ATS qui publie
+  les offres des autres n'est pas un employeur. `isAggregatorTenant`
+  (`packages/job-connectors/src/aggregator-tenants.ts`) porte une liste courte et
+  citée — `lever/jobgether` — justifiée par la mesure : 3 501 des 4 251 offres
+  d'une collecte de 10 sources. L'agent ne l'enregistre plus et le journal dit
+  `source · agrégateur ignoré · lever/jobgether` ; vérifié sur la base réelle
+  (95 → 95 sources, aucune écriture).
+  **Reste à faire, sur décision** : la ligne `jobgether` créée avant le filtre est
+  toujours au registre (`fetchedJobCount` 0) et sera recollectée à chaque cycle.
+- **Le journal parle de « source », plus de « source enregistrée »** : la phrase
+  vient désormais de l'appelant, qui seul sait s'il a enregistré, ignoré ou
+  reconnu. Sinon une source écartée s'affichait comme enregistrée.
 - **Les sources fraîchement découvertes sont bien collectées — et le périmètre est
   bien la cause du rendement nul.** Mesure réelle sur les 10 `CompanySource` que
   l'agent venait de créer : **10 collectes sur 10, aucun échec**, **4 251 offres**
