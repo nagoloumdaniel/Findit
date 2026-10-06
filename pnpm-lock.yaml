@@ -121,9 +121,18 @@ importers:
 
   apps/worker:
     dependencies:
+      '@findit/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      '@findit/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@findit/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@findit/crawler':
+        specifier: workspace:*
+        version: link:../../packages/crawler
       '@findit/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -136,6 +145,12 @@ importers:
       '@findit/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@findit/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
+      '@findit/persist':
+        specifier: workspace:*
+        version: link:../../packages/persist
       '@findit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -303,6 +318,24 @@ importers:
       '@findit/job-connectors':
         specifier: workspace:*
         version: link:../job-connectors
+
+  packages/persist:
+    dependencies:
+      '@findit/database':
+        specifier: workspace:*
+        version: link:../database
+      '@findit/extract':
+        specifier: workspace:*
+        version: link:../extract
+      '@findit/job-classification':
+        specifier: workspace:*
+        version: link:../job-classification
+      '@findit/job-normalization':
+        specifier: workspace:*
+        version: link:../job-normalization
+      '@findit/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/shared: {}
 

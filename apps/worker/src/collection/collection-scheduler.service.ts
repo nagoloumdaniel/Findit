@@ -1,5 +1,12 @@
 import type { WorkerEnv } from "@findit/config";
 import type { PrismaClient } from "@findit/database";
+import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
+import { createDeepSeekModel } from "@findit/ai";
+import { crawl } from "@findit/crawler";
+import { BraveSearchProvider } from "@findit/job-connectors";
+import type { WebSearchProvider } from "@findit/job-connectors";
+import { runAgent } from "@findit/orchestrator";
+import { persistOffers } from "@findit/persist";
 import { TelegramSender } from "@findit/notifications";
 import {
   Inject,
@@ -13,6 +20,8 @@ import { Worker } from "bullmq";
 import { notifyAfterCycle } from "./notify-after-cycle.js";
 
 import {
+  AGENT_COLLECTION_JOB,
+  AGENT_COLLECTION_SCHEDULER_ID,
   COLLECTION_CYCLE_JOB,
   COLLECTION_SCHEDULER_ID,
   FINDIT_QUEUE,
@@ -27,6 +36,14 @@ import { createCycleDeps, createScrapedCycleDeps } from "./cycle-deps.js";
 import { createJobHandler } from "./job-handler.js";
 import { runCycle } from "./run-cycle.js";
 import { runScrapedCycle } from "./run-scraped-cycle.js";
+
+/** Moteur de recherche inactif : sans clé Brave, l'agent ne découvre rien. */
+const NO_SEARCH: WebSearchProvider = {
+  name: "none",
+  search: () => Promise.resolve([]),
+  healthCheck: () =>
+    Promise.resolve({ healthy: false, detail: "Aucune clé de recherche configurée." }),
+};
 
 /**
  * Programme la collecte et l'exécute.
@@ -73,9 +90,22 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
       await this.queue.removeJobScheduler(SCRAPED_COLLECTION_SCHEDULER_ID);
     }
 
+    // L'agent autonome a sa propre planification quotidienne. Même règle que les
+    // sources scrapées : interrupteur éteint, la planification est retirée.
+    if (this.env.AGENT_RUN_ENABLED) {
+      await this.queue.upsertJobScheduler(
+        AGENT_COLLECTION_SCHEDULER_ID,
+        { pattern: this.env.AGENT_COLLECTION_CRON, tz: this.env.JOB_COLLECTION_TIMEZONE },
+        { name: AGENT_COLLECTION_JOB, opts: { removeOnComplete: 50, removeOnFail: 100 } },
+      );
+    } else {
+      await this.queue.removeJobScheduler(AGENT_COLLECTION_SCHEDULER_ID);
+    }
+
     const handle = createJobHandler({
       native: () => this.#runNativeCycle(),
       scraped: () => this.#runScrapedCycle(),
+      agent: () => this.#runAgent(),
     });
 
     this.#worker = new Worker(JOB_PIPELINE_QUEUE, (job) => handle(job), {
@@ -137,6 +167,58 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
     );
 
     return summary;
+  }
+
+  /**
+   * Exécute un run complet de l'agent autonome : recherche, découverte, crawl,
+   * extraction, déduplication, consignation. Les dépendances sont fabriquées
+   * ici, à partir de l'environnement validé, et jamais réutilisées d'un run à
+   * l'autre.
+   */
+  async #runAgent(): Promise<unknown> {
+    if (this.env.DEEPSEEK_API_KEY === undefined) {
+      throw new Error("DEEPSEEK_API_KEY manquante : l'agent ne peut pas s'initialiser.");
+    }
+
+    const started = new Date();
+    const model = createDeepSeekModel({
+      apiKey: this.env.DEEPSEEK_API_KEY,
+      model: this.env.DEEPSEEK_MODEL,
+    });
+
+    const search: WebSearchProvider =
+      this.env.BRAVE_SEARCH_API_KEY === undefined
+        ? NO_SEARCH
+        : new BraveSearchProvider({
+            apiKey: this.env.BRAVE_SEARCH_API_KEY,
+            fetch: globalThis.fetch,
+          });
+
+    const result = await runAgent(this.env.AGENT_OBJECTIVE, {
+      runStore: createAgentRunStore(this.prisma),
+      memoryStore: createAgentMemoryStore(this.prisma),
+      search,
+      crawl,
+      model,
+      persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
+    });
+
+    console.log(
+      JSON.stringify({
+        event: "agent-run",
+        runId: result.runId,
+        status: result.status,
+        startedAt: started.toISOString(),
+        searchCount: result.searchCount,
+        sourceCount: result.sourceCount,
+        pageCount: result.pageCount,
+        extractedCount: result.extractedCount,
+        retainedCount: result.retainedCount,
+        errorCount: result.errorCount,
+      }),
+    );
+
+    return result;
   }
 
   /**

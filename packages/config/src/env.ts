@@ -103,6 +103,24 @@ export const workerEnvSchema = z.object({
   APIFY_API_TOKEN: z.string().min(1).optional(),
   SCRAPEGRAPH_API_KEY: z.string().min(1).optional(),
 
+  /// Clé DeepSeek, partagée avec l'API. Requise seulement quand l'agent est
+  /// allumé (`AGENT_RUN_ENABLED=true`) ; absente, le worker démarre quand même
+  /// pour les cycles de collecte.
+  DEEPSEEK_API_KEY: z.string().min(1).optional(),
+  /// Modèle DeepSeek. deepseek-flash par défaut ; deepseek-v4-pro pour le fort.
+  DEEPSEEK_MODEL: z.string().min(1).default("deepseek-flash"),
+
+  /*
+   * Agent autonome (Search → Crawl → Extract → Store). Éteint par défaut : un
+   * run dépense des appels LLM (DeepSeek) et des requêtes web réels. Même
+   * allumé, il faut DEEPSEEK_API_KEY pour que le modèle s'initialise.
+   */
+  AGENT_RUN_ENABLED: boolFromEnv(false),
+  /// Cron du run quotidien de l'agent. 8 h, heure de Paris.
+  AGENT_COLLECTION_CRON: z.string().min(1).default("0 8 * * *"),
+  /// Objectif par défaut de l'agent, en langage naturel.
+  AGENT_OBJECTIVE: z.string().min(1).default("alternance et stage développeur en Île-de-France"),
+
   /*
    * France Travail (API officielle, francetravail.io). Facultatif : sans les
    * deux identifiants du compte partenaire, le cycle collecte simplement sans

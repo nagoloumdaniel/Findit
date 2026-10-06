@@ -1,5 +1,11 @@
 export { runAgent } from "./run-agent.js";
-export type { CrawlSource, ExtractJobs, RunAgentDeps, RunAgentResult } from "./run-agent.js";
+export type {
+  CrawlSource,
+  ExtractJobs,
+  PersistJobs,
+  RunAgentDeps,
+  RunAgentResult,
+} from "./run-agent.js";
 
 export {
   DEFAULT_COUNTRY,

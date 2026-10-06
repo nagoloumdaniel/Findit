@@ -15,3 +15,7 @@ export const COLLECTION_SCHEDULER_ID = "collection-every-4h";
 /** Cycle quotidien des sources scrapées (job boards), distinct du cycle de 4 h. */
 export const SCRAPED_COLLECTION_JOB = "scraped-collection";
 export const SCRAPED_COLLECTION_SCHEDULER_ID = "scraped-collection-daily";
+
+/** Run quotidien de l'agent autonome, distinct des deux cycles de collecte. */
+export const AGENT_COLLECTION_JOB = "agent-run";
+export const AGENT_COLLECTION_SCHEDULER_ID = "agent-run-daily";

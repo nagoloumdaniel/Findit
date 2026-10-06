@@ -27,6 +27,11 @@ export type CrawlSource = (options: CrawlOptions) => Promise<CrawlResult>;
 /** Extraction d'une page, du même contrat que `extractJobsFromPage`. */
 export type ExtractJobs = (page: CrawledPage, model: ExtractModel) => Promise<ExtractionResult>;
 
+/** Persistance des offres retenues. Défaut : le compte est consigné sans écrire. */
+export type PersistJobs = (
+  offers: readonly ExtractionResult["offers"][number][],
+) => Promise<{ readonly inserted: number }>;
+
 /**
  * Dépendances du run : les briques déjà construites, injectées pour que la
  * boucle soit vérifiable avec des doubles. Aucune n'est fabriquée ici.
@@ -39,6 +44,8 @@ export interface RunAgentDeps {
   readonly model: ExtractModel;
   /** Extraction. Défaut : `extractJobsFromPage`. */
   readonly extract?: ExtractJobs;
+  /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
+  readonly persist?: PersistJobs;
 }
 
 /** Compteurs du run, renvoyés à l'appelant pour le rapport. */
@@ -152,6 +159,7 @@ export async function runAgent(
   };
 
   const seenTitles = new Set<string>();
+  const retainedOffers: ExtractionResult["offers"][number][] = [];
 
   try {
     // Génération des requêtes, bornée au nombre autorisé par run.
@@ -267,19 +275,27 @@ export async function runAgent(
             }
             seenTitles.add(key);
             counters.retainedCount += 1;
+            retainedOffers.push(offer);
           }
         }
       }
     }
 
-    // Stockage : aucune table ne reçoit l'offre extraite telle quelle sans
-    // inventer des champs que l'extraction ne produit pas. On consigne le
-    // compte exact d'offres retenues dans l'action STORE.
+    // Stockage : si un persistant est fourni, on lui confie les offres retenues
+    // et on consigne le nombre réellement inséré ; sinon, on consigne le compte.
     if (counters.retainedCount > 0) {
-      await deps.runStore.recordAction(runId, {
-        kind: ACTION_KIND.STORE,
-        detail: String(counters.retainedCount),
-      });
+      if (deps.persist !== undefined) {
+        const { inserted } = await deps.persist(retainedOffers);
+        await deps.runStore.recordAction(runId, {
+          kind: ACTION_KIND.STORE,
+          detail: String(inserted),
+        });
+      } else {
+        await deps.runStore.recordAction(runId, {
+          kind: ACTION_KIND.STORE,
+          detail: String(counters.retainedCount),
+        });
+      }
     }
 
     // Une borne de temps atteinte signale un arrêt volontaire, pas un échec.

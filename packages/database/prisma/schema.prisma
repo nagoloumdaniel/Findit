@@ -947,6 +947,9 @@ model Contact {
 
   createdAt DateTime @default(now())
 
+  /// Une même adresse ou un même téléphone n'est enregistré qu'une fois par
+  /// entreprise : la mise à jour d'un contact rejoue un upsert, jamais un doublon.
+  @@unique([companyId, email])
+  @@unique([companyId, phone])
   @@index([companyId])
-  @@index([email])
 }

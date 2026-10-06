@@ -135,6 +135,18 @@ describe("parseDatabaseEnv", () => {
     expect(worker.SCRAPING_INDEED_MAX_ITEMS).toBe(100);
   });
 
+  it("keeps the autonomous agent off by default, daily at 8 am, with a default objective", () => {
+    const worker = parseWorkerEnv({
+      REDIS_URL: required.REDIS_URL,
+      DATABASE_URL: required.DATABASE_URL,
+    });
+
+    expect(worker.AGENT_RUN_ENABLED).toBe(false);
+    expect(worker.AGENT_COLLECTION_CRON).toBe("0 8 * * *");
+    expect(worker.AGENT_OBJECTIVE).toBe("alternance et stage développeur en Île-de-France");
+    expect(worker.DEEPSEEK_API_KEY).toBeUndefined();
+  });
+
   it("turns the scraped-sources cycle on only with an explicit true, and bounds the result cap", () => {
     const base = { REDIS_URL: required.REDIS_URL, DATABASE_URL: required.DATABASE_URL };
 

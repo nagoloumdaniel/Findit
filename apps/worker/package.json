@@ -13,11 +13,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@findit/agent": "workspace:*",
+    "@findit/ai": "workspace:*",
     "@findit/config": "workspace:*",
+    "@findit/crawler": "workspace:*",
     "@findit/database": "workspace:*",
     "@findit/job-connectors": "workspace:*",
     "@findit/job-pipeline": "workspace:*",
     "@findit/notifications": "workspace:*",
+    "@findit/orchestrator": "workspace:*",
+    "@findit/persist": "workspace:*",
     "@findit/shared": "workspace:*",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
