@@ -42,8 +42,13 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
-- **Run de contrôle après les trois dernières briques** (requêtes citées +
-  découverte ciblée + porte de conformité), même bornes : 3 tours, 8 pages,
+- **Run de contrôle après les correctifs** (planificateur + sélecteur + porte de
+  conformité + résolution de redirection, mêmes bornes) : 3 tours, 5 pages,
+  **aucun doublon de page**, 2 offres extraites, 0 insérée, coût **1 687 µ$** —
+  contre 2 493 µ$ au run précédent et 5 419 µ$ avant le ciblage. Les décisions
+  pèsent 1 562 µ$ des 1 687, dont 862 µ$ de sélection : le modèle choisit juste,
+  mais c'est le poste de dépense principal.
+- **Run de contrôle après les trois dernières briques** (requêtes citées + découverte ciblée + porte de conformité), même bornes : 3 tours, 8 pages,
   **0 offre extraite**, aucun refus de conformité, coût **1 028 µ$** — contre
   5 419 µ$ avant le ciblage. Le détail : 4 racines de board traversées
   (`liste ATS`), 4 pages d'offre écartées (`hors contrat`, donc CDI). La chaîne
@@ -67,6 +72,16 @@ pièges déjà payés.
   alors la même clé, la seconde page était sautée, et la mémoire étant persistante
   sans expiration la perte était définitive. Trouvé par revue adversariale, pas par
   un test.
+- **Pages déjà visitées jamais repayées** : la mémoire persistante est consultée
+  aussi pour chaque page, pas seulement pour la source. Sans cela, une page revue
+  par un crawl était recomptée et ré-extraite d'un run à l'autre — trou signalé par
+  une vérification indépendante.
+- **Une page rendue deux fois par un même crawl n'est plus payée deux fois** :
+  mesuré sur un run réel, `jobs.lever.co/theodo` et `jobs.lever.co/theodo?`
+  sortaient du même résultat et étaient comptées et extraites toutes les deux. Le
+  doublon est maintenant écarté par la même clé normalisée. Conséquence visible
+  dans les tests : le run de budget compte 5 pages distinctes là où la doublure
+  rendait 5 fois les mêmes.
 - **Redirections résolues avant le crawl** : `resolveFinalUrl`
   (`packages/crawler/src/resolve.ts`) fait un HEAD — une GET d'un octet si le
   serveur refuse HEAD — et rend l'URL finale sans lire la page. L'agent s'en sert
