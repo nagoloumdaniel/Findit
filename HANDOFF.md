@@ -1,56 +1,102 @@
 # Passation - Web Intelligence Agent
 
 Document destiné à un agent qui reprend le travail. Il dit ce qu'est le projet,
-comment on y travaille, ce qui est **réellement** fait, ce qui a déjà été tranché
-et pourquoi, et les pièges déjà payés.
+comment on y travaille, ce qui est **réellement** fait, ce qui reste, et les
+pièges déjà payés.
 
 À jour au 2026-10-06. **Pivot majeur** : Findit (agrégateur d'offres d'alternance
 à scrapers figés + espace candidat privé) devient le **Web Intelligence Agent**
-(agent IA autonome de collecte web). Le cahier des charges et la roadmap ont été
-réécrits : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) et
-[roadmap.md](roadmap.md) font foi.
+(agent IA de collecte web). Le dépôt et les paquets gardent le nom `findit` /
+`@findit/*`. Le cahier des charges et la roadmap font foi :
+[CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) et [roadmap.md](roadmap.md).
 
 ## 1. Décisions tranchées (2026-10-06)
 
 - **Espace privé candidat supprimé sauf matching/scoring de CV** : profil,
-  lettres, suivi de candidatures, rendu PDF, `/espace`, `WorkspaceGuard` supprimés ;
-  le matching et le scoring de CV (score CV ↔ offre) sont **conservés**, pilotés par
-  DeepSeek (cahier des charges, section 4.11). Le code déterministe retiré sera
-  réécrit en agent IA.
-- **LLM = DeepSeek API uniquement** (plus d'Ollama local). Le paquet `@findit/ai`
-  est orphelin, à réécrire sur DeepSeek.
+  lettres, suivi de candidatures, rendu PDF, `/espace`, `WorkspaceGuard`
+  supprimés ; le matching et le scoring de CV (score CV ↔ offre) sont
+  **conservés**, pilotés par DeepSeek (cahier des charges, section 4.11).
+- **LLM = DeepSeek API uniquement** (plus d'Ollama local). `@findit/ai` est le
+  client DeepSeek réel (`createDeepSeekModel`), importé par le worker, l'API
+  matching, `@findit/extract` et `@findit/matching` ; il n'est plus orphelin.
 - **MVP V1 d'abord** : Scheduler + Search + Crawl + Extract + LLM classification +
   Deduplication + PostgreSQL + Dashboard, sur 10 à 20 sources.
-- **Offres d'écoles exclues** : écoles, organismes de formation, termes « école ».
+- **Offres d'écoles exclues** : `looksLikeSchool` (`@findit/extract`) et
+  `detectSchoolRisk` (`@findit/job-classification`) écartent écoles et
+  organismes de formation.
 
 ## 2. État réel (2026-10-06)
 
 ### Fait et vérifié
 
-- Docs réécrites : cahier des charges, roadmap (pivot + MVP V1 en 8 phases).
-- Espace candidat supprimé (7 modules API, 3 paquets, le web `/espace` et
-  `candidatures`, 11 tables + 4 enums Prisma). `PromptVersion` conservé (lié aux
-  décisions de classification).
-- Typecheck, lint, test : **25/25 verts** après la suppression.
+- **Pipeline de l'agent implémenté** dans `packages/orchestrator/src/run-agent.ts`
+  (`runAgent(objective, deps)`) : génération de requêtes (`@findit/agent`),
+  recherche web Brave (`@findit/job-connectors`), scoring des sources, mémoire
+  « URL déjà vue », crawl borné (`@findit/crawler` : HTTP + repli Playwright,
+  robots.txt, profondeur/pages/déjà visité), extraction page par page par
+  DeepSeek (`@findit/extract`), validation (`isValidOffer`), déduplication par
+  titre normalisé, persistance (`@findit/persist`). Les erreurs sont consignées
+  dans `AgentError` ; les statuts sont RUNNING / SUCCEEDED / FAILED / STOPPED.
+- **Reprise en cascade (CDC §4.7) livrée** dans
+  `packages/orchestrator/src/recovery.ts` : par page, relecture bornée d'une page
+  vide (`AgentMemory` ne re-crawle pas, mais la relecture repasse par le
+  crawler), extraction déterministe des `schema.org JobPosting` en JSON-LD
+  (`extractStructuredOffers`) avant le LLM, relance des seuls échecs, et abandon
+  journalisé dans `AgentError` avec `retried = true`. Bornes :
+  `maxRecoveries` (5) et `maxAttemptsPerStep` / `maxTotalAttempts` du moteur.
+- **Migration `20261006120000_agent_and_remove_private` écrite** : DROP des tables
+  privées (CandidateProfile, Resume, SourceResume, JobMatch, CoverLetter,
+  Application, ApplicationEvent, ResumeAnalysis, SourceCoverLetter,
+  SourceResumeMatch + 4 enums) et CREATE de Source, AgentRun, AgentAction,
+  AgentError, AgentMemory, SearchQuery, CrawlJob, CrawlPage, Extraction, Contact.
+  Le schéma Prisma ne contient plus aucun modèle `User`.
+- **Web** (`apps/web`, Next.js 16, port 3100) : `/`, `/offres/[slug]`,
+  `/dashboard` et ses sections `{agent, analytics, config, crawls, jobs, logs,
+matching, sources}`. Pas de `/espace`, pas de `/candidatures`.
+- **API** (`apps/api`, NestJS sur Fastify, port 4000) : `GET /health`,
+  `GET /api/jobs{,/stats,/filters,/:slug}`, `GET /api/agent/{runs,stats,
+analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
+- **Worker** (`apps/worker`, NestJS + BullMQ) : concurrence 1, trois
+  planifications — ATS natifs (`JOB_COLLECTION_CRON`, `0 */4 * * *`), job boards
+  Apify (`SCRAPED_COLLECTION_CRON`, `0 6 * * *`, si `SCRAPED_SOURCES_ENABLED` +
+  jeton Apify), agent (`AGENT_COLLECTION_CRON`, `0 8 * * *`, si
+  `AGENT_RUN_ENABLED`). S'y ajoutent les notifications Telegram. Un run unique
+  hors BullMQ existe dans `apps/worker/run-agent-once.ts`.
+- **Docs** : cahier des charges et roadmap réécrits (pivot + MVP V1).
+- **Tests** : `pnpm test --force` (run frais) le 2026-10-06 → **38/38 tâches
+  Turborepo réussies, 580 tests verts**. Détail par paquet : job-connectors 190,
+  job-normalization 51, job-pipeline 43, crawler 37, agent 36, api 32,
+  job-classification 26, worker 26, config 24, notifications 22, extract 18,
+  web 16, ai 15, job-deduplication 13, shared 10, persist 10, matching 7,
+  orchestrator 2, database 1, ui 1. Un « vert » Turborepo peut venir du cache :
+  forcer (`--force`) pour une preuve fraîche.
+- **Git** : branche `main`, 134 commits, dernier `d44dd4b` (2026-10-06 17:28).
 
-### Conservé et réutilisable comme outils de l'agent
+### Reste à faire
 
-- Monorepo (Next.js + NestJS + TypeScript + PostgreSQL/Prisma + Redis/BullMQ + Docker).
-- Worker : scheduler cron + BullMQ.
-- `job-connectors` : recherche web (Brave), découverte, robots.txt, registre de
-  conformité, garde de budget, connecteurs ATS/job boards (→ « extraction spécialisée »).
-- `job-normalization`, `job-classification` (dont détection d'écoles),
-  `job-deduplication`, `job-pipeline` (ingestion), `notifications` (Telegram).
-
-### Pas encore fait
-
-- Le MVP V1 lui-même : AI Planner, Search/Discovery agent, crawler générique
-  (Playwright + Cheerio), extraction LLM (DeepSeek), dashboard admin, schéma
-  remanié (sources, crawl_jobs, crawl_pages, search_queries, agent_runs…).
-- Migration de suppression des tables privées en base (rôle applicatif non
-  propriétaire du schéma, voir §7).
-- Nettoyage restant : CSS mort (`globals.css` classes `.workspace*`), `pnpm-lock.yaml`.
-- Questions ouvertes Q-1 (hébergement), Q-2 (auth), Q-3 (sources MVP).
+- **Authentification absente** (Q-2 ouverte).
+- **Connecteurs spécialisés en repli** (section 4.7, étape 3) non câblés dans
+  l'agent : la relecture bornée, l'extraction `JobPosting` JSON-LD et l'abandon
+  journalisé sont livrés, mais l'agent n'invoque pas les connecteurs ATS/job
+  boards comme stratégie de secours.
+- **Boucle d'outils pilotée par le LLM** (section 5) non implémentée : le run est
+  un pipeline déterministe. Le LLM n'intervient que dans l'extraction structurée
+  (`@findit/extract`) et, côté matching, dans la structuration du CV et le score.
+  La génération de requêtes (`generateSearchQueries`) est déterministe : fonction
+  synchrone, sans modèle ni appel réseau.
+- **`.env.example` désynchronisé du worker** : il ne déclare pas
+  `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`, alors que le
+  worker les lit (défauts dans `packages/config/src/env.ts`). Écart réel à
+  combler.
+- **CSS mort `.workspace*`** : `apps/web/src/app/globals.css` garde 24 règles
+  `.workspace*`, plus référencées par aucun composant (`apps/web/src` ne les
+  contient que dans ce fichier).
+- **Application de la migration à la base en ligne** : le rôle applicatif n'est
+  pas propriétaire du schéma ; appliquer la migration structurelle via la
+  connexion propriétaire, puis `migrate resolve`. L'état en ligne n'est pas
+  vérifiable depuis ce dépôt et n'est pas affirmé ici.
+- **Questions ouvertes** : Q-1 (hébergement), Q-2 (auth), Q-3 (sources MVP),
+  listées en section 15 du cahier des charges.
 
 ## 3. Règles de travail (non négociables)
 
@@ -62,16 +108,33 @@ réécrits : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) et
 6. **Le registre de conformité fait foi** ([docs/legal-compliance.md](docs/legal-compliance.md)).
 7. **Ne jamais toucher au port 3000** : il appartient à un autre projet. Le site est sur 3100.
 
-## 4. Architecture (ce qui reste)
+## 4. Architecture
 
 Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 
-- `apps/web` - Next.js 16, port 3100 (liste publique des offres).
-- `apps/api` - NestJS sur Fastify, port 4000 (offres uniquement, plus d'espace privé).
-- `apps/worker` - NestJS + BullMQ (scheduler, collecte).
-- `packages/` - `config`, `database` (Prisma), `shared`, `ui`, `job-connectors`,
-  `job-normalization`, `job-classification`, `job-deduplication`, `job-pipeline`,
-  `notifications`, `ai` (orphelin, à réécrire sur DeepSeek).
+- `apps/web` - Next.js 16, port 3100 (site public + dashboard).
+- `apps/api` - NestJS sur Fastify, port 4000 (offres, agent, matching).
+- `apps/worker` - NestJS + BullMQ (scheduler, collecte, agent).
+
+Les 17 paquets de `packages/` :
+
+- `agent` - requêtes de recherche, scoring des sources, stores run/mémoire.
+- `ai` - client DeepSeek (`createDeepSeekModel`) et erreurs associées.
+- `config` - schémas d'environnement, `loadRootEnv()`.
+- `crawler` - crawl borné HTTP + rendu Playwright, robots.txt, liens/pagination.
+- `database` - client Prisma + migrations + seed.
+- `extract` - extraction structurée des offres par page, exclusion des écoles.
+- `job-classification` - classification (contrat, rôle) et détection d'écoles.
+- `job-connectors` - connecteurs ATS/job boards, Brave, registre, garde de budget.
+- `job-deduplication` - similarité et décision de doublon.
+- `job-normalization` - HTML → texte, titres normalisés, localisation.
+- `job-pipeline` - décision d'ingestion, slug, persistance pipeline.
+- `matching` - structuration de CV et score CV ↔ offre (DeepSeek).
+- `notifications` - Telegram (format, envoi, commandes).
+- `orchestrator` - boucle `runAgent` (search → crawl → extract → persist).
+- `persist` - persistance des offres retenues par le run.
+- `shared` - périmètre des offres partagé.
+- `ui` - composants partagés (`PageShell`).
 
 ## 5. Environnement
 
@@ -87,24 +150,35 @@ DeepSeek se configure via la clé de plateforme (voir §6).
 
 ## 6. Outillage DeepSeek
 
-Claude Code est branché sur un compte DeepSeek (`@deepseek-ai/dsh-subagent-claude-code`,
-profil `desktop`). L'API DeepSeek redirige les noms de modèles Claude vers les siens :
-`claude-opus-*` → `deepseek-v4-pro`, `claude-sonnet-*`/`claude-haiku-*` → `deepseek-flash`.
-`deepseek-v4-pro` ne supporte pas la vision, `deepseek-flash` oui. La clé de compte
-n'est pas une clé API : une clé de plateforme est obligatoire. Après une mise à jour
-du Harness, lancer [scripts/update-claude-subagent.cjs](scripts/update-claude-subagent.cjs).
+Claude Code est branché sur un compte DeepSeek
+(`@deepseek-ai/dsh-subagent-claude-code`, profil `desktop` par défaut). Deux
+scripts du dépôt, vérifiés présents :
+
+- [scripts/update-claude-subagent.cjs](scripts/update-claude-subagent.cjs) :
+  aligne le bundle sous-agent sur la version de DeepSeek Harness après une mise à
+  jour (`node scripts/update-claude-subagent.cjs`, ou `--check` pour constater).
+- [scripts/compare-deepseek-models.cjs](scripts/compare-deepseek-models.cjs) :
+  compare `deepseek-flash` et `deepseek-v4-pro` sur quatre questions de
+  raisonnement, à contexte identique
+  (`node scripts/compare-deepseek-models.cjs <clé> [filtre] [--dry]`).
+
+Non vérifiable depuis le dépôt, donc à reconfirmer côté plateforme : l'alias des
+noms de modèles Claude (`claude-opus-*` → `deepseek-v4-pro`,
+`claude-sonnet-*`/`claude-haiku-*` → `deepseek-flash`), la prise en charge de la
+vision, et le fait que la clé de compte n'est pas une clé API.
 
 ## 7. Pièges déjà payés
 
 - **`.env` non lu** : appeler `loadRootEnv()` avant toute lecture de `process.env`.
-- **`next build` cassé par `NODE_ENV`** : `run-next.mjs` retire `NODE_ENV` du `.env`.
+- **`next build` cassé par `NODE_ENV`** : `apps/web/run-next.mjs` retire `NODE_ENV` du `.env`.
 - **Injection NestJS silencieusement cassée** : écrire `@Inject(MonService)` explicite.
 - **Champs JSON Prisma** : stocker des objets validés par Zod, jamais de sortie IA brute.
 - **Port 4000 occupé** : `Get-NetTCPConnection -LocalPort 4000`.
 - **Le rôle applicatif n'est pas propriétaire du schéma** (base en ligne) : une
   migration structurelle échoue ; l'appliquer avec la connexion propriétaire, puis
-  `migrate resolve`. La suppression des tables privées devra passer par là.
-- **Hook de pré-push rejoue `format:check`** : `pnpm format:check` avant de pousser.
+  `migrate resolve`. Cela vaut pour la migration `20261006120000`.
+- **Hook de pré-push local** : `.githooks/pre-push` rejoue `format:check`,
+  `typecheck`, `lint` et `test`.
 - **Un « vert » peut venir du cache Turborepo** : forcer (`--force`) et une tâche par
   invocation pour une preuve.
 - **Node de la machine v24.10.0** alors que le dépôt exige `>= 24.18 < 25`.
