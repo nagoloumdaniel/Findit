@@ -37,6 +37,14 @@ pièges déjà payés.
   DeepSeek (`@findit/extract`), validation (`isValidOffer`), déduplication par
   titre normalisé, persistance (`@findit/persist`). Les erreurs sont consignées
   dans `AgentError` ; les statuts sont RUNNING / SUCCEEDED / FAILED / STOPPED.
+- **« 0 insérée » n'est pas une panne, c'est mesuré** : sur un run à 178 rejets,
+  **156 étaient des CDI hors périmètre**, 12 des métiers hors périmètre (Bras
+  droit CEO, communication…), 6 des dates absentes, 2 des freelances, 1 une date
+  trop ancienne, 1 un titre. Les sources atteintes sont des **boards d'entreprise
+  qui listent tous les contrats** : la porte de contrat ouvre la page parce qu'un
+  stage y figure, puis l'extraction rend tout le board. Le levier n'est donc pas
+  la validation, il est en amont : viser les offres du périmètre plutôt que les
+  boards entiers.
 - **Reprise en cascade (CDC §4.7) livrée** dans
   `packages/orchestrator/src/recovery.ts` : par page, relecture bornée d'une page
   vide (`AgentMemory` ne re-crawle pas, mais la relecture repasse par le
