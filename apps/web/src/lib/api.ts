@@ -208,3 +208,15 @@ export const fetchAgentRuns = (): Promise<ApiResult<AgentRunSummary[]>> =>
 
 export const fetchAgentSources = (): Promise<ApiResult<SourceItem[]>> =>
   request<SourceItem[]>("/api/agent/sources");
+
+/// Un matching de CV passé, sans le CV : la liste n'en a pas besoin, et ne pas le
+/// charger est la même minimisation que la rétention côté API.
+export type MatchingRunSummary = {
+  id: string;
+  createdAt: string;
+  jobCount: number;
+  bestScore: number;
+};
+
+export const fetchMatchingHistory = (): Promise<ApiResult<MatchingRunSummary[]>> =>
+  request<MatchingRunSummary[]>("/api/matching/history");

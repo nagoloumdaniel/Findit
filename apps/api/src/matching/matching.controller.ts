@@ -1,9 +1,9 @@
-import { Body, Controller, Inject, Post, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, UsePipes } from "@nestjs/common";
 import { z } from "zod";
 
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { MatchingService } from "./matching.service.js";
-import type { MatchItem } from "./matching.service.js";
+import type { MatchItem, MatchingRunDetail, MatchingRunSummary } from "./matching.service.js";
 
 const scoreBodySchema = z.object({ cvText: z.string().min(1) });
 
@@ -21,5 +21,17 @@ export class MatchingController {
   @UsePipes(new ZodValidationPipe(scoreBodySchema))
   score(@Body() body: ScoreBody): Promise<MatchItem[]> {
     return this.matching.score(body.cvText);
+  }
+
+  /** Matchings passés, du plus récent au plus ancien, sans le CV. */
+  @Get("history")
+  history(): Promise<MatchingRunSummary[]> {
+    return this.matching.history();
+  }
+
+  /** Un matching passé, avec le CV soumis et ses résultats. */
+  @Get("history/:id")
+  historyDetail(@Param("id") id: string): Promise<MatchingRunDetail | null> {
+    return this.matching.historyDetail(id);
   }
 }

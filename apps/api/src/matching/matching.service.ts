@@ -23,6 +23,20 @@ export type MatchItem = {
   recommendation: string;
 };
 
+/// Un matching passé, tel qu'affiché dans l'historique : sans le CV ni les items.
+export type MatchingRunSummary = {
+  id: string;
+  createdAt: string;
+  jobCount: number;
+  bestScore: number;
+};
+
+/// Un matching passé, complet : le CV soumis et les résultats rendus.
+export type MatchingRunDetail = MatchingRunSummary & {
+  cvText: string;
+  items: MatchItem[];
+};
+
 @Injectable()
 export class MatchingService {
   readonly #logger = new Logger(MatchingService.name);
@@ -86,9 +100,81 @@ export class MatchingService {
         });
       }
 
-      return items.sort((a, b) => b.score - a.score);
+      const sorted = items.sort((a, b) => b.score - a.score);
+      await this.#saveRun(cvText, sorted, env);
+      return sorted;
     } finally {
       await this.#recordModelCall(model, usageBefore, env);
+    }
+  }
+
+  /**
+   * Historique des matchings, du plus récent au plus ancien.
+   *
+   * Sans le CV : la liste n'en a pas besoin, et ne pas le charger est la même
+   * minimisation que la rétention.
+   */
+  async history(limit = 20): Promise<MatchingRunSummary[]> {
+    const runs = await this.prisma.matchingRun.findMany({
+      orderBy: { createdAt: "desc" },
+      take: Math.max(1, Math.min(100, limit)),
+      select: { id: true, createdAt: true, jobCount: true, bestScore: true },
+    });
+
+    return runs.map((run) => ({
+      id: run.id,
+      createdAt: run.createdAt.toISOString(),
+      jobCount: run.jobCount,
+      bestScore: run.bestScore,
+    }));
+  }
+
+  /** Un matching passé, avec le CV soumis et les résultats rendus. */
+  async historyDetail(id: string): Promise<MatchingRunDetail | null> {
+    const run = await this.prisma.matchingRun.findUnique({ where: { id } });
+    if (run === null) {
+      return null;
+    }
+
+    return {
+      id: run.id,
+      createdAt: run.createdAt.toISOString(),
+      jobCount: run.jobCount,
+      bestScore: run.bestScore,
+      cvText: run.cvText,
+      items: run.items as unknown as MatchItem[],
+    };
+  }
+
+  /**
+   * Garde le matching et purge ce qui a dépassé la rétention.
+   *
+   * La purge se fait ici plutôt que par une tâche planifiée : une écriture est le
+   * seul moment où l'on est sûr qu'un matching vient d'avoir lieu, et cela évite
+   * un cron de plus à surveiller. Un échec est journalisé sans faire échouer la
+   * requête : l'utilisateur a son résultat.
+   */
+  async #saveRun(
+    cvText: string,
+    items: readonly MatchItem[],
+    env: ReturnType<typeof parseApiEnv>,
+  ): Promise<void> {
+    try {
+      await this.prisma.matchingRun.create({
+        data: {
+          cvText,
+          jobCount: items.length,
+          bestScore: items[0]?.score ?? 0,
+          items,
+        },
+      });
+
+      const cutoff = new Date(Date.now() - env.MATCHING_RETENTION_HOURS * 60 * 60 * 1000);
+      await this.prisma.matchingRun.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    } catch (error) {
+      this.#logger.error(
+        `Matching non historisé : ${error instanceof Error ? error.message : "inconnu"}`,
+      );
     }
   }
 

@@ -982,3 +982,29 @@ model ModelCall {
   @@index([purpose, createdAt])
 }
 
+/// Un matching de CV, gardé pour donner un historique à la page Matching.
+///
+/// Le POURQUOI : le `cvText` était reçu puis oublié, la page ne pouvait donc rien
+/// montrer d'autre qu'un résultat immédiat. Il est conservé ici **avec une
+/// rétention** : `MATCHING_RETENTION_HOURS` (défaut 72 h), purgée à chaque
+/// écriture. Un CV est une donnée personnelle (docs/legal-compliance.md, règles de
+/// minimisation) : la durée est donc courte et réglable, et rien n'en est dérivé
+/// d'autre que le matching demandé.
+model MatchingRun {
+  id String @id @default(uuid(7))
+
+  /// Texte du CV tel qu'il a été soumis. Purgé passé la rétention.
+  cvText String
+  /// Nombre d'offres scorées pour ce CV.
+  jobCount Int @default(0)
+  /// Meilleur score obtenu, gardé pour afficher la liste sans relire les items.
+  bestScore Int @default(0)
+
+  /// Résultats du matching, tels que rendus à l'appelant.
+  items Json
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+

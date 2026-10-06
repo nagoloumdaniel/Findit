@@ -58,6 +58,12 @@ export const apiEnvSchema = z.object({
    */
   DEEPSEEK_INPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
   DEEPSEEK_OUTPUT_USD_PER_MTOK: z.coerce.number().min(0).optional(),
+  /*
+   * Durée de conservation d'un matching de CV, en heures. Un CV est une donnée
+   * personnelle (docs/legal-compliance.md) : la rétention est courte et la purge
+   * se fait à chaque nouvelle écriture, sans tâche planifiée à maintenir.
+   */
+  MATCHING_RETENTION_HOURS: z.coerce.number().int().min(1).max(8760).default(72),
 });
 
 export const workerEnvSchema = z.object({
