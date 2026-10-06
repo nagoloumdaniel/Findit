@@ -42,6 +42,29 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Où l'alternance vit vraiment — mesuré, classe de source par classe.** Même
+  pipeline d'ingestion, trois familles de sources :
+
+  | Famille                                                      | Découvertes | Acceptées                        | Coût mesuré          |
+  | ------------------------------------------------------------ | ----------- | -------------------------------- | -------------------- |
+  | Boards d'entreprises (agent : Lever, Greenhouse)             | 4 251       | **0**                            | 0                    |
+  | France Travail, 8 métiers, filtre alternance                 | 13          | 2 (mises à jour, **0 nouvelle**) | 0                    |
+  | Job boards scrape (Indeed, WTTJ, HelloWork), 8 offres chacun | 23          | **12**                           | 14 200 µ$ (0,0142 $) |
+
+  Un seul cycle de boards a fait passer la base de **18 à 23 offres**. HelloWork
+  accepte 7 offres sur 8, Indeed 3 sur 8, WTTJ 2 sur 7 ; partout ailleurs le taux
+  est nul. Conclusion : le levier d'alternance est le cycle des job boards scrape,
+  pas l'élargissement des recherches d'ATS — élargir France Travail de 1 à 8
+  métiers n'a rendu aucune offre nouvelle.
+  **Réserves** : mesure à 8 offres par board, alors que les plafonds par défaut
+  sont 30 (WTTJ), 40 (HelloWork) et 100 (Indeed) — le rendement et le coût à ces
+  plafonds ne sont pas mesurés. Le cycle tourne une fois par jour
+  (`SCRAPED_COLLECTION_CRON=0 6 * * *`), avec un plafond de 0,15 $ par cycle et
+  4,5 $ par mois.
+
+- **France Travail n'est pas le levier** : une seule recherche (« développeur »)
+  suffit à ratisser le métier, l'API filtrant elle-même `natureContrat=alternance`
+  et l'Île-de-France. Élargir à huit métiers a rendu 13 offres, dont 2 déjà connues.
 - **Agrégateurs déguisés en entreprises écartés** : un locataire d'ATS qui publie
   les offres des autres n'est pas un employeur. `isAggregatorTenant`
   (`packages/job-connectors/src/aggregator-tenants.ts`) porte une liste courte et
