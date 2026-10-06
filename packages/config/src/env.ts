@@ -100,6 +100,8 @@ export const workerEnvSchema = z.object({
   SCRAPED_COLLECTION_CRON: z.string().min(1).default("0 6 * * *"),
   /// Résultats par run pour Welcome to the Jungle. 30 tient le plan gratuit.
   SCRAPING_WTTJ_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(30),
+  /// Résultats par run pour HelloWork. 40 tient le plan gratuit.
+  SCRAPING_HELLOWORK_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(40),
   APIFY_API_TOKEN: z.string().min(1).optional(),
   SCRAPEGRAPH_API_KEY: z.string().min(1).optional(),
 

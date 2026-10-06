@@ -146,4 +146,14 @@ export {
 } from "./wttj.js";
 export type { WttjConnectorOptions } from "./wttj.js";
 
+export {
+  HELLOWORK_ACTOR_ID,
+  HELLOWORK_CONNECTOR_NAME,
+  HELLOWORK_MAX_ITEMS_CEILING,
+  HelloworkInputError,
+  createHelloworkConnector,
+  mapHelloworkItem,
+} from "./hellowork.js";
+export type { HelloworkConnectorOptions } from "./hellowork.js";
+
 export { SOURCE_PRIORITY_JOB_BOARD, SOURCE_PRIORITY_OFFICIAL } from "./source-priority.js";

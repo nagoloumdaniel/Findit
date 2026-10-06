@@ -131,6 +131,7 @@ describe("parseDatabaseEnv", () => {
     expect(worker.SCRAPED_SOURCES_ENABLED).toBe(false);
     expect(worker.SCRAPED_COLLECTION_CRON).toBe("0 6 * * *");
     expect(worker.SCRAPING_WTTJ_MAX_ITEMS).toBe(30);
+    expect(worker.SCRAPING_HELLOWORK_MAX_ITEMS).toBe(40);
   });
 
   it("turns the scraped-sources cycle on only with an explicit true, and bounds the result cap", () => {
@@ -144,5 +145,7 @@ describe("parseDatabaseEnv", () => {
     );
     expect(() => parseWorkerEnv({ ...base, SCRAPING_WTTJ_MAX_ITEMS: "0" })).toThrow();
     expect(() => parseWorkerEnv({ ...base, SCRAPING_WTTJ_MAX_ITEMS: "101" })).toThrow();
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_HELLOWORK_MAX_ITEMS: "0" })).toThrow();
+    expect(() => parseWorkerEnv({ ...base, SCRAPING_HELLOWORK_MAX_ITEMS: "101" })).toThrow();
   });
 });

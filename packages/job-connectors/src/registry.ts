@@ -3,6 +3,7 @@ import { AtsKind, ConnectorStatus, SourceAccessStatus, type PrismaClient } from 
 import type { ConnectorRegistration } from "./access-policy.js";
 import { FRANCE_TRAVAIL_CONNECTOR_NAME } from "./france-travail.js";
 import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
+import { HELLOWORK_CONNECTOR_NAME } from "./hellowork.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
 import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
 import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
@@ -83,6 +84,15 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_10_06,
     notes:
       "Acces TOLERE, non autorise : les conditions de Welcome to the Jungle interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify bebity/welcome-to-the-jungle-jobs-scraper, sans compte ni cookie, profession Tech, 30 resultats par run par defaut (plan gratuit), budget plafonne. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
+  },
+  {
+    name: HELLOWORK_CONNECTOR_NAME,
+    atsKind: AtsKind.JOB_BOARD,
+    accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_10_06,
+    notes:
+      "Acces TOLERE, non autorise : les conditions de HelloWork interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify solidcode/hellowork-scraper, sans compte ni cookie, contrat alternance/stage et region Ile-de-France filtres cote acteur, 40 resultats par run par defaut (plan gratuit), budget plafonne. L'acteur n'honore pas le plafond de resultats de son entree : le volume et le cout sont bornes par la charge maximale du run. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
   },
 ];
 

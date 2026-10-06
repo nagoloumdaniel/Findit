@@ -5,6 +5,7 @@ import { createPrismaClient } from "@findit/database";
 import type { RunConnectorDeps } from "@findit/job-connectors";
 import {
   createCycleBudget,
+  createHelloworkConnector,
   createPrismaConnectorRunStore,
   createPrismaSpendLedger,
   createWttjConnector,
@@ -13,6 +14,7 @@ import {
   SOURCE_PRIORITY_JOB_BOARD,
   usdToMicroUsd,
   WTTJ_CONNECTOR_NAME,
+  HELLOWORK_CONNECTOR_NAME,
 } from "@findit/job-connectors";
 
 import { createIngestionPersistence, runCollection } from "./src/collection/run-collection.js";
@@ -28,9 +30,25 @@ import { createIngestionPersistence, runCollection } from "./src/collection/run-
  * notices restent : le coût fait partie du cumul du mois, l'effacer fausserait
  * la garde de budget.
  *
- *   pnpm board:proof -- --max-items 20          # preuve puis nettoyage
- *   pnpm board:proof -- --max-items 20 --keep   # garde les offres
+ *   pnpm board:proof -- --max-items 20                    # Welcome to the Jungle
+ *   pnpm board:proof -- --source hellowork --max-items 20  # HelloWork
+ *   pnpm board:proof -- --max-items 20 --keep              # garde les offres
  */
+
+const SOURCES = {
+  wttj: {
+    name: WTTJ_CONNECTOR_NAME,
+    target: { query: "développeur", location: "Île-de-France, France" },
+    create: (token: string, maxItems: number) => createWttjConnector({ token, maxItems }),
+  },
+  hellowork: {
+    name: HELLOWORK_CONNECTOR_NAME,
+    target: { query: "développeur", location: "Île-de-France" },
+    create: (token: string, maxItems: number) => createHelloworkConnector({ token, maxItems }),
+  },
+} as const;
+
+type SourceKey = keyof typeof SOURCES;
 
 const argValue = (name: string): string | undefined => {
   const index = process.argv.indexOf(name);
@@ -42,6 +60,16 @@ const main = async (): Promise<void> => {
   const env = parseWorkerEnv(process.env);
   const keep = process.argv.includes("--keep");
   const maxItems = Number(argValue("--max-items") ?? "20");
+  const sourceKey = (argValue("--source") ?? "wttj") as SourceKey;
+  const source = SOURCES[sourceKey];
+
+  if (source === undefined) {
+    console.error(
+      `Source inconnue : ${sourceKey} (attendue : ${Object.keys(SOURCES).join(", ")}).`,
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   if (env.APIFY_API_TOKEN === undefined) {
     console.error(
@@ -54,7 +82,7 @@ const main = async (): Promise<void> => {
   const prisma = createPrismaClient(env.DATABASE_URL);
 
   try {
-    const registration = await loadRegistration(prisma, WTTJ_CONNECTOR_NAME);
+    const registration = await loadRegistration(prisma, source.name);
     if (registration === null) {
       console.error(
         "Aucune ligne de registre pour la source : lancer d'abord `pnpm registry:sync`.",
@@ -95,14 +123,14 @@ const main = async (): Promise<void> => {
       ),
     };
 
-    console.log(`Source : ${WTTJ_CONNECTOR_NAME}, plafond ${String(maxItems)} resultats.`);
+    console.log(`Source : ${source.name}, plafond ${String(maxItems)} resultats.`);
     console.log(`Cumul du mois avant : ${microUsdToUsd(monthBefore).toFixed(5)} $`);
 
     const summary = await runCollection(
       [
         {
-          connector: createWttjConnector({ token: env.APIFY_API_TOKEN, maxItems }),
-          target: { query: "développeur", location: "Île-de-France, France" },
+          connector: source.create(env.APIFY_API_TOKEN, maxItems),
+          target: source.target,
           companyName: "",
           /*
            * Le rang du cycle reel, pas celui d'un ATS : la preuve doit arbitrer
@@ -149,7 +177,7 @@ const main = async (): Promise<void> => {
     );
 
     const created = await prisma.job.findMany({
-      where: { firstSeenAt: { gte: startedAt }, sources: { some: { name: WTTJ_CONNECTOR_NAME } } },
+      where: { firstSeenAt: { gte: startedAt }, sources: { some: { name: source.name } } },
       select: {
         title: true,
         status: true,
@@ -172,10 +200,10 @@ const main = async (): Promise<void> => {
     // Nettoyage : seulement ce que CE run a ecrit. Une offre qui existait deja
     // n'est jamais supprimee ; une source ajoutee a une offre existante l'est.
     await prisma.job.deleteMany({
-      where: { firstSeenAt: { gte: startedAt }, sources: { some: { name: WTTJ_CONNECTOR_NAME } } },
+      where: { firstSeenAt: { gte: startedAt }, sources: { some: { name: source.name } } },
     });
     await prisma.jobSource.deleteMany({
-      where: { name: WTTJ_CONNECTOR_NAME, createdAt: { gte: startedAt } },
+      where: { name: source.name, createdAt: { gte: startedAt } },
     });
     await prisma.duplicateGroup.deleteMany({
       where: { createdAt: { gte: startedAt }, jobs: { none: {} } },

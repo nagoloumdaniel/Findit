@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { COLLECTION_ALLOWED_STATUSES } from "./access-policy.js";
 import { createFranceTravailConnector } from "./france-travail.js";
 import { greenhouseConnector } from "./greenhouse.js";
+import { createHelloworkConnector } from "./hellowork.js";
 import { leverConnector } from "./lever.js";
 import { workableConnector } from "./workable.js";
 import { workdayConnector } from "./workday.js";
@@ -54,6 +55,10 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
       [workdayConnector, SourceAccessStatus.AUTHORIZED_CRAWL],
       [
         createWttjConnector({ token: "test", maxItems: 1 }),
+        SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+      ],
+      [
+        createHelloworkConnector({ token: "test", maxItems: 1 }),
         SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
       ],
     ] as const;
