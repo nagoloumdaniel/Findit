@@ -44,6 +44,12 @@ pièges déjà payés.
   (`extractStructuredOffers`) avant le LLM, relance des seuls échecs, et abandon
   journalisé dans `AgentError` avec `retried = true`. Bornes :
   `maxRecoveries` (5) et `maxAttemptsPerStep` / `maxTotalAttempts` du moteur.
+- **Porte déterministe avant le modèle** (`packages/extract/src/contract.ts`,
+  `mentionsPerimeterContract`) : une page hors 2xx est écartée, et une page qui
+  ne nomme aucun contrat du périmètre n'appelle pas le modèle. Mesuré sur un run
+  réel : 127 offres extraites d'un board hors périmètre, 101 rejetées faute de
+  contrat, zéro insérée — la porte supprime ces appels. Elle se remplace par
+  `pageGate`.
 - **Migration `20261006120000_agent_and_remove_private` écrite** : DROP des tables
   privées (CandidateProfile, Resume, SourceResume, JobMatch, CoverLetter,
   Application, ApplicationEvent, ResumeAnalysis, SourceCoverLetter,

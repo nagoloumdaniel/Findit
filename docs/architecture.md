@@ -73,6 +73,10 @@ Brave Search, si BRAVE_SEARCH_API_KEY existe (sinon aucun résultat)
 @findit/crawler : crawl borné
     |   profondeur 2, 20 pages/source, 50 pages/run, 5 minutes/run, robots.txt respecté
     v
+Porte déterministe avant le modèle
+    |   une page hors 2xx est écartée ; une page qui ne nomme aucun contrat du
+    |   périmètre (`mentionsPerimeterContract`) n'appelle pas le modèle du tout
+    v
 @findit/extract : extraction spécialisée puis LLM, page par page
     |   données structurées `JobPosting` (JSON-LD) d'abord, déterministes et gratuites ;
     |   DeepSeek ensuite ; schéma Zod validé après coup, exclusion déterministe des écoles
@@ -86,6 +90,14 @@ Validation puis déduplication par titre normalisé, dans le run
 AgentRun / AgentAction / AgentError en base
 ```
 
+- Une page hors 2xx (réponse d'erreur servie) n'est ni relue ni extraite : c'est une réponse, pas une
+  page d'offres. Le statut 0 reste traité par la relecture, puisque « jamais lue » n'est pas « erreur ».
+- Avant l'extraction, une **porte déterministe** lit le même contenu que le modèle recevrait : si la
+  page ne nomme aucun contrat du périmètre (alternance, apprentissage, stage…), le modèle n'est pas
+  appelé. Mesuré avant la porte : 127 offres extraites d'un board hors périmètre, 101 rejetées faute
+  de contrat, zéro insérée — chaque page payait un appel pour rien. La porte se remplace via
+  `pageGate`. C'est un garde-fou de coût, pas un classifieur : un faux positif coûte un appel, un
+  faux négatif ferait perdre une offre, donc le vocabulaire est volontairement large.
 - Une page vide est relue une fois de façon bornée (`recoverPage`, câblée sur le crawler, donc
   `robots.txt` revérifié et repli navigateur conservé) avant d'être abandonnée.
 - Les étapes de récupération sont enchaînées par `packages/orchestrator/src/recovery.ts` : relecture,

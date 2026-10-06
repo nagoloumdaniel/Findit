@@ -45,6 +45,7 @@ Périmètre du CDC (section 13) : Scheduler + Search + Crawl + Extract + LLM cla
 - Analytics : `AgentService.analytics()` dans `apps/api/src/agent/agent.service.ts` et page `apps/web/src/app/dashboard/analytics/page.tsx`.
 - Matching/scoring de CV : `packages/matching/src/structure.ts` (`structureCv`), `apps/api/src/matching/`, page `apps/web/src/app/dashboard/matching/page.tsx`.
 - Reprise en cascade (CDC §4.7) : moteur borné `packages/orchestrator/src/recovery.ts` ; relecture d'une page vide (`recoverPage`, câblée dans `apps/worker/src/collection/collection-scheduler.service.ts`), extraction déterministe `extractStructuredOffers` (`packages/extract/src/structured.ts`, JSON-LD `JobPosting`) avant le LLM, relance des seuls échecs, abandon journalisé dans `AgentError` avec `retried = true`. Bornes : `maxRecoveries`, `maxAttemptsPerStep`, `maxTotalAttempts`.
+- Porte déterministe anti-coût (CDC §12) : `packages/extract/src/contract.ts` (`mentionsPerimeterContract`) écarte les pages hors 2xx et n'appelle pas le modèle sur une page qui ne nomme aucun contrat du périmètre. Mesure qui l'a motivée : 127 offres extraites, 101 rejetées faute de contrat, zéro insérée ; coût LLM consigné à zéro, donc non mesurable.
 
 **Reste à faire** :
 
