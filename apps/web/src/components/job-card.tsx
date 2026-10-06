@@ -54,7 +54,13 @@ export const JobCard = ({ job, now }: JobCardProps) => (
       </ul>
     ) : null}
 
+    {/*
+     * Une offre reprise d'un job board est signalée comme telle : le lecteur
+     * doit savoir que la description affichée en détail n'est qu'un extrait
+     * d'un contenu qui ne nous appartient pas.
+     */}
     <p className="job-source">
+      {job.origin === "JOB_BOARD" ? "Job board - " : null}
       {job.canonicalSource ? `Source : ${job.canonicalSource.name}` : "Source non renseignée"}
     </p>
   </article>

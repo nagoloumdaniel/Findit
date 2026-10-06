@@ -3,6 +3,8 @@ import { DEFAULT_CONTRACTS, DEFAULT_ROLE_CATEGORIES, publishedAfterFor } from "@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
+import { excerptOf, loadJobBoardSourceNames, originOf } from "./job-origin.js";
+import type { JobOrigin } from "./job-origin.js";
 import type { JobQuery } from "./job-query.js";
 
 export type JobListItem = {
@@ -22,6 +24,9 @@ export type JobListItem = {
   dataQualityScore: number;
   skills: string[];
   canonicalSource: { name: string; url: string } | null;
+  /// D'où vient l'offre. Une offre de job board n'expose qu'un extrait en
+  /// public : sa description complète n'est pas à nous.
+  origin: JobOrigin;
 };
 
 export type JobList = {
@@ -32,6 +37,9 @@ export type JobList = {
 };
 
 export type JobDetail = JobListItem & {
+  /// Vrai quand la description est un extrait. L'interface doit le dire, sans
+  /// quoi le lecteur prend la coupure pour une erreur de Findit.
+  descriptionTruncated: boolean;
   description: string;
   responsibilities: string[];
   requirements: string[];
@@ -115,7 +123,7 @@ export class JobsService {
   async list(query: JobQuery, now: Date = new Date()): Promise<JobList> {
     const where = this.publicWhere(query, now);
 
-    const [total, rows] = await Promise.all([
+    const [total, rows, jobBoardNames] = await Promise.all([
       this.prisma.job.count({ where }),
       this.prisma.job.findMany({
         where,
@@ -131,27 +139,31 @@ export class JobsService {
           sources: { orderBy: { priority: "desc" }, take: 1 },
         },
       }),
+      loadJobBoardSourceNames(this.prisma),
     ]);
 
     return {
-      items: rows.map((row) => ({
-        slug: row.slug,
-        isDemo: row.isDemo,
-        title: row.title,
-        roleCategory: row.roleCategory,
-        companyName: row.company.name,
-        companyLogoUrl: row.company.logoUrl,
-        city: row.city,
-        departmentCode: row.departmentCode,
-        contractType: row.contractType,
-        workMode: row.workMode,
-        publishedAt: row.publishedAt,
-        dataQualityScore: row.dataQualityScore,
-        skills: row.skills.map((link) => link.skill.name),
-        canonicalSource: row.sources[0]
-          ? { name: row.sources[0].name, url: row.sources[0].url }
-          : null,
-      })),
+      items: rows.map((row) => {
+        const canonical = row.sources[0] ?? null;
+
+        return {
+          slug: row.slug,
+          isDemo: row.isDemo,
+          title: row.title,
+          roleCategory: row.roleCategory,
+          companyName: row.company.name,
+          companyLogoUrl: row.company.logoUrl,
+          city: row.city,
+          departmentCode: row.departmentCode,
+          contractType: row.contractType,
+          workMode: row.workMode,
+          publishedAt: row.publishedAt,
+          dataQualityScore: row.dataQualityScore,
+          skills: row.skills.map((link) => link.skill.name),
+          canonicalSource: canonical ? { name: canonical.name, url: canonical.url } : null,
+          origin: originOf(canonical?.name ?? null, jobBoardNames),
+        };
+      }),
       total,
       page: query.page,
       pageSize: query.pageSize,
@@ -168,23 +180,35 @@ export class JobsService {
     freshness: JobQuery["freshness"],
     now: Date = new Date(),
   ): Promise<JobDetail | null> {
-    const row = await this.prisma.job.findFirst({
-      where: {
-        slug,
-        status: JobStatus.PUBLISHED,
-        publishedAt: { gte: publishedAfterFor(freshness, now) },
-        expiresAt: { gt: now },
-      },
-      include: {
-        company: { select: { name: true, logoUrl: true, website: true, careerUrl: true } },
-        skills: { include: { skill: { select: { name: true } } } },
-        sources: { orderBy: { priority: "desc" } },
-      },
-    });
+    const [row, jobBoardNames] = await Promise.all([
+      this.prisma.job.findFirst({
+        where: {
+          slug,
+          status: JobStatus.PUBLISHED,
+          publishedAt: { gte: publishedAfterFor(freshness, now) },
+          expiresAt: { gt: now },
+        },
+        include: {
+          company: { select: { name: true, logoUrl: true, website: true, careerUrl: true } },
+          skills: { include: { skill: { select: { name: true } } } },
+          sources: { orderBy: { priority: "desc" } },
+        },
+      }),
+      loadJobBoardSourceNames(this.prisma),
+    ]);
 
     if (!row) {
       return null;
     }
+
+    const canonical = row.sources[0] ?? null;
+    const origin = originOf(canonical?.name ?? null, jobBoardNames);
+    /*
+     * Une offre venue d'un job board ne sort jamais entière : le public n'en
+     * reçoit qu'un extrait et le lien vers l'origine. La description complète
+     * reste en base, où le matching privé la lit directement.
+     */
+    const fromJobBoard = origin === "JOB_BOARD";
 
     return {
       slug: row.slug,
@@ -203,10 +227,11 @@ export class JobsService {
       publishedAt: row.publishedAt,
       expiresAt: row.expiresAt,
       dataQualityScore: row.dataQualityScore,
-      description: row.description,
-      responsibilities: row.responsibilities,
-      requirements: row.requirements,
-      benefits: row.benefits,
+      descriptionTruncated: fromJobBoard,
+      description: fromJobBoard ? excerptOf(row.description) : row.description,
+      responsibilities: fromJobBoard ? [] : row.responsibilities,
+      requirements: fromJobBoard ? [] : row.requirements,
+      benefits: fromJobBoard ? [] : row.benefits,
       salaryMin: row.salaryMin,
       salaryMax: row.salaryMax,
       salaryPeriod: row.salaryPeriod,
@@ -217,9 +242,8 @@ export class JobsService {
       canonicalUrl: row.canonicalUrl,
       applyUrl: row.applyUrl,
       skills: row.skills.map((link) => link.skill.name),
-      canonicalSource: row.sources[0]
-        ? { name: row.sources[0].name, url: row.sources[0].url }
-        : null,
+      canonicalSource: canonical ? { name: canonical.name, url: canonical.url } : null,
+      origin,
       sources: row.sources.map((source) => ({
         name: source.name,
         url: source.url,

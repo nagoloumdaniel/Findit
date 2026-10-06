@@ -127,6 +127,22 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
 
       <section className="detail-section" aria-labelledby="description-title">
         <h2 id="description-title">Description</h2>
+        {/*
+         * Le contenu d'un job board ne nous appartient pas : on n'en publie
+         * qu'un extrait, et on dit où lire la suite. Le lien vers l'origine est
+         * donc ici, à côté du texte coupé, et pas seulement en bas de page.
+         */}
+        {job.descriptionTruncated ? (
+          <p className="detail-note">
+            Extrait. Cette offre provient d’une plateforme tierce : la description complète se lit à
+            la source.{" "}
+            {job.canonicalSource ? (
+              <a href={job.canonicalSource.url} target="_blank" rel="noreferrer noopener nofollow">
+                Lire la suite sur {job.canonicalSource.name}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
         <p>{job.description}</p>
       </section>
 

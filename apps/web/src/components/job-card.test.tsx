@@ -21,6 +21,7 @@ const job = (overrides: Partial<JobListItem> = {}): JobListItem => ({
   dataQualityScore: 92,
   skills: ["React", "TypeScript"],
   canonicalSource: { name: "Page carrière Orbit Studio", url: "https://example.invalid/job" },
+  origin: "OFFICIAL",
   ...overrides,
 });
 
@@ -74,5 +75,28 @@ describe("JobCard", () => {
     const html = renderToStaticMarkup(<JobCard job={job({ canonicalSource: null })} now={now} />);
 
     expect(html).toContain("Source non renseignée");
+  });
+
+  it("signale une offre reprise d'un job board", () => {
+    // Le lecteur doit savoir que la description du détail ne sera qu'un extrait
+    // d'un contenu qui ne nous appartient pas.
+    const html = renderToStaticMarkup(
+      <JobCard
+        job={job({
+          origin: "JOB_BOARD",
+          canonicalSource: { name: "welcome-to-the-jungle", url: "https://example.invalid/wttj" },
+        })}
+        now={now}
+      />,
+    );
+
+    expect(html).toContain("Job board");
+    expect(html).toContain("welcome-to-the-jungle");
+  });
+
+  it("ne signale rien pour une offre officielle", () => {
+    const html = renderToStaticMarkup(<JobCard job={job()} now={now} />);
+
+    expect(html).not.toContain("Job board");
   });
 });

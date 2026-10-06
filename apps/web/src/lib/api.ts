@@ -15,6 +15,9 @@ export type JobListItem = {
   dataQualityScore: number;
   skills: string[];
   canonicalSource: { name: string; url: string } | null;
+  /// « JOB_BOARD » signale une offre reprise d'une plateforme tierce : l'API
+  /// n'en livre qu'un extrait, jamais la description complète.
+  origin: "OFFICIAL" | "JOB_BOARD";
 };
 
 export type JobList = {
@@ -25,6 +28,7 @@ export type JobList = {
 };
 
 export type JobDetail = JobListItem & {
+  descriptionTruncated: boolean;
   description: string;
   responsibilities: string[];
   requirements: string[];
