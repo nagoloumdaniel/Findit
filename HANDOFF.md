@@ -104,13 +104,17 @@ analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification
   boards comme stratégie de secours.
 - **Boucle d'outils partielle (section 5)** : le modèle choisit les recherches
   (`createLlmQueryPlanner`, `packages/orchestrator/src/planner.ts`, schéma Zod,
-  borné à `maxQueries`, repli déterministe sur tout échec), et le plan est
-  consigné (`AgentAction` DISCOVER, coût compris). Le reste de la séquence reste
-  fixe : le modèle ne choisit ni le crawl, ni l'extraction, ni l'arrêt, et aucune
-  observation ne lui est renvoyée entre deux étapes.
-  Mesuré : un plan qui commence par les requêtes génériques envoie le crawl sur
-  des agrégateurs (403) ; le prompt impose donc les `site:` d'abord, et le run
-  correspondant a extrait 80 offres en 6 pages pour 3 928 micro-dollars.
+  borné à `maxQueries`, repli déterministe sur tout échec), **voit ce que le tour
+  a produit** (requêtes exécutées, sources notées, offres retenues, pages
+  visitées) et décide via `refine` s'il en faut un autre — `null` arrête. Chaque
+  plan est consigné (`AgentAction` DISCOVER, coût compris) avec son numéro de
+  tour. Bornes : `maxPlanRounds` (3), plus les bornes de pages et de temps.
+  Restent fixes : le choix du crawl, de l'extraction et de l'arrêt.
+  Mesures : un plan qui commence par des requêtes génériques envoie le crawl sur
+  des agrégateurs (403) — le prompt impose donc les `site:` d'abord (80 offres
+  extraites en 6 pages, 3 928 µ$) ; et avec 8 pages de budget, le premier tour
+  consomme tout et aucun second tour n'a lieu : les tours ne servent que si le
+  budget de pages le permet.
 - **`.env.example` désynchronisé du worker** : il ne déclare pas
   `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`, alors que le
   worker les lit (défauts dans `packages/config/src/env.ts`). Écart réel à

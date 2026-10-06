@@ -52,8 +52,8 @@ matching appelle l'API depuis le navigateur via `NEXT_PUBLIC_API_URL`.
 ## Flux de l'agent autonome
 
 L'entrée est `runAgent(objective, deps)` dans `packages/orchestrator/src/run-agent.ts`. La séquence
-est fixe, sauf la planification : le modèle peut choisir les recherches (section 5), il ne choisit
-pas encore les autres étapes.
+est fixe, sauf les tours de planification : le modèle choisit les recherches, voit ce que le tour a
+produit, et décide s'il en faut un autre (section 5). Il ne choisit pas encore les autres étapes.
 
 ```text
 Objectif (AGENT_OBJECTIVE)
@@ -95,6 +95,12 @@ Validation puis déduplication par titre normalisé, dans le run
 AgentRun / AgentAction / AgentError en base
 ```
 
+- **Boucle de décision** (section 5) : après un tour, `runAgent` transmet au planificateur ce que le
+  tour a produit — requêtes exécutées, sources notées, offres retenues, pages visitées — et appelle
+  `refine`. Un plan rendu relance un tour, `null` arrête. Bornes : `maxQueries` par tour,
+  `maxPlanRounds` (3), et les bornes de pages ou de temps, qui coupent la boucle avant toute
+  révision. Conséquence mesurée : avec 8 pages de budget, le premier tour a consommé tout le budget et
+  aucun second tour n'a eu lieu — les tours ne servent que si le budget de pages le permet.
 - Une page hors 2xx (réponse d'erreur servie) n'est ni relue ni extraite : c'est une réponse, pas une
   page d'offres. Le statut 0 reste traité par la relecture, puisque « jamais lue » n'est pas « erreur ».
 - Avant l'extraction, une **porte déterministe** lit le même contenu que le modèle recevrait : si la
@@ -324,10 +330,11 @@ doit faire échouer le démarrage.
   le LLM et l'abandon journalisé (`AgentError.retried = true`) sont livrés. L'étape « connecteurs
   spécialisés en repli » (CDC §4.7, étape 3) n'est pas câblée dans l'agent : il n'invoque pas
   `@findit/job-connectors` comme secours.
-- Boucle d'outils partielle : le modèle choisit **les recherches** (`createLlmQueryPlanner`, avec
-  repli déterministe), mais la suite de `runAgent` reste fixe — il ne choisit ni le crawl, ni
-  l'extraction, ni l'arrêt, et aucune observation ne lui est renvoyée entre deux étapes. Le reste de
-  la section 5 (boucle décision → outil → résultat → décision) reste à faire.
+- Boucle d'outils partielle : le modèle choisit **les recherches** et décide s'il en faut un autre
+  tour à la lumière du précédent (`createLlmQueryPlanner` + `refine`, avec repli déterministe). La
+  suite de `runAgent` reste fixe : il ne choisit ni le crawl, ni l'extraction, ni l'arrêt, et les
+  observations ne portent que sur la recherche. Le reste de la section 5 (décision sur les autres
+  outils) reste à faire.
 - Les job boards et l'agent autonome sont éteints par défaut (`SCRAPED_SOURCES_ENABLED=false`,
   `AGENT_RUN_ENABLED=false`) ; les job boards ne tournent que par `pnpm board:proof`.
 - Le workflow CI est écrit dans `.github/workflows/ci.yml`, mais l'état du compte GitHub et
