@@ -71,11 +71,15 @@ Optionnelles :
   source est simplement absente du cycle.
 - `APIFY_API_TOKEN` - jeton du compte Apify dédié, pour les job boards. Sans lui, aucun job board
   n'est collecté, même interrupteur allumé. Un run dépense du crédit réel : le cycle quotidien des
-  job boards reste éteint tant que `SCRAPED_SOURCES_ENABLED` n'est pas à `true`. Réglages :
-  `SCRAPED_COLLECTION_CRON` (6 h, heure de Paris), `SCRAPING_WTTJ_MAX_ITEMS` (30),
-  `SCRAPING_HELLOWORK_MAX_ITEMS` (40), `SCRAPING_INDEED_MAX_ITEMS` (100), et les plafonds de
+  job boards est **allumé par défaut** depuis le 2026-10-07, parce qu'il est la seule famille de
+  sources qui rend (12-13 offres acceptées par cycle, contre 0 sur les boards d'entreprises et 2
+  déjà connues sur France Travail). Réglages :
+  `SCRAPED_COLLECTION_CRON` (6 h, heure de Paris), `SCRAPING_WTTJ_MAX_ITEMS` (15),
+  `SCRAPING_HELLOWORK_MAX_ITEMS` (15), `SCRAPING_INDEED_MAX_ITEMS` (20), et les plafonds de
   dépense `SCRAPING_BUDGET_MONTHLY_USD` (4,5 pour le plan gratuit) et `SCRAPING_BUDGET_CYCLE_USD`
-  (0,15). Remettre l'interrupteur à `false` et redémarrer le worker retire la planification.
+  (0,15). Les plafonds d'items ont été resserrés le 2026-10-07 : deux cycles identiques dos à dos
+  ont rendu les mêmes offres sans en ajouter aucune, la première page concentrant la fraîcheur.
+  Remettre `SCRAPED_SOURCES_ENABLED` à `false` et redémarrer le worker retire la planification.
 - `TELEGRAM_*` - alertes et résumé de run ; simulation par défaut tant que
   `TELEGRAM_NOTIFICATIONS_ENABLED` et `TELEGRAM_DRY_RUN` ne sont pas réglés.
 

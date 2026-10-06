@@ -48,26 +48,26 @@ La **reprise en cascade** (cahier des charges, section 4.7) est portée par `pac
 
 ## Fonctionnalités
 
-| Élément                         | État                   | Détail                                                                                                                          |
-| ------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Monorepo et contrôles qualité   | Disponible             | Format, lint, typecheck, tests, build sous Turborepo                                                                            |
-| Base PostgreSQL en ligne        | Disponible             | Neon, TLS obligatoire pour un hôte distant ; migrations additives uniquement                                                    |
-| Redis local                     | Disponible             | Service Docker avec healthcheck, file BullMQ                                                                                    |
-| Configuration validée           | Disponible             | Schémas Zod par runtime, échec rapide au démarrage                                                                              |
-| API des offres                  | Disponible             | `GET /api/jobs`, `/api/jobs/stats`, `/api/jobs/filters`, `/api/jobs/:slug`                                                      |
-| Site public                     | Disponible             | Recherche par texte, filtres repliables, pagination, page de détail                                                             |
-| Dashboard d'administration      | Partiel                | `/dashboard` et 8 sections ; Jobs, Crawls, Logs et Configuration sont encore des états vides                                    |
-| Agent autonome                  | Éteint par défaut      | Activé par `AGENT_RUN_ENABLED=true` avec `DEEPSEEK_API_KEY` ; cron `AGENT_COLLECTION_CRON` (défaut `0 8 * * *`, Paris)          |
-| Reprise en cascade              | Disponible             | CDC §4.7 : relecture bornée, `JobPosting` JSON-LD avant le LLM, relance des échecs, abandon journalisé (`retried`)              |
-| Recherche web de l'agent        | Éteinte sans clé Brave | `BRAVE_SEARCH_API_KEY` ; sans clé, le moteur rend une liste vide et l'agent ne découvre rien                                    |
-| Registre de conformité          | Disponible             | Table `Connector`, synchronisée par `pnpm registry:sync`                                                                        |
-| Connecteurs ATS natifs          | Disponible             | Greenhouse, Lever, Workable, Workday, France Travail                                                                            |
-| Job boards (Apify)              | Éteint par défaut      | Welcome to the Jungle, HelloWork, Indeed ; `SCRAPED_SOURCES_ENABLED=true` **et** `APIFY_API_TOKEN`, cron `0 6 * * *`            |
-| Normalisation et classification | Disponible             | Contrat, métier, lieu, école, décision d'ingestion                                                                              |
-| Déduplication                   | Disponible             | Décision écrite, source canonique élue, sources secondaires tracées                                                             |
-| Alertes Telegram                | Éteintes par défaut    | Nouvelles offres idempotentes ; commandes `/start`, `/status`, `/latest`, `/help`                                               |
-| Matching CV / offres            | Disponible via l'API   | `POST /api/matching/score` (corps `{ cvText }`) : CV structuré par DeepSeek, score sur les 15 offres publiées les plus récentes |
-| Authentification                | Absente                | Aucun modèle `User`, aucune garde sur les routes                                                                                |
+| Élément                         | État                   | Détail                                                                                                                                                                                                   |
+| ------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Monorepo et contrôles qualité   | Disponible             | Format, lint, typecheck, tests, build sous Turborepo                                                                                                                                                     |
+| Base PostgreSQL en ligne        | Disponible             | Neon, TLS obligatoire pour un hôte distant ; migrations additives uniquement                                                                                                                             |
+| Redis local                     | Disponible             | Service Docker avec healthcheck, file BullMQ                                                                                                                                                             |
+| Configuration validée           | Disponible             | Schémas Zod par runtime, échec rapide au démarrage                                                                                                                                                       |
+| API des offres                  | Disponible             | `GET /api/jobs`, `/api/jobs/stats`, `/api/jobs/filters`, `/api/jobs/:slug`                                                                                                                               |
+| Site public                     | Disponible             | Recherche par texte, filtres repliables, pagination, page de détail                                                                                                                                      |
+| Dashboard d'administration      | Partiel                | `/dashboard` et 8 sections ; Jobs, Crawls, Logs et Configuration sont encore des états vides                                                                                                             |
+| Agent autonome                  | Éteint par défaut      | Activé par `AGENT_RUN_ENABLED=true` avec `DEEPSEEK_API_KEY` ; cron `AGENT_COLLECTION_CRON` (défaut `0 8 * * *`, Paris)                                                                                   |
+| Reprise en cascade              | Disponible             | CDC §4.7 : relecture bornée, `JobPosting` JSON-LD avant le LLM, relance des échecs, abandon journalisé (`retried`)                                                                                       |
+| Recherche web de l'agent        | Éteinte sans clé Brave | `BRAVE_SEARCH_API_KEY` ; sans clé, le moteur rend une liste vide et l'agent ne découvre rien                                                                                                             |
+| Registre de conformité          | Disponible             | Table `Connector`, synchronisée par `pnpm registry:sync`                                                                                                                                                 |
+| Connecteurs ATS natifs          | Disponible             | Greenhouse, Lever, Workable, Workday, France Travail                                                                                                                                                     |
+| Job boards (Apify)              | Allumé par défaut      | Welcome to the Jungle, HelloWork, Indeed ; `SCRAPED_SOURCES_ENABLED=true` **et** `APIFY_API_TOKEN`, cron `0 6 * * *`. Seule famille de sources qui rend : 12-13 offres acceptées par cycle, pour ~0,06 $ |
+| Normalisation et classification | Disponible             | Contrat, métier, lieu, école, décision d'ingestion                                                                                                                                                       |
+| Déduplication                   | Disponible             | Décision écrite, source canonique élue, sources secondaires tracées                                                                                                                                      |
+| Alertes Telegram                | Éteintes par défaut    | Nouvelles offres idempotentes ; commandes `/start`, `/status`, `/latest`, `/help`                                                                                                                        |
+| Matching CV / offres            | Disponible via l'API   | `POST /api/matching/score` (corps `{ cvText }`) : CV structuré par DeepSeek, score sur les 15 offres publiées les plus récentes                                                                          |
+| Authentification                | Absente                | Aucun modèle `User`, aucune garde sur les routes                                                                                                                                                         |
 
 ## Périmètre métier
 

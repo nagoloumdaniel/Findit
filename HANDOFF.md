@@ -313,8 +313,9 @@ matching, sources}`. Pas de `/espace`, pas de `/candidatures`.
 analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
 - **Worker** (`apps/worker`, NestJS + BullMQ) : concurrence 1, trois
   planifications — ATS natifs (`JOB_COLLECTION_CRON`, `0 */4 * * *`), job boards
-  Apify (`SCRAPED_COLLECTION_CRON`, `0 6 * * *`, si `SCRAPED_SOURCES_ENABLED` +
-  jeton Apify), agent (`AGENT_COLLECTION_CRON`, `0 8 * * *`, si
+  Apify (`SCRAPED_COLLECTION_CRON`, `0 6 * * *`, **allumé par défaut** depuis le
+  2026-10-07 : c'est la seule famille de sources qui rend, et le jeton Apify reste
+  requis), agent (`AGENT_COLLECTION_CRON`, `0 8 * * *`, si
   `AGENT_RUN_ENABLED`). S'y ajoutent les notifications Telegram. Un run unique
   hors BullMQ existe dans `apps/worker/run-agent-once.ts`.
 - **Docs** : cahier des charges et roadmap réécrits (pivot + MVP V1).
