@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SCORE_THRESHOLD, scoreSources } from "./scoring.js";
+import { DEFAULT_SCORE_THRESHOLD, isAtsBoardListing, scoreSources } from "./scoring.js";
 import type { SourceResult } from "./types.js";
 
 const result = (overrides: Partial<SourceResult> = {}): SourceResult => ({
@@ -164,5 +164,24 @@ describe("scoreSources", () => {
     expect(aggregator?.reasons).toContain("page de recherche agrégée probable");
     expect(aggregator?.keep).toBe(true);
     expect(scored[0]?.result.domain).toBe("jobs.lever.co");
+  });
+});
+
+describe("isAtsBoardListing", () => {
+  it("reconnaît la racine d'un board, pas ses pages d'offre", () => {
+    // Une racine liste tous les contrats d'une entreprise : on la traverse,
+    // on ne la prend pas pour une offre.
+    expect(isAtsBoardListing("https://boards.greenhouse.io/acme")).toBe(true);
+    expect(isAtsBoardListing("https://jobs.lever.co/theodo")).toBe(true);
+
+    expect(isAtsBoardListing("https://boards.greenhouse.io/acme/jobs/4606134004")).toBe(false);
+    expect(
+      isAtsBoardListing("https://jobs.lever.co/theodo/19acaa5d-159c-4ca9-a39c-f5a2ed5ffcd5"),
+    ).toBe(false);
+  });
+
+  it("ne prend pas un site ordinaire pour un board d'ATS", () => {
+    expect(isAtsBoardListing("https://example.com/jobs")).toBe(false);
+    expect(isAtsBoardListing("pas une url")).toBe(false);
   });
 });

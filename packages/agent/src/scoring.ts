@@ -98,6 +98,19 @@ const ATS_HOSTS: readonly string[] = [
   "jobteaser.com",
 ];
 
+/** Vrai quand le domaine appartient à un ATS connu, à la source des offres. */
+export const isAtsHost = (domain: string): boolean =>
+  ATS_HOSTS.some((suffix) => domain === suffix || domain.endsWith(`.${suffix}`));
+
+/** Hôte d'une URL, ou chaîne vide si elle n'est pas analysable. */
+const hostnameOf = (url: string): string => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+};
+
 /** Job boards connus, qui jouissent d'une réputation de base favorable. */
 const JOB_BOARD_DOMAINS: readonly string[] = [
   "welcometothejungle.com",
@@ -129,6 +142,16 @@ const pathSegmentCount = (url: string): number => {
     return 0;
   }
 };
+
+/**
+ * Vrai pour la racine d'un board d'ATS : `/acme`, `?board=…` — une **liste** de
+ * toutes les offres d'une entreprise, pas une offre. Le POURQUOI : mesuré, une
+ * telle page fait extraire tout le board (tous contrats confondus) alors que ses
+ * liens mènent à des pages d'offre précises. L'agent la traverse pour trouver
+ * les offres, mais ne la prend pas pour une offre.
+ */
+export const isAtsBoardListing = (url: string): boolean =>
+  isAtsHost(hostnameOf(url)) && pathSegmentCount(url) < 2;
 
 /** Signaux d'un organisme de formation ou d'une école, à écarter. */
 const SCHOOL_SIGNALS: readonly string[] = [
@@ -184,7 +207,7 @@ const scoreSource = (result: SourceResult): Omit<ScoredSource, "keep"> => {
   }
 
   // 2. Liste d'offres probable : ATS reconnu ou vocabulaire de listing.
-  if (ATS_HOSTS.some((suffix) => domain === suffix || domain.endsWith(`.${suffix}`))) {
+  if (isAtsHost(domain)) {
     score += 30;
     reasons.push("domaine d'ATS reconnu");
 

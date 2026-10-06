@@ -1,4 +1,10 @@
-import { ACTION_KIND, AGENT_RUN_STATUS, MEMORY_KIND, scoreSources } from "@findit/agent";
+import {
+  ACTION_KIND,
+  AGENT_RUN_STATUS,
+  MEMORY_KIND,
+  isAtsBoardListing,
+  scoreSources,
+} from "@findit/agent";
 import type {
   AgentMemoryStore,
   AgentRunStore,
@@ -194,7 +200,17 @@ export async function runAgent(
   const config = resolveOptions(options);
   const extract = deps.extract ?? extractJobsFromPage;
   const specializedExtract = deps.specializedExtract ?? extractStructuredOffers;
-  const pageGate = deps.pageGate ?? mentionsPerimeterContract;
+  /*
+   * Porte par défaut : la page doit nommer un contrat du périmètre, **et** ne pas
+   * être la racine d'un board d'ATS. Un board liste tous les contrats d'une
+   * entreprise ; on le traverse pour trouver ses pages d'offre, on ne le prend
+   * pas pour une offre. Mesuré : sans cela, un board faisait extraire tout son
+   * contenu, majoritairement hors périmètre, aux frais du modèle.
+   */
+  const pageGate =
+    deps.pageGate ??
+    ((page: CrawledPage): boolean =>
+      mentionsPerimeterContract(page) && !isAtsBoardListing(page.url));
 
   const runId = await deps.runStore.startRun(objective);
   const deadline = config.now() + config.maxRuntimeMs;
@@ -418,11 +434,19 @@ export async function runAgent(
              * périmètre ne peut pas porter d'offre du périmètre. Le modèle n'est
              * donc pas appelé — mesuré sur un run réel, un board hors périmètre
              * coûtait un appel par page pour des offres toutes rejetées ensuite.
+             * La racine d'un board d'ATS est écartée elle aussi : elle liste tous
+             * les contrats, et ses pages d'offre seront extraites à leur tour.
              */
             if (!pageGate(usable)) {
+              const reason =
+                deps.pageGate !== undefined
+                  ? "hors porte"
+                  : isAtsBoardListing(usable.url)
+                    ? "liste ATS"
+                    : "hors contrat";
               await deps.runStore.recordAction(runId, {
                 kind: ACTION_KIND.EXTRACT,
-                detail: `${usable.url} · hors contrat`,
+                detail: `${usable.url} · ${reason}`,
                 count: 0,
               });
               continue;

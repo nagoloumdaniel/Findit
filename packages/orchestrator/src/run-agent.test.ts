@@ -623,6 +623,27 @@ describe("runAgent - porte déterministe", () => {
 
     expect(result).toMatchObject({ extractedCount: 1, errorCount: 0 });
   });
+
+  it("traverse une racine de board ATS sans la prendre pour une offre", async () => {
+    const fake = buildFakePrisma();
+    let extractCalls = 0;
+    const deps = buildDeps(fake, {
+      search: oneSource("https://boards.greenhouse.io/acme"),
+      crawl: crawlOf(makePage("https://boards.greenhouse.io/acme")),
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] });
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    // La page nomme bien un contrat, mais c'est une liste de board : on ne
+    // l'extrait pas, ses pages d'offre le seront.
+    expect(result).toMatchObject({ extractedCount: 0, errorCount: 0 });
+    expect(extractCalls).toBe(0);
+    expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain("liste ATS");
+  });
 });
 
 // ---------------------------------------------------------------------------

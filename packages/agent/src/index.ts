@@ -1,7 +1,7 @@
 export { deterministicSearchQueryGenerator, generateSearchQueries } from "./search-queries.js";
 export type { SearchQueryGenerator } from "./search-queries.js";
 
-export { DEFAULT_SCORE_THRESHOLD, scoreSources } from "./scoring.js";
+export { DEFAULT_SCORE_THRESHOLD, isAtsBoardListing, isAtsHost, scoreSources } from "./scoring.js";
 export type { ScoreSourcesOptions, ScoredSource } from "./scoring.js";
 
 export { createAgentRunStore } from "./run-store.js";
