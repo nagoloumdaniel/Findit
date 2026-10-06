@@ -87,6 +87,83 @@ const stringScore = (a: string, b: string): number => {
   return jaccard(tokens(a), tokens(b));
 };
 
+/*
+ * Mots qui ne distinguent pas une entreprise d'une autre : formes juridiques et
+ * articles. « Acme » et « Acme SAS » sont la même entreprise ; « Preuve Alpha
+ * SAS » et « Preuve Gamma SAS » ne le sont pas, et le « SAS » qu'elles partagent
+ * ne doit pas peser dans leur ressemblance (bug B010).
+ */
+const COMPANY_STOPWORDS: ReadonlySet<string> = new Set([
+  "sas",
+  "sasu",
+  "sarl",
+  "sa",
+  "eurl",
+  "snc",
+  "scop",
+  "se",
+  "gmbh",
+  "ltd",
+  "inc",
+  "llc",
+  "plc",
+  "co",
+  "cie",
+  "de",
+  "du",
+  "des",
+  "la",
+  "le",
+  "les",
+  "et",
+  "and",
+  "the",
+  "of",
+]);
+
+/** Score d'un nom contenu dans un autre : une variante probable, jamais l'identité. */
+const COMPANY_VARIANT_SCORE = 0.85;
+
+const isSubset = (small: ReadonlySet<string>, large: ReadonlySet<string>): boolean => {
+  for (const token of small) {
+    if (!large.has(token)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Ressemblance de deux noms d'entreprise. Les formes juridiques sont écartées ;
+ * des noms égaux ensuite valent 1 ; un nom qui contient l'autre - « Acme » et
+ * « Acme France » - est une variante probable (0,85) ; sinon le recouvrement
+ * décide, et deux noms qui ne partagent qu'un mot sur trois restent loin de
+ * l'identité. Un nom qui n'est que formes juridiques se compare en entier.
+ */
+const companyScore = (a: string, b: string): number => {
+  if (a === b) {
+    return 1;
+  }
+
+  const withoutStopwords = (name: string): ReadonlySet<string> => {
+    const all = tokens(name);
+    const kept = new Set([...all].filter((token) => !COMPANY_STOPWORDS.has(token)));
+    return kept.size === 0 ? all : kept;
+  };
+
+  const first = withoutStopwords(a);
+  const second = withoutStopwords(b);
+
+  if (first.size === second.size && isSubset(first, second)) {
+    return 1;
+  }
+  if (isSubset(first, second) || isSubset(second, first)) {
+    return COMPANY_VARIANT_SCORE;
+  }
+
+  return jaccard(first, second);
+};
+
 /**
  * Rapproche deux dates. Une même offre porte parfois des dates un peu
  * différentes selon la source : proche vaut fort, lointain vaut faible.
@@ -121,7 +198,7 @@ const locationScore = (a: ComparableOffer, b: ComparableOffer): number => {
  */
 export const scoreSimilarity = (a: ComparableOffer, b: ComparableOffer): Similarity => {
   const breakdown: SimilarityBreakdown = {
-    company: stringScore(a.normalizedCompany, b.normalizedCompany),
+    company: companyScore(a.normalizedCompany, b.normalizedCompany),
     title: stringScore(a.normalizedTitle, b.normalizedTitle),
     location: locationScore(a, b),
     date: dateScore(a.publishedAt, b.publishedAt),

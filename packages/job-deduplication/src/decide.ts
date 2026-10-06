@@ -24,11 +24,13 @@ const MERGE_THRESHOLD = 0.85;
 const DISTINCT_THRESHOLD = 0.6;
 
 /*
- * En deçà, les noms d'entreprise n'ont presque rien en commun : ce sont deux
+ * En deçà, les noms d'entreprise n'ont pas assez en commun : ce sont deux
  * entreprises, pas deux libellés d'une même. Les variantes d'un même nom -
- * « Acme », « Acme France » - restent au-dessus.
+ * « Acme », « Acme France » - restent au-dessus. À 0,3 le seuil laissait passer
+ * deux noms qui ne partagent qu'un mot sur trois (bug B010) ; à 0,5 ils sont
+ * séparés, et les variantes (un nom contenu dans l'autre, 0,85) passent.
  */
-const COMPANY_MIN = 0.3;
+const COMPANY_MIN = 0.5;
 
 /**
  * Décide si deux offres sont la même publication. La décision porte son score
