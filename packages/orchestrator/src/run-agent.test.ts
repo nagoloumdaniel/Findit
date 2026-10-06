@@ -868,4 +868,87 @@ describe("runAgent - tours de planification", () => {
     expect(refineCalls).toBe(1);
     expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
   });
+
+  /** Une recherche qui rend une source différente à chaque requête. */
+  const searchEchoing = (): WebSearchProvider => ({
+    name: "doublure",
+    search: (query) =>
+      Promise.resolve([
+        {
+          url: `https://example.com/${encodeURIComponent(query.query)}`,
+          title: "Offres d'alternance développeur",
+          description: "Postes à pourvoir",
+          host: "example.com",
+        },
+      ]),
+    healthCheck: () => Promise.resolve({ healthy: true, detail: "La doublure répond." }),
+  });
+
+  /** Un crawl qui rend cinq pages d'un coup, pour éprouver le budget du tour. */
+  const wideCrawl: CrawlSource = () =>
+    Promise.resolve({
+      pages: [1, 2, 3, 4, 5].map((index) => makePage(`https://example.com/page-${String(index)}`)),
+      stopReason: "completed",
+      truncated: false,
+      visitedCount: 5,
+      robotsDeniedCount: 0,
+    });
+
+  it("réserve une part du budget de pages à chaque tour", async () => {
+    const fake = buildFakePrisma();
+    let refineCalls = 0;
+    const planner: QueryPlanner = {
+      plan: () =>
+        Promise.resolve({ queries: [{ query: "tour 1", engine: "brave" }], source: "llm" }),
+      refine: () => {
+        refineCalls += 1;
+        return Promise.resolve({
+          queries: [{ query: `tour ${String(refineCalls + 1)}`, engine: "brave" }],
+          source: "llm",
+        });
+      },
+    };
+
+    const deps = buildDeps(fake, {
+      search: searchEchoing(),
+      crawl: wideCrawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      planner,
+    });
+
+    const result = await runAgent("alternance développeur", deps, {
+      maxQueries: 1,
+      maxPages: 6,
+      maxPlanRounds: 3,
+    });
+
+    // 6 pages = 3 tours × 2 pages : chaque tour garde de quoi en faire un autre.
+    expect(result.pageCount).toBe(6);
+    expect(refineCalls).toBe(2);
+    expect(
+      fake.actions.filter((action) => action.kind === "DISCOVER").map((action) => action.detail),
+    ).toEqual([
+      "plan llm · 1 requête(s)",
+      "plan llm · 1 requête(s) · tour 2",
+      "plan llm · 1 requête(s) · tour 3",
+    ]);
+  });
+
+  it("laisse tout le budget à un planificateur qui ne révise pas", async () => {
+    const fake = buildFakePrisma();
+    const deps = buildDeps(fake, {
+      search: searchEchoing(),
+      crawl: wideCrawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance et stage développeur en Île-de-France", deps, {
+      maxQueries: 1,
+      maxPages: 6,
+    });
+
+    // Un seul tour : les cinq pages de la source passent, comme avant.
+    expect(result.pageCount).toBe(5);
+    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
+  });
 });

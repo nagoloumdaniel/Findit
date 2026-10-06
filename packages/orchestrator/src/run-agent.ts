@@ -234,11 +234,28 @@ export async function runAgent(
     const executedQueries: string[] = [];
     let round = 0;
 
+    /** Pages autorisées pour le tour en cours, recalculée à chaque tour. */
+    let roundPageLimit = config.maxPages;
+    const roundExhausted = (): boolean => counters.pageCount >= roundPageLimit;
+
     let planUsageBefore = deps.model.usage?.();
     let current = await planner.plan({ objective, maxQueries: config.maxQueries });
     let planUsage = usageDelta(planUsageBefore, deps.model.usage?.());
 
     for (;;) {
+      /*
+       * Budget de pages du tour. Sans lui, un premier tour productif consommait
+       * tout le run et `refine` n'était jamais appelé — mesuré : 8 pages prises
+       * par le premier tour, un seul tour exécuté. Chaque tour reçoit donc une
+       * part, et le dernier dispose de ce qui reste. Un planificateur sans
+       * `refine` garde tout le budget : il n'y a pas de tour suivant.
+       */
+      const perRound =
+        planner.refine === undefined
+          ? config.maxPages
+          : Math.max(1, Math.ceil(config.maxPages / config.maxPlanRounds));
+      roundPageLimit = Math.min(config.maxPages, counters.pageCount + perRound);
+
       await deps.runStore.recordAction(runId, {
         kind: ACTION_KIND.DISCOVER,
         detail: `plan ${current.source} · ${String(current.queries.length)} requête(s)${
@@ -250,7 +267,7 @@ export async function runAgent(
       });
 
       for (const query of current.queries) {
-        if (shouldStop()) {
+        if (shouldStop() || roundExhausted()) {
           break;
         }
         executedQueries.push(query.query);
@@ -282,7 +299,7 @@ export async function runAgent(
             kept: source.keep,
           });
 
-          if (shouldStop()) {
+          if (shouldStop() || roundExhausted()) {
             break;
           }
           if (!source.keep) {
@@ -321,7 +338,7 @@ export async function runAgent(
           counters.sourceCount += 1;
 
           for (const page of crawlResult.pages) {
-            if (shouldStop()) {
+            if (shouldStop() || roundExhausted()) {
               break;
             }
 
