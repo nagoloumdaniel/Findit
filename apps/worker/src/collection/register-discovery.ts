@@ -1,5 +1,9 @@
 import type { PrismaClient } from "@findit/database";
-import { collectDiscoveries, registerDiscoveredSource } from "@findit/job-connectors";
+import {
+  collectDiscoveries,
+  isAggregatorTenant,
+  registerDiscoveredSource,
+} from "@findit/job-connectors";
 
 import { toDiscoveredSource } from "./run-cycle.js";
 
@@ -34,10 +38,22 @@ export const registerDiscoveryFromUrl = async (
 
   const discoveries = collectDiscoveries([{ url, title: url, description: "", host }]);
   const created: string[] = [];
+  const aggregators: string[] = [];
 
   for (const known of discoveries.known) {
     const source = toDiscoveredSource(known);
     if (source === null) {
+      continue;
+    }
+
+    /*
+     * Un locataire d'ATS qui publie les offres des autres n'est pas un
+     * employeur : l'enregistrer ferait payer à chaque cycle le tri de milliers
+     * d'offres qui ne sont pas les siennes (mesuré : 3 501 offres sur 4 251 pour
+     * `lever/jobgether`).
+     */
+    if (isAggregatorTenant(source.connectorName, source.atsIdentifier)) {
+      aggregators.push(`${source.connectorName}/${source.atsIdentifier}`);
       continue;
     }
 
@@ -53,5 +69,13 @@ export const registerDiscoveryFromUrl = async (
     }
   }
 
-  return created.length === 0 ? null : created.join(", ");
+  const notes: string[] = [];
+  if (created.length > 0) {
+    notes.push(`enregistrée · ${created.join(", ")}`);
+  }
+  if (aggregators.length > 0) {
+    notes.push(`agrégateur ignoré · ${aggregators.join(", ")}`);
+  }
+
+  return notes.length === 0 ? null : notes.join(" · ");
 };

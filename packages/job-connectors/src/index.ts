@@ -1,6 +1,8 @@
 export { decideDiscoveredSourceAccess } from "./board-access.js";
 export type { SourceAccessRefusal, SourceAccessVerdict } from "./board-access.js";
 
+export { isAggregatorTenant } from "./aggregator-tenants.js";
+
 export {
   COLLECTION_ALLOWED_STATUSES,
   TERMS_MAX_AGE_DAYS,

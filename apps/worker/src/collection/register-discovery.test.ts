@@ -41,8 +41,18 @@ describe("registerDiscoveryFromUrl", () => {
 
     await expect(
       registerDiscoveryFromUrl(prisma, "https://job-boards.greenhouse.io/acme/jobs/4606134004"),
-    ).resolves.toBe("greenhouse/acme");
+    ).resolves.toBe("enregistrée · greenhouse/acme");
     expect(upserts).toEqual(["company", "companySource"]);
+  });
+
+  it("écarte un agrégateur déguisé en entreprise, sans l'enregistrer", async () => {
+    const { prisma, upserts } = prismaWith(true);
+
+    // Mesuré : lever/jobgether a rendu 3 501 des 4 251 offres d'une collecte.
+    await expect(
+      registerDiscoveryFromUrl(prisma, "https://jobs.lever.co/jobgether/abc123"),
+    ).resolves.toBe("agrégateur ignoré · lever/jobgether");
+    expect(upserts).toEqual([]);
   });
 
   it("n'annonce rien pour une source déjà connue, mais la met à jour", async () => {

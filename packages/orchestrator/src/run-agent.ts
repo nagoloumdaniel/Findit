@@ -462,7 +462,7 @@ export async function runAgent(
               if (phrase !== null) {
                 await deps.runStore.recordAction(runId, {
                   kind: ACTION_KIND.DISCOVER,
-                  detail: `source enregistrée · ${phrase}`,
+                  detail: `source · ${phrase}`,
                 });
               }
             } catch (error) {

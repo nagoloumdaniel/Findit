@@ -1507,14 +1507,13 @@ describe("runAgent - enregistrement des sources découvertes", () => {
 
     expect(registered).toEqual([url]);
     const enregistrement = fake.actions.find(
-      (action) =>
-        action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source enregistrée"),
+      (action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source · "),
     );
-    expect(enregistrement?.detail).toBe("source enregistrée · acme · connecteur greenhouse");
+    expect(enregistrement?.detail).toBe("source · acme · connecteur greenhouse");
 
     // L'enregistrement précède la sélection : il ne dépend pas du choix de crawl.
     const details = fake.actions.map((action) => action.detail ?? "");
-    const registeredAt = details.findIndex((detail) => detail.startsWith("source enregistrée"));
+    const registeredAt = details.findIndex((detail) => detail.startsWith("source · "));
     const selectionAt = details.findIndex((detail) => detail.startsWith("sélection"));
     expect(registeredAt).toBeGreaterThanOrEqual(0);
     expect(registeredAt).toBeLessThan(selectionAt);
@@ -1574,9 +1573,9 @@ describe("runAgent - enregistrement des sources découvertes", () => {
       kind: "DISCOVER",
       message: "registre indisponible",
     });
-    expect(
-      fake.actions.some((action) => (action.detail ?? "").startsWith("source enregistrée")),
-    ).toBe(false);
+    expect(fake.actions.some((action) => (action.detail ?? "").startsWith("source · "))).toBe(
+      false,
+    );
   });
 
   it("n'enregistre qu'une fois la même URL dans le run", async () => {
@@ -1612,8 +1611,7 @@ describe("runAgent - enregistrement des sources découvertes", () => {
     expect(registered).toEqual([url]);
     expect(
       fake.actions.filter(
-        (action) =>
-          action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source enregistrée"),
+        (action) => action.kind === "DISCOVER" && (action.detail ?? "").startsWith("source · "),
       ),
     ).toHaveLength(1);
   });
