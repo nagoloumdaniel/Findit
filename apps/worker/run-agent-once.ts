@@ -3,7 +3,7 @@ import { createPrismaClient } from "@findit/database";
 import { createAgentMemoryStore, createAgentRunStore } from "@findit/agent";
 import { createDeepSeekModel, computeCostMicroUsd } from "@findit/ai";
 import type { ModelUsage } from "@findit/ai";
-import { crawl } from "@findit/crawler";
+import { crawl, resolveFinalUrl } from "@findit/crawler";
 import type { CrawledPage } from "@findit/crawler";
 import { BraveSearchProvider, decideDiscoveredSourceAccess } from "@findit/job-connectors";
 import { runAgent } from "@findit/orchestrator";
@@ -59,6 +59,7 @@ const main = async (): Promise<void> => {
       model,
       planner: createLlmQueryPlanner({ model }),
       sourceSelector: createLlmSourceSelector({ model }),
+      resolveUrl: (url) => resolveFinalUrl(url),
       // Même porte de conformité que le worker : le registre décide.
       sourceGate: (url) => decideDiscoveredSourceAccess(prisma, url, new Date()),
       ...(modelCost === undefined ? {} : { modelCost }),

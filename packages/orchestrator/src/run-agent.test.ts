@@ -236,6 +236,7 @@ interface DepsInput {
     url: string,
   ) => Promise<{ readonly allowed: boolean; readonly reason: string }>;
   readonly sourceSelector?: SourceSelector;
+  readonly resolveUrl?: (url: string) => Promise<string | null>;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -1309,7 +1310,7 @@ describe("runAgent - choix des sources", () => {
     expect(requested[0]).toBe(6);
   });
 
-  it("paie encore un alias découvert APRÈS la page finale : limite connue", async () => {
+  it("paie encore un alias découvert APRÈS la page finale, faute de résolution", async () => {
     const fake = buildFakePrisma();
     const crawled: string[] = [];
     // Ivalua, sens inverse du test précédent : la page finale passe d'abord, puis
@@ -1347,5 +1348,42 @@ describe("runAgent - choix des sources", () => {
       "https://example.com/company/careers/",
       "https://example.com/carrieres",
     ]);
+  });
+
+  it("reconnaît un alias de redirection AVANT de le payer quand la résolution est branchée", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    // Même situation que le test précédent, mais le worker branche `resolveUrl`
+    // (`resolveFinalUrl` du crawler) : l'alias est reconnu avant le crawl.
+    const search = makeSearch([
+      {
+        url: "https://example.com/company/careers/",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/carrieres",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      resolveUrl: (url) =>
+        Promise.resolve(url.includes("carrieres") ? "https://example.com/company/careers/" : null),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual(["https://example.com/company/careers/"]);
   });
 });

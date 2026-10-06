@@ -22,3 +22,6 @@ export { CrawlConfigError } from "./types.js";
 export type { CrawledPage, CrawlResult, CrawlStopReason, RenderedPage } from "./types.js";
 
 export { normalizeUrl, sameOrigin, tryResolveLink } from "./url.js";
+
+export { resolveFinalUrl } from "./resolve.js";
+export type { ResolveFinalUrlOptions } from "./resolve.js";

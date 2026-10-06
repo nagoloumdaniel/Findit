@@ -100,6 +100,13 @@ export interface RunAgentDeps {
    * modèle (section 5) se branche ici.
    */
   readonly sourceSelector?: SourceSelector;
+  /**
+   * Résout l'URL finale d'une source sans lire la page (`resolveFinalUrl` du
+   * crawler). Sert à reconnaître un alias de redirection AVANT de le payer :
+   * mesuré, `/carrieres` et `/company/careers` mènent à la même page. Sans cette
+   * porte, seule l'adresse déjà vue est reconnue. Défaut : aucune résolution.
+   */
+  readonly resolveUrl?: (url: string) => Promise<string | null>;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -452,7 +459,22 @@ export async function runAgent(
         }
 
         // Mémoire : une URL déjà visitée n'est pas re-crawlée dans ce run.
-        const memoryKey = crawlKey(sourceUrl);
+        /*
+         * Identité de la source. La résolution de redirection est une aide : si
+         * elle échoue, on garde l'adresse demandée et le crawl se comporte comme
+         * avant.
+         */
+        let memoryKey = crawlKey(sourceUrl);
+        if (deps.resolveUrl !== undefined) {
+          try {
+            const resolved = await deps.resolveUrl(sourceUrl);
+            if (resolved !== null) {
+              memoryKey = crawlKey(resolved);
+            }
+          } catch (error) {
+            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+          }
+        }
         if (crawledKeys.has(memoryKey)) {
           continue;
         }
