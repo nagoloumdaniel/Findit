@@ -36,9 +36,11 @@ chantiers avaient été demandés à ce stade :
 
 Le chantier de scraping touche deux contraintes fortes du projet : le **registre de conformité** (aucune
 collecte sans permission constatée) et la règle « rien ne sort du poste ». La première a été traitée par
-un nouveau régime de registre (section 26, C-1). La seconde est **contredite par l'état réel** : l'API
+un nouveau régime de registre (section 26, C-1). La seconde est **contredite par le branchement** : l'API
 lit `DATABASE_URL`, qui pointe sur la base en ligne, donc tout ce que l'application écrit - profil, texte
-du CV, lettres, candidatures - part sur cette base. Voir C-4 et Q-1.
+du CV, lettres, candidatures - partirait sur cette base. Mesure du 2026-10-06 : ces tables sont encore
+**vides** (0 profil, 0 CV, 0 lettre, 0 candidature), donc rien n'a quitté le poste à ce jour ; la
+contrainte reste à trancher avant la première utilisation réelle de l'espace privé. Voir C-4 et Q-1.
 
 ---
 
@@ -643,8 +645,12 @@ Aucune n'est masquée. Chacune demande une décision ou une vérification.
 
 - Le produit fonctionne, et la base est passée **en ligne** (Neon, TLS obligatoire). Ce qui reste pour une
   mise en ligne propre : **un hébergeur pour le worker** - sans lui, pas de collecte quand le poste est
-  éteint - et **la décision sur les données privées** (Q-1), qui n'est plus théorique puisque
-  l'application écrit tout ce qu'elle produit dans la base en ligne.
+  éteint - et **la décision sur les données privées** (Q-1). Celle-ci n'est plus théorique : l'API pointe
+  sur la base en ligne, donc la première utilisation réelle de l'espace privé y écrirait le profil et le
+  CV. Les tables privées sont encore vides au 2026-10-06.
+- Le vrai problème à résoudre n'est pas technique : **le flux est presque vide** (3 offres publiées pour
+  tout le site, alors que 92 cycles de collecte ont abouti). La contrainte est l'offre disponible sur les
+  sources natives ; c'est la raison d'être du scraping, et il est livré mais éteint.
 - Apify est tranché (Q-4) et le moteur est livré : registre rouvert, acteurs épinglés par source, garde de
   budget prouvée, un premier job board monté mais éteint. Ce qui manque n'est plus une autorisation, mais
   une décision d'affichage public.

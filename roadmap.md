@@ -216,9 +216,29 @@ Espace prive
 
 Endpoints absents : authentification utilisateur complete, analyse GitHub, export DOCX, admin, webhook ou commandes Telegram en HTTP.
 
-## 8. Etat base de donnees locale auditee
+## 8. Etat de la base auditee
 
-Compteurs releves le 2026-07-24 apres `pnpm infra:up`, `pnpm db:migrate` et `pnpm registry:sync` :
+Compteurs releves le 2026-10-06 sur la base **en ligne** (Neon), par une lecture seule :
+
+| Table               | Lignes | Lecture d'audit                                                |
+| ------------------- | ------ | -------------------------------------------------------------- |
+| `Connector`         | 6      | Registre apres retrait des sources en attente de permission    |
+| `CompanySource`     | 84     | Annuaire et sources decouvertes                                |
+| `ConnectorRun`      | 92     | Dernier run le 2026-10-05 a 23 h 13, SUCCEEDED                 |
+| `Job`               | 3      | Toutes PUBLISHED, aucune demonstration, toutes dans la fenetre |
+| `CandidateProfile`  | 0      | Aucun profil                                                   |
+| `SourceResume`      | 0      | Aucun CV source                                                |
+| `SourceCoverLetter` | 0      | Aucune lettre                                                  |
+| `SourceResumeMatch` | 0      | Aucun score stocke                                             |
+| `Application`       | 0      | Aucune candidature suivie                                      |
+
+Constat a retenir : le moteur collecte et reussit (92 runs, tous en succes) mais ne
+publie presque rien - **3 offres pour tout le site**. C'est le probleme a resoudre,
+et c'est la raison d'etre du chantier de scraping. Les tables privees sont vides :
+aucun profil, aucun CV, aucune lettre n'a encore quitte le poste, meme si l'API
+pointe sur la base en ligne.
+
+Releve precedent, sur la base PostgreSQL Docker locale, le 2026-07-24 :
 
 | Table                     | Lignes | Lecture d'audit                                    |
 | ------------------------- | ------ | -------------------------------------------------- |
@@ -837,7 +857,7 @@ Ordre d'execution recommande : TASK-301 a 303, puis 305 avant 304 (le plafond av
     - Cout de chaque run consigne dans `ConnectorRun`.
     - `maxItems` impose a chaque appel d'acteur.
   - Tests : test worker avec budget fictif (nomme comme tel)
-  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. Plan Apify reel : gratuit, 5 $ de credit par mois (confirme par le proprietaire) ; defauts `SCRAPING_BUDGET_MONTHLY_USD=4.5` (5 $ moins 10 % de marge) et `SCRAPING_BUDGET_CYCLE_USD=0.15` (30 cycles quotidiens sous 4,5 $), modifiables sans toucher au code. `packages/job-connectors/src/spend-budget.ts` : montants en micro-dollars entiers, cout maximal d'un run (demarrage + resultats + details), refus d'un appel sans plafond de resultats valide (`UnboundedRunError`), billet de reservation par run, refus `CYCLE_BUDGET_EXCEEDED` ou `MONTH_BUDGET_EXCEEDED` qui arrete la source sans arreter le cycle ; `spend-ledger.ts` relit le cumul du mois dans `ConnectorRun`, donc un redemarrage du worker ne le remet pas a zero ; `ConnectorRun.costMicroUsd` (migration additive `20261006090000_connector_run_cost`) et `recordCost` dans le journal de runs. 14 tests de budget + 2 tests de configuration. Prouve sur la base Neon reelle : cout de 4,46 $ ecrit puis relu (cumul 4 460 000), run estime a 0,02 $ autorise, run estime a 0,10 $ refuse en `MONTH_BUDGET_EXCEEDED`, base nettoyee (cumul revenu a 0). Reste a brancher dans le connecteur Apify (TASK-304), qui n'existe pas encore : la garde n'est donc pas encore appelee par le cycle. Incident repete : `findit_app` ne peut pas modifier le schema, colonne ajoutee par le proprietaire de la base via l'outil Neon puis `migrate resolve --applied` ; a trancher en phase 20 (URL proprietaire pour les migrations).
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. Plan Apify reel : gratuit, 5 $ de credit par mois (confirme par le proprietaire) ; defauts `SCRAPING_BUDGET_MONTHLY_USD=4.5` (5 $ moins 10 % de marge) et `SCRAPING_BUDGET_CYCLE_USD=0.15` (30 cycles quotidiens sous 4,5 $), modifiables sans toucher au code. `packages/job-connectors/src/spend-budget.ts` : montants en micro-dollars entiers, cout maximal d'un run (demarrage + resultats + details), refus d'un appel sans plafond de resultats valide (`UnboundedRunError`), billet de reservation par run, refus `CYCLE_BUDGET_EXCEEDED` ou `MONTH_BUDGET_EXCEEDED` qui arrete la source sans arreter le cycle ; `spend-ledger.ts` relit le cumul du mois dans `ConnectorRun`, donc un redemarrage du worker ne le remet pas a zero ; `ConnectorRun.costMicroUsd` (migration additive `20261006090000_connector_run_cost`) et `recordCost` dans le journal de runs. 14 tests de budget + 2 tests de configuration. Prouve sur la base Neon reelle : cout de 4,46 $ ecrit puis relu (cumul 4 460 000), run estime a 0,02 $ autorise, run estime a 0,10 $ refuse en `MONTH_BUDGET_EXCEEDED`, base nettoyee (cumul revenu a 0). La garde est depuis cablee dans les deux cycles via `createCycleDeps` (TASK-304) ; elle n'est sollicitee que si un connecteur payant tourne, ce qui suppose `SCRAPED_SOURCES_ENABLED=true`. Incident repete : `findit_app` ne peut pas modifier le schema, colonne ajoutee par le proprietaire de la base via l'outil Neon puis `migrate resolve --applied` ; a trancher en phase 20 (URL proprietaire pour les migrations).
 
 - [~] TASK-304 - Abstraction `ScrapeProvider` et connecteur Apify generique
   - Priorite : P1

@@ -166,9 +166,11 @@ La base est en ligne (Neon) et exige TLS. Redis reste local. Un `DATABASE_URL` d
 
 - Le rôle applicatif de la base en ligne n'est pas propriétaire du schéma : une migration qui change la structure doit être appliquée avec une connexion propriétaire, puis réconciliée par `migrate resolve`. L'incident s'est produit deux fois.
 - `DATABASE_URL_OWNER` existe dans le `.env` local mais n'est déclaré nulle part dans le code ni dans `.env.example`.
-- Aucun connecteur de job board n'est monté dans le cycle : Welcome to the Jungle ne s'exécute que par l'outil `pnpm board:proof`, et la garde de budget n'est donc pas encore appelée par le cycle réel.
+- Aucun connecteur de job board ne tourne : `SCRAPED_SOURCES_ENABLED` vaut `false`, donc Welcome to the Jungle ne s'exécute que par l'outil `pnpm board:proof`. La garde de budget est en revanche déjà câblée dans les deux cycles (`createCycleDeps`) ; elle n'est sollicitée que si un connecteur payant tourne.
 - Le contenu d'une offre de job board s'afficherait aujourd'hui en entier sur le site public : la règle d'affichage (extrait court et lien vers l'origine, ou description complète réservée au matching privé) n'est pas tranchée.
 - Le CV source n'a ni versionnement, ni chiffrement du binaire : seul le texte extrait est conservé.
 - L'IA locale n'est pas utilisée pour le matching ni pour la génération du design des documents, par choix de coût. Un site hébergé ne pourra pas joindre Ollama, qui reste sur le poste.
 - L'analyse GitHub et l'export DOCX n'existent pas.
 - Le workflow CI est écrit mais GitHub Actions est désactivé pour le compte du dépôt : aucune exécution automatique.
+- Le flux est presque vide : 3 offres publiées pour tout le site au 2026-10-06, alors que 92 cycles de collecte ont abouti. La contrainte est l'offre disponible sur les sources natives, pas la chaîne technique - d'où le chantier de scraping.
+- Les tables privées sont vides : aucun profil, aucun CV, aucune lettre n'a encore été écrit, même si l'API pointe sur la base en ligne.
