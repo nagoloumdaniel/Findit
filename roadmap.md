@@ -52,7 +52,8 @@ Périmètre du CDC (section 13) : Scheduler + Search + Crawl + Extract + LLM cla
 **Reste à faire** :
 
 - Connecteurs spécialisés en repli (CDC §4.7, étape 3) : la cascade est livrée, mais l'agent n'invoque pas les connecteurs ATS/job boards (`packages/job-connectors/src/`) comme stratégie de secours.
-- Boucle d'outils pilotée par le LLM (CDC §5) : `packages/orchestrator/src/run-agent.ts` est un pipeline déterministe (requêtes → scoring → crawl → extraction → validation → déduplication → persistance) ; le LLM n'intervient que dans l'extraction et le matching.
+- Planification des recherches par le modèle (CDC §5, première brique) : `packages/orchestrator/src/planner.ts` (`createLlmQueryPlanner`) — le modèle propose les requêtes, schéma Zod, bornées à `maxQueries`, dédupliquées, avec repli automatique sur `generateSearchQueries` si la sortie est invalide, vide ou le modèle en panne. Le plan est consigné (`AgentAction` DISCOVER) avec son coût. Mesure : premier plan générique → crawl sur des agrégateurs en 403 ; prompt corrigé pour commencer par les `site:` → 80 offres extraites en 6 pages pour 3 928 micro-dollars.
+- Boucle d'outils pilotée par le LLM (CDC §5) : partielle. Le modèle choisit les recherches, mais `packages/orchestrator/src/run-agent.ts` reste une séquence fixe (scoring → crawl → extraction → validation → déduplication → persistance) ; il ne choisit ni le crawl, ni l'extraction, ni l'arrêt, et aucune observation ne lui est renvoyée entre deux étapes.
 
 ## 5. V3 (différé)
 

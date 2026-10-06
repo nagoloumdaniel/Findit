@@ -102,11 +102,15 @@ analytics,sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification
   l'agent : la relecture bornée, l'extraction `JobPosting` JSON-LD et l'abandon
   journalisé sont livrés, mais l'agent n'invoque pas les connecteurs ATS/job
   boards comme stratégie de secours.
-- **Boucle d'outils pilotée par le LLM** (section 5) non implémentée : le run est
-  un pipeline déterministe. Le LLM n'intervient que dans l'extraction structurée
-  (`@findit/extract`) et, côté matching, dans la structuration du CV et le score.
-  La génération de requêtes (`generateSearchQueries`) est déterministe : fonction
-  synchrone, sans modèle ni appel réseau.
+- **Boucle d'outils partielle (section 5)** : le modèle choisit les recherches
+  (`createLlmQueryPlanner`, `packages/orchestrator/src/planner.ts`, schéma Zod,
+  borné à `maxQueries`, repli déterministe sur tout échec), et le plan est
+  consigné (`AgentAction` DISCOVER, coût compris). Le reste de la séquence reste
+  fixe : le modèle ne choisit ni le crawl, ni l'extraction, ni l'arrêt, et aucune
+  observation ne lui est renvoyée entre deux étapes.
+  Mesuré : un plan qui commence par les requêtes génériques envoie le crawl sur
+  des agrégateurs (403) ; le prompt impose donc les `site:` d'abord, et le run
+  correspondant a extrait 80 offres en 6 pages pour 3 928 micro-dollars.
 - **`.env.example` désynchronisé du worker** : il ne déclare pas
   `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON` ni `AGENT_OBJECTIVE`, alors que le
   worker les lit (défauts dans `packages/config/src/env.ts`). Écart réel à

@@ -51,15 +51,20 @@ matching appelle l'API depuis le navigateur via `NEXT_PUBLIC_API_URL`.
 
 ## Flux de l'agent autonome
 
-L'entrée est `runAgent(objective, deps)` dans `packages/orchestrator/src/run-agent.ts`. Le pipeline
-est une séquence fixe : aucune boucle d'outils pilotée par le modèle.
+L'entrée est `runAgent(objective, deps)` dans `packages/orchestrator/src/run-agent.ts`. La séquence
+est fixe, sauf la planification : le modèle peut choisir les recherches (section 5), il ne choisit
+pas encore les autres étapes.
 
 ```text
 Objectif (AGENT_OBJECTIVE)
     |
     v
+Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/planner.ts`)
+    |   le modèle propose les requêtes (schéma Zod, bornées à `maxQueries`) ; sortie invalide,
+    |   vide ou modèle en panne rendent le plan déterministe — le run ne part jamais sans recherche
+    v
 @findit/agent : generateSearchQueries(objective)
-    |   requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans appel modèle
+    |   repli : requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle
     v
 Brave Search, si BRAVE_SEARCH_API_KEY existe (sinon aucun résultat)
     |
@@ -319,8 +324,10 @@ doit faire échouer le démarrage.
   le LLM et l'abandon journalisé (`AgentError.retried = true`) sont livrés. L'étape « connecteurs
   spécialisés en repli » (CDC §4.7, étape 3) n'est pas câblée dans l'agent : il n'invoque pas
   `@findit/job-connectors` comme secours.
-- Pas de boucle d'outils pilotée par le modèle : la séquence `runAgent` est fixe et le LLM ne sert
-  qu'à l'extraction page par page (et, côté matching, à la structuration du CV et au score).
+- Boucle d'outils partielle : le modèle choisit **les recherches** (`createLlmQueryPlanner`, avec
+  repli déterministe), mais la suite de `runAgent` reste fixe — il ne choisit ni le crawl, ni
+  l'extraction, ni l'arrêt, et aucune observation ne lui est renvoyée entre deux étapes. Le reste de
+  la section 5 (boucle décision → outil → résultat → décision) reste à faire.
 - Les job boards et l'agent autonome sont éteints par défaut (`SCRAPED_SOURCES_ENABLED=false`,
   `AGENT_RUN_ENABLED=false`) ; les job boards ne tournent que par `pnpm board:proof`.
 - Le workflow CI est écrit dans `.github/workflows/ci.yml`, mais l'état du compte GitHub et
