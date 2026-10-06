@@ -83,13 +83,13 @@ model Company {
   id   String @id @default(uuid(7))
   slug String @unique
 
-  name String
+  name           String
   /// Nom réduit à une forme comparable, utilisé pour rapprocher les doublons.
   normalizedName String
 
-  website    String?
-  careerUrl  String?
-  logoUrl    String?
+  website   String?
+  careerUrl String?
+  logoUrl   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -98,6 +98,7 @@ model Company {
   aliases         CompanyAlias[]
   sources         CompanySource[]
   classifications CompanyClassification[]
+  contacts        Contact[]
 
   @@index([normalizedName])
 }
@@ -106,7 +107,7 @@ model Job {
   id   String @id @default(uuid(7))
   slug String @unique
 
-  title String
+  title           String
   /// Titre débarrassé des mentions H/F, du type de contrat et des codes
   /// internes, afin de comparer deux publications de la même offre.
   normalizedTitle String
@@ -123,7 +124,7 @@ model Job {
   contractType ContractType
   workMode     WorkMode
 
-  city String
+  city           String
   /// Restreint aux départements d'Île-de-France par une contrainte de contrôle.
   departmentCode String
   postalCode     String?
@@ -182,11 +183,6 @@ model Job {
   fraudDecisions         FraudDetectionDecision[]
   duplicateDecisions     DuplicateDecision[]
   processingLogs         ProcessingLog[]
-  matches                JobMatch[]
-  sourceResumeMatches    SourceResumeMatch[]
-  sourceCoverLetters     SourceCoverLetter[]
-  applications           Application[]
-  coverLetters           CoverLetter[]
   telegramNotifications  TelegramJobNotification[]
 
   /// Une même source ne peut pas décrire deux fois la même offre.
@@ -211,10 +207,10 @@ model JobSource {
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  name String
-  url  String
+  name      String
+  url       String
   /// Rang de confiance de la source. Le plus élevé devient la source canonique.
-  priority Int
+  priority  Int
   /// Dernière vérification que ce lien répond toujours.
   checkedAt DateTime
 
@@ -558,8 +554,8 @@ model DuplicateDecision {
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  action DuplicateAction
-  score  Float
+  action         DuplicateAction
+  score          Float
   /// Détail par critère : entreprise, titre, description, lieu, compétences, date.
   scoreBreakdown Json
   reasons        String[]
@@ -666,176 +662,16 @@ model ProcessingLog {
   @@index([correlationId])
 }
 
-// ---------------------------------------------------------------------------
-// CV, correspondance et lettre
-// ---------------------------------------------------------------------------
-
-enum ResumeFileType {
-  PDF
-  DOCX
-  TXT
-}
-
-enum ResumeStatus {
-  UPLOADED
-  PARSED
-  PARSE_FAILED
-  DELETED
-}
-
-/// Un CV déposé sans compte. Rattaché à une session de navigateur, jamais à une
-/// identité, et supprimé automatiquement à l'échéance.
-model Resume {
-  id String @id @default(uuid(7))
-
-  /// Identifiant aléatoire et temporaire de session. N'est pas un identifiant
-  /// d'utilisateur et ne sert à aucun suivi publicitaire.
-  browserSessionId String
-
-  fileType ResumeFileType
-  fileSize Int
-  /// Nom de stockage réattribué : le nom d'origine n'est jamais conservé.
-  storageKey  String       @unique
-  contentHash String
-  status      ResumeStatus @default(UPLOADED)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  /// Échéance de suppression automatique.
-  expiresAt DateTime
-  deletedAt DateTime?
-
-  analyses     ResumeAnalysis[]
-  matches      JobMatch[]
-  coverLetters CoverLetter[]
-
-  @@index([browserSessionId])
-  @@index([expiresAt])
-}
-
-/// Faits extraits d'un CV. Rien n'est complété : ce qui est absent reste absent
-/// et remonte dans les avertissements.
-model ResumeAnalysis {
-  id String @id @default(uuid(7))
-
-  resumeId String
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-
-  headline        String?
-  summary         String?
-  yearsExperience Float?
-  studyLevel      String?
-  location        String?
-  availability    String?
-
-  /// Faits structurés extraits tels quels : expériences, projets, formations,
-  /// compétences, langues, certifications.
-  extractedFacts Json
-  /// Ce que l'extraction n'a pas pu établir.
-  warnings       String[]
-  /// Confiance sur 100 dans l'extraction.
-  confidence     Int
-
-  analysedBy      DecisionSource
-  createdAt       DateTime       @default(now())
-  promptVersionId String?
-  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
-
-  @@index([resumeId, createdAt])
-}
-
-/// Score indicatif entre un CV et une offre. Ce n'est pas le résultat d'un ATS
-/// réel et cela ne préjuge pas de la sélection par l'employeur.
-model JobMatch {
-  id String @id @default(uuid(7))
-
-  resumeId String
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  /// Score global sur 100.
-  score Int
-  /// Score par catégorie pondérée, pour que le total soit explicable.
-  scoreBreakdown Json
-
-  matchedSkills   String[]
-  missingSkills   String[]
-  missingKeywords String[]
-  strengths       String[]
-  weaknesses      String[]
-  /// Suggestions portant uniquement sur la mise en valeur de l'existant.
-  recommendations String[]
-
-  /// Confiance sur 100 dans l'analyse.
-  confidence Int
-  /// Renseigné quand le CV ou l'offre ne contient pas assez d'éléments.
-  insufficientDataWarning String?
-
-  computedBy      DecisionSource
-  createdAt       DateTime       @default(now())
-  promptVersionId String?
-  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
-
-  coverLetters CoverLetter[]
-
-  @@unique([resumeId, jobId, computedBy])
-  @@index([resumeId, score])
-  @@index([jobId])
-}
-
-enum CoverLetterTone {
-  PROFESSIONAL
-  DIRECT
-  ENTHUSIASTIC
-  SOBER
-}
-
-/// Lettre produite à partir des seuls faits du CV et de l'offre.
-model CoverLetter {
-  id String @id @default(uuid(7))
-
-  resumeId String
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  matchId String?
-  match   JobMatch? @relation(fields: [matchId], references: [id], onDelete: SetNull)
-
-  tone    CoverLetterTone @default(PROFESSIONAL)
-  subject String
-  body    String
-  /// Éléments du CV réellement utilisés, afin que la lettre soit vérifiable.
-  usedResumeFacts Json
-  /// Vrai lorsque l'utilisateur a modifié le texte à la main.
-  editedByUser    Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  expiresAt DateTime
-
-  generatedBy     DecisionSource
-  promptVersionId String?
-  promptVersion   PromptVersion? @relation(fields: [promptVersionId], references: [id], onDelete: SetNull)
-
-  @@index([resumeId, createdAt])
-  @@index([jobId])
-  @@index([expiresAt])
-}
-
 /// Instructions versionnées envoyées aux modèles. Permet de rattacher une
 /// décision passée à l'instruction exacte qui l'a produite.
 model PromptVersion {
   id String @id @default(uuid(7))
 
-  name    String
-  version Int
-  /// Identifiant du modèle visé, par exemple « claude-opus-4-8 ».
-  model   String
-  content String
+  name        String
+  version     Int
+  /// Identifiant du modèle visé, par exemple « deepseek-v4-pro ».
+  model       String
+  content     String
   /// Empreinte du contenu, pour détecter une dérive silencieuse.
   contentHash String
 
@@ -846,9 +682,6 @@ model PromptVersion {
   jobClassifications     JobClassificationDecision[]
   schoolDecisions        SchoolDetectionDecision[]
   fraudDecisions         FraudDetectionDecision[]
-  resumeAnalyses         ResumeAnalysis[]
-  jobMatches             JobMatch[]
-  coverLetters           CoverLetter[]
 
   @@unique([name, version])
   @@index([name, active])
@@ -860,7 +693,6 @@ model PromptVersion {
 
 enum NotificationType {
   NEW_JOB
-  APPLICATION_REMINDER
 }
 
 enum NotificationStatus {
@@ -899,208 +731,222 @@ model TelegramJobNotification {
 }
 
 // ---------------------------------------------------------------------------
-// Espace privé du propriétaire
+// Agent autonome (MVP V1)
 // ---------------------------------------------------------------------------
 
-/// Profil du propriétaire de la plateforme. À la différence de `Resume`, qui
-/// est un dépôt public anonyme et éphémère, ce profil est privé et durable :
-/// il n'est accessible que derrière la clé de l'espace privé.
-///
-/// La plateforme est personnelle : ce profil n'existe qu'en un seul exemplaire.
-/// La contrainte est portée par une valeur fixe de `singleton`, unique.
-/// États d'une candidature du propriétaire. L'ordre raconte le parcours.
-enum ApplicationStatus {
-  TO_APPLY
-  APPLIED
-  INTERVIEW
-  OFFER_RECEIVED
-  REJECTED
-  WITHDRAWN
+enum SourceType {
+  CAREER_SITE
+  JOB_BOARD
+  API
+  RSS
+  SEARCH_ENGINE
 }
 
-/// Dossier de candidature du propriétaire. Il photographie l'offre, le CV, le
-/// score et la lettre au moment de candidater : le dossier reste lisible même
-/// quand l'offre expire, que le CV est purgé ou que la lettre est régénérée.
-/// Le lien vers l'offre vivante est conservé tant qu'elle existe, sans plus.
-model Application {
-  id String @id @default(uuid(7))
+/// Une source web à explorer par l'agent (page carrière, job board, API, flux).
+model Source {
+  id       String     @id @default(uuid(7))
+  name     String
+  url      String
+  type     SourceType
+  /// Expression cron, lue par le scheduler.
+  schedule String
+  maxDepth Int        @default(2)
+  maxPages Int        @default(50)
+  priority Int        @default(50)
+  enabled  Boolean    @default(true)
 
-  jobId String?
-  job   Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  lastCrawlAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  jobSlug     String
-  jobTitle    String
-  companyName String
+  crawlJobs CrawlJob[]
 
-  resumeFileName   String?
-  matchScore       Int?
-  letterSubject    String?
-  letterParagraphs String[] @default([])
+  @@index([enabled, priority])
+}
 
-  status ApplicationStatus @default(TO_APPLY)
-  notes  String?
+enum AgentRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  STOPPED
+}
 
-  /// Date d'envoi réelle, renseignée au passage au statut APPLIED.
-  appliedAt DateTime?
+/// Une exécution complète de l'agent pour un objectif donné.
+model AgentRun {
+  id        String         @id @default(uuid(7))
+  objective String
+  status    AgentRunStatus @default(RUNNING)
+
+  searches     Int @default(0)
+  pages        Int @default(0)
+  extracted    Int @default(0)
+  validated    Int @default(0)
+  duplicates   Int @default(0)
+  inserted     Int @default(0)
+  errors       Int @default(0)
+  costMicroUsd Int @default(0)
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  actions       AgentAction[]
+  errorLogs     AgentError[]
+  searchQueries SearchQuery[]
+  crawlJobs     CrawlJob[]
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+}
+
+/// Une étape du run : SEARCH, DISCOVER, CRAWL, EXTRACT, ANALYZE, VALIDATE, DEDUP, STORE, PUBLISH.
+model AgentAction {
+  id         String   @id @default(uuid(7))
+  agentRunId String
+  agentRun   AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  kind         String
+  detail       String?
+  /// Ce que l'action a coûté, en micro-dollars (appels LLM, requêtes payantes).
+  costMicroUsd Int     @default(0)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  events ApplicationEvent[]
-
-  @@index([status, updatedAt])
-  @@index([jobSlug])
+  @@index([agentRunId, createdAt])
 }
 
-/// Chaque changement de statut est conservé : l'historique ne se réécrit pas.
-model ApplicationEvent {
-  id String @id @default(uuid(7))
+/// Une erreur rencontrée pendant le run. Retry contrôlé, jamais de boucle infinie.
+model AgentError {
+  id         String   @id @default(uuid(7))
+  agentRunId String
+  agentRun   AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
 
-  applicationId String
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  status     ApplicationStatus
-  note       String?
-  occurredAt DateTime @default(now())
-
-  @@index([applicationId, occurredAt])
-}
-
-model CandidateProfile {
-  id String @id @default(uuid(7))
-
-  /// Toujours « owner ». Rend le profil unique par construction.
-  singleton String @unique @default("owner")
-
-  fullName String
-  email    String?
-  phone    String?
-  city     String?
-
-  targetRoles     String[]
-  availability    String?
-  studyProgram    String?
-  school          String?
-  workStudyRhythm String?
-
-  portfolioUrl String?
-  githubUrl    String?
-  linkedinUrl  String?
-
-  /// Langues et préférences, en JSON : leur forme évolue sans migration.
-  languages   Json @default("[]")
-  preferences Json @default("{}")
-
-  activeResumeId String?
+  kind    String
+  message String
+  retried Boolean @default(false)
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([agentRunId, createdAt])
 }
 
-/// CV source du propriétaire, importé dans l'espace privé. À la différence de
-/// `Resume` - dépôt public anonyme et éphémère - celui-ci est durable et privé.
-///
-/// Le texte extrait est conservé ; le fichier d'origine ne l'est pas encore, ce
-/// qui suffit pour lire et analyser, pas pour ré-exporter l'original. La
-/// déduplication par empreinte évite de stocker deux fois le même import.
-model SourceResume {
-  id String @id @default(uuid(7))
-
-  fileType         ResumeFileType
-  originalFileName String
-  fileSize         Int
-  contentHash      String @unique
-
-  extractedText String
-
-  structuredFacts      Json?
-  structuredWarnings   String[] @default([])
-  structuredConfidence Int?
-  structuredAt         DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  expiresAt DateTime
-
-  matches SourceResumeMatch[]
-  coverLetters SourceCoverLetter[]
-
-  @@index([createdAt])
-  @@index([structuredAt])
-  @@index([expiresAt])
+enum MemoryKind {
+  VISITED_URL
+  ANALYZED_URL
+  SEARCH_QUERY
+  SOURCE_PATTERN
 }
 
-/// Lettre de motivation du propriétaire pour une offre précise. Distincte de
-/// `CoverLetter` (dépôt public anonyme). Le texte vient du modèle local mais
-/// n'est stocké qu'après vérification : toute compétence technique citée doit
-/// exister dans le CV structuré. La lettre se relit et se régénère à volonté ;
-/// une seule lettre courante par couple CV/offre, en cascade des deux côtés.
-model SourceCoverLetter {
-  id String @id @default(uuid(7))
+/// Mémoire de l'agent : sites/URLs déjà vus, requêtes déjà faites, patterns de sources.
+model AgentMemory {
+  id    String     @id @default(uuid(7))
+  key   String
+  kind  MemoryKind
+  value Json?
 
-  sourceResumeId String
-  sourceResume   SourceResume @relation(fields: [sourceResumeId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime
+  createdAt  DateTime @default(now())
 
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  subject String
-  /// Paragraphes de la lettre, sans formule d'adresse ni signature : le
-  /// modèle de document les ajoute au rendu.
-  paragraphs String[]
-
-  /// Faits du CV que le modèle déclare avoir utilisés, pour la relecture.
-  usedFacts String[]
-  /// Ce que la génération signale elle-même comme fragile.
-  warnings String[]
-
-  computedBy DecisionSource
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([sourceResumeId, jobId])
-  @@index([jobId])
+  @@unique([kind, key])
 }
 
-/// Score entre le CV source du propriétaire et une offre. Distinct de
-/// `JobMatch`, qui appartient au dépôt public anonyme : les deux mondes ne
-/// partagent pas leurs tables. Calculé par règles, jamais par IA, et recalculé
-/// à la demande : la ligne suit le CV et l'offre (suppression en cascade).
-model SourceResumeMatch {
-  id String @id @default(uuid(7))
+/// Une requête de recherche générée à partir de l'objectif.
+model SearchQuery {
+  id         String   @id @default(uuid(7))
+  agentRunId String
+  agentRun   AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
 
-  sourceResumeId String
-  sourceResume   SourceResume @relation(fields: [sourceResumeId], references: [id], onDelete: Cascade)
-
-  jobId String
-  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
-
-  /// Score global sur 100.
-  score Int
-  /// Critères pondérés et leurs raisons, pour que le total soit explicable.
-  scoreBreakdown Json
-
-  matchedSkills   String[]
-  missingSkills   String[]
-  missingKeywords String[]
-  strengths       String[]
-  weaknesses      String[]
-  /// Suggestions portant uniquement sur la mise en valeur de l'existant.
-  recommendations String[]
-
-  /// Confiance sur 100 : quantité de matière comparée, pas qualité du candidat.
-  confidence Int
-  /// Renseigné quand le CV ou l'offre ne contient pas assez d'éléments.
-  insufficientDataWarning String?
-
-  computedBy DecisionSource
+  query  String
+  engine String
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  /// Un seul score courant par couple CV/offre : recalculer remplace.
-  @@unique([sourceResumeId, jobId])
-  @@index([jobId])
-  @@index([sourceResumeId, score])
+  @@index([agentRunId, createdAt])
+}
+
+enum CrawlJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+/// Une session de crawl sur une source, lancée par un run.
+model CrawlJob {
+  id         String    @id @default(uuid(7))
+  sourceId   String
+  source     Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  agentRunId String?
+  agentRun   AgentRun? @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+
+  status    CrawlJobStatus @default(PENDING)
+  startedAt DateTime       @default(now())
+  endedAt   DateTime?
+
+  pages CrawlPage[]
+
+  @@index([sourceId, startedAt])
+}
+
+enum CrawlPageStatus {
+  PENDING
+  FETCHED
+  FAILED
+  SKIPPED
+}
+
+/// Une page visitée pendant un crawl : URL, profondeur, contenu récupéré.
+model CrawlPage {
+  id         String   @id @default(uuid(7))
+  crawlJobId String
+  crawlJob   CrawlJob @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
+
+  url          String
+  status       CrawlPageStatus @default(PENDING)
+  depth        Int             @default(0)
+  httpStatus   Int?
+  /// HTML brut récupéré, borné en taille par le crawler.
+  html         String?
+  /// Texte visible extrait, pour l'extraction LLM.
+  text         String?
+  /// robots.txt refusait l'accès : page sautée sans la lire.
+  robotsDenied Boolean         @default(false)
+
+  crawledAt   DateTime     @default(now())
+  extractions Extraction[]
+
+  @@unique([crawlJobId, url])
+  @@index([crawlJobId, depth])
+}
+
+/// Données structurées extraites d'une page par le LLM.
+model Extraction {
+  id          String    @id @default(uuid(7))
+  crawlPageId String
+  crawlPage   CrawlPage @relation(fields: [crawlPageId], references: [id], onDelete: Cascade)
+
+  /// Sortie structurée, validée par Zod avant stockage.
+  data  Json
+  /// Identifiant du modèle qui a produit l'extraction.
+  model String?
+
+  createdAt DateTime @default(now())
+
+  @@index([crawlPageId])
+}
+
+/// Contact professionnel public extrait (email/téléphone), rattaché à une entreprise.
+model Contact {
+  id        String   @id @default(uuid(7))
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  email     String?
+  phone     String?
+  /// URL de la page d'où le contact a été extrait.
+  sourceUrl String
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([email])
 }

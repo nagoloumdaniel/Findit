@@ -5,3 +5,4 @@ coverage
 packages/database/src/generated
 pnpm-lock.yaml
 docs/superpowers/plans
+.claude

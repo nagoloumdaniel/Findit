@@ -1,3 +1,0 @@
-Marie Martin
-Développeuse Full-stack - Alternance
-Compétences : Vue.js, Python, Django

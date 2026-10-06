@@ -6,15 +6,11 @@ variable, jamais par leur valeur.
 
 ## 1. Prérequis
 
-| Outil          | Version        | Rôle                            |
-| -------------- | -------------- | ------------------------------- |
-| Node.js        | >= 24.18, < 25 | Runtime de toutes les apps      |
-| pnpm           | 11.13.1        | Gestionnaire du monorepo        |
-| Docker Compose | v2             | PostgreSQL et Redis locaux      |
-| Ollama         | >= 0.32        | IA locale (modèle `qwen2.5:7b`) |
-
-Matériel constaté suffisant : 32 Go de RAM, GPU 6 Go (RTX 2060) - le modèle
-tourne à ~21 tokens/s à chaud, le démarrage à froid charge 4,7 Go.
+| Outil          | Version        | Rôle                       |
+| -------------- | -------------- | -------------------------- |
+| Node.js        | >= 24.18, < 25 | Runtime de toutes les apps |
+| pnpm           | 11.13.1        | Gestionnaire du monorepo   |
+| Docker Compose | v2             | PostgreSQL et Redis locaux |
 
 ## 2. Installation
 
@@ -39,11 +35,11 @@ Obligatoires :
   revient à révoquer l'accès.
 - `NEXT_PUBLIC_API_URL`, `CORS_ORIGIN`, `WEB_PORT` (3100), `API_PORT` (4000).
 
-IA locale :
+IA (DeepSeek) :
 
-- `AI_PROVIDER` - `disabled` par défaut ; `ollama` pour activer.
-- `OLLAMA_BASE_URL` (http://localhost:11434, ne JAMAIS l'exposer
-  publiquement), `AI_MODEL_EXTRACTION`, `AI_MODEL_REASONING`.
+- `DEEPSEEK_API_KEY` - clé de plateforme DeepSeek, jamais exposée.
+- `DEEPSEEK_MODEL` - `deepseek-flash` par défaut, `deepseek-v4-pro` pour le
+  raisonnement fort.
 
 Optionnelles :
 
@@ -64,7 +60,6 @@ Optionnelles :
   crédits). Réservée aux sites carrières ; voir `docs/legal-compliance.md`.
 - `TELEGRAM_*` - alertes ; simulation par défaut tant que
   `TELEGRAM_NOTIFICATIONS_ENABLED` et `TELEGRAM_DRY_RUN` ne sont pas réglés.
-- `RESUME_RETENTION_HOURS` - rétention des CV importés (24 par défaut).
 
 Règle absolue : aucune valeur réelle dans `.env.example`, jamais - un
 incident a déjà été payé et le hook de pré-commit le bloque.
@@ -77,7 +72,6 @@ pnpm db:migrate                                      # migrations, additives uni
 pnpm registry:sync                                   # registre de conformité des connecteurs
 pnpm --filter @findit/database db:import-companies   # annuaire (packages/database/data)
 pnpm careers:scan                                    # trouve les ATS des sites carrières
-ollama pull qwen2.5:7b
 ```
 
 `pnpm infra:up` ne sert qu'à Redis et à une éventuelle base locale : en
@@ -106,16 +100,12 @@ pnpm --filter @findit/worker exec node dist/main.js
 pnpm --filter @findit/web exec next start -p 3100
 ```
 
-`ollama serve` doit tourner en service (il meurt avec sa session s'il est
-lancé à la main). Vérifier : `curl http://localhost:11434/api/tags`.
-
 Contrôles de vie : `GET /health` sur l'API ; la home répond sur 3100.
 
 ## 6. Exposition publique
 
 - HTTPS par reverse proxy (Caddy/nginx) devant 3100 uniquement.
-- L'API 4000 et Ollama 11434 ne s'exposent JAMAIS directement : le web les
-  atteint en local.
+- L'API 4000 ne s'expose JAMAIS directement : le web l'atteint en local.
 - La page `/` étant aussi l'espace du propriétaire via le proxy à clé, une
   instance publique doit soit protéger le site entier (auth du reverse
   proxy), soit désactiver le proxy en retirant `INTERNAL_API_KEY` de
@@ -123,9 +113,8 @@ Contrôles de vie : `GET /health` sur l'API ; la home répond sur 3100.
 
 ## 7. Sauvegardes et retour arrière
 
-- Sauvegarde : `pg_dump` de la base (les CV expirent seuls sous
-  `RESUME_RETENTION_HOURS` ; les dossiers de candidature, offres et registre
-  sont le patrimoine à sauver).
+- Sauvegarde : `pg_dump` de la base (offres, entreprises et registre sont le
+  patrimoine à sauver).
 - Retour arrière applicatif : `git checkout <commit précédent>` puis
   `pnpm install && pnpm build` et redémarrage. Les migrations étant
   additives uniquement, un binaire ancien tourne sur un schéma plus récent.

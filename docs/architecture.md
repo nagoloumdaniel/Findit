@@ -53,7 +53,7 @@ API NestJS/Fastify
     +--> CandidateProfile
     +--> SourceResume : upload PDF/DOCX/TXT + extraction texte + rétention
     +--> POST /api/resumes/:id/structure
-    +--> IA locale Ollama pour structurer le CV en JSON valide
+    +--> IA DeepSeek pour structurer le CV en JSON valide
     +--> SourceResumeMatch : score explicable, sans IA
     +--> SourceCoverLetter : lettre factuelle, garde-fou anti-invention
     +--> Application / ApplicationEvent : dossiers et historique daté
@@ -100,7 +100,7 @@ Les offres hors périmètre sont refusées par la classification ou par les cont
 | `@findit/job-deduplication`  | Similarité et décision de doublon                           | Actif, décision écrite en base                                           |
 | `@findit/job-pipeline`       | Ingestion, élection de la source canonique, lien d'apply    | Actif                                                                    |
 | `@findit/notifications`      | Alertes Telegram et commandes du bot                        | Actif                                                                    |
-| `@findit/ai`                 | Client Ollama et sorties structurées validées par Zod       | Actif, utilisé par la structuration du CV et la lettre                   |
+| `@findit/ai`                 | Client DeepSeek et sorties structurées validées par Zod     | Actif, sert l'agent (extraction, analyse, matching/scoring)              |
 | `@findit/documents`          | Modèles de CV et de lettre, rendu PDF déterministe          | Actif ; export DOCX absent                                               |
 | `@findit/matching-engine`    | Score explicable offre/profil, sans IA                      | Actif                                                                    |
 | `@findit/resume-parser`      | Extraction/structuration du CV                              | Emplacement réservé, README seulement : l'extraction vit dans `apps/api` |
@@ -155,7 +155,7 @@ Chaque runtime lit la configuration via `@findit/config` et échoue vite si une 
 | Runtime | Variables principales                                                                                                                                                                                                                                   |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Web     | `WEB_PORT`, `NEXT_PUBLIC_API_URL`, `INTERNAL_API_KEY` (proxy serveur)                                                                                                                                                                                   |
-| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `RESUME_RETENTION_HOURS`, `AI_PROVIDER`, `OLLAMA_BASE_URL`, `AI_MODEL_*`                                                                                                    |
+| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                        |
 | Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `TELEGRAM_*`, `APP_URL` |
 
 Findit utilise `3100` pour le web et `4000` pour l'API en local. Le port `3000` ne doit pas être utilisé pour ce projet.
@@ -169,7 +169,7 @@ La base est en ligne (Neon) et exige TLS. Redis reste local. Un `DATABASE_URL` d
 - Aucun connecteur de job board ne tourne : `SCRAPED_SOURCES_ENABLED` vaut `false`, donc Welcome to the Jungle ne s'exécute que par l'outil `pnpm board:proof`. La garde de budget est en revanche déjà câblée dans les deux cycles (`createCycleDeps`) ; elle n'est sollicitée que si un connecteur payant tourne.
 - Le contenu d'une offre de job board s'afficherait aujourd'hui en entier sur le site public : la règle d'affichage (extrait court et lien vers l'origine, ou description complète réservée au matching privé) n'est pas tranchée.
 - Le CV source n'a ni versionnement, ni chiffrement du binaire : seul le texte extrait est conservé.
-- L'IA locale n'est pas utilisée pour le matching ni pour la génération du design des documents, par choix de coût. Un site hébergé ne pourra pas joindre Ollama, qui reste sur le poste.
+- Le matching/scoring de CV et la génération des documents ne dépendent pas de règles déterministes, par choix de coût. L'IA DeepSeek sert l'agent (extraction, analyse, matching/scoring de CV).
 - L'analyse GitHub et l'export DOCX n'existent pas.
 - Le workflow CI est écrit mais GitHub Actions est désactivé pour le compte du dépôt : aucune exécution automatique.
 - Le flux est presque vide : 3 offres publiées pour tout le site au 2026-10-06, alors que 92 cycles de collecte ont abouti. La contrainte est l'offre disponible sur les sources natives, pas la chaîne technique - d'où le chantier de scraping.

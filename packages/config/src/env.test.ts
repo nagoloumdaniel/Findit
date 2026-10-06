@@ -6,13 +6,13 @@ const required = {
   DATABASE_URL: "postgresql://findit:findit@localhost:5432/findit",
   REDIS_URL: "redis://localhost:6379",
   INTERNAL_API_KEY: "local-development-key-change-me-0001",
+  DEEPSEEK_API_KEY: "cle-de-test-deepseek",
 };
 
 describe("environment parsing", () => {
   it("coerces API settings", () => {
-    const env = parseApiEnv({ ...required, API_PORT: "4000", RESUME_RETENTION_HOURS: "24" });
+    const env = parseApiEnv({ ...required, API_PORT: "4000" });
     expect(env.API_PORT).toBe(4000);
-    expect(env.RESUME_RETENTION_HOURS).toBe(24);
   });
 
   it("normalizes the CORS origin without a trailing slash", () => {
@@ -150,5 +150,24 @@ describe("parseDatabaseEnv", () => {
     expect(() => parseWorkerEnv({ ...base, SCRAPING_HELLOWORK_MAX_ITEMS: "101" })).toThrow();
     expect(() => parseWorkerEnv({ ...base, SCRAPING_INDEED_MAX_ITEMS: "0" })).toThrow();
     expect(() => parseWorkerEnv({ ...base, SCRAPING_INDEED_MAX_ITEMS: "101" })).toThrow();
+  });
+});
+
+describe("DeepSeek configuration", () => {
+  it("defaults the model to deepseek-flash", () => {
+    const env = parseApiEnv({ ...required });
+    expect(env.DEEPSEEK_MODEL).toBe("deepseek-flash");
+  });
+
+  it("reads a custom DeepSeek model", () => {
+    const env = parseApiEnv({ ...required, DEEPSEEK_MODEL: "deepseek-v4-pro" });
+    expect(env.DEEPSEEK_MODEL).toBe("deepseek-v4-pro");
+  });
+
+  it("requires a non-empty DeepSeek API key", () => {
+    const withoutKey: NodeJS.ProcessEnv = { ...required };
+    delete withoutKey.DEEPSEEK_API_KEY;
+    expect(() => parseApiEnv(withoutKey)).toThrow();
+    expect(() => parseApiEnv({ ...required, DEEPSEEK_API_KEY: "" })).toThrow();
   });
 });

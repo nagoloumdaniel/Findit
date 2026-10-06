@@ -43,7 +43,7 @@ Il n'existe **aucun déploiement public** à ce jour. Le site tourne en local su
 | Alertes Telegram                | Disponible | Nouvelles offres idempotentes ; bot `/start`, `/status`, `/latest`, `/help` |
 | Espace privé                    | Disponible | Porté par le proxy serveur, la clé n'atteint jamais le navigateur           |
 | Import de CV                    | Disponible | Upload PDF/DOCX/TXT, extraction, structuration IA, suppression, rétention   |
-| IA locale (Ollama)              | Disponible | Désactivée par défaut, sert la structuration du CV et la lettre             |
+| IA (DeepSeek API)               | Disponible | Client `@findit/ai`, sortie structurée revalidée                            |
 | Score et lettre                 | Disponible | Score explicable sans IA, lettre factuelle, refus de toute invention        |
 | Documents PDF                   | Disponible | CV et lettre, rendu déterministe ; l'export DOCX manque                     |
 | Suivi des candidatures          | Disponible | Dossiers avec instantanés et historique daté                                |
@@ -59,7 +59,7 @@ Périmètre validé : contrats alternance et stage ; métiers front-end, back-en
 - **Worker** : NestJS + BullMQ (collecte planifiée, découverte web optionnelle via Brave)
 - **Base de données** : PostgreSQL en ligne (Neon) via Prisma 7 ; image `pgvector/pgvector:pg18` pour le développement local
 - **File d'attente / cache** : Redis 8 local
-- **IA** : client Ollama local (`@findit/ai`), désactivé par défaut
+- **IA** : DeepSeek API via `@findit/ai` (clé `DEEPSEEK_API_KEY`)
 - **Scraping** : connecteurs natifs, Apify pour les job boards (plafond de dépense), ScrapeGraphAI prévu pour les sites carrières
 - **Qualité** : ESLint, Prettier, Vitest ; workflow CI écrit, exécution bloquée par le compte GitHub
 - **Infra locale** : Docker Compose
@@ -70,7 +70,7 @@ Aucun déploiement public n'existe. En local : web http://localhost:3100, API ht
 
 ## Installation locale
 
-Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack), Docker Desktop (Redis, et PostgreSQL local si vous n'utilisez pas la base en ligne). Ollama uniquement si vous activez les briques IA.
+Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack), Docker Desktop (Redis, et PostgreSQL local si vous n'utilisez pas la base en ligne).
 
 ```powershell
 corepack enable
@@ -117,7 +117,7 @@ apps/
   api/      API NestJS/Fastify (port 4000)
   worker/   Collecte planifiée, BullMQ, notifications
 packages/
-  ai/                  Client IA local (Ollama), sortie structurée revalidée
+  ai/                  Client IA DeepSeek, sortie structurée revalidée
   config/              Schémas de configuration Zod
   database/            Schéma Prisma, migrations, seed, annuaire d'employeurs
   documents/           Modèles de CV et de lettre, rendu PDF déterministe

@@ -9,17 +9,12 @@ export class AiError extends Error {
   override readonly name: string = "AiError";
 }
 
-/** Le fournisseur IA est éteint (`AI_PROVIDER=disabled`) : rien n'a été tenté. */
-export class AiDisabledError extends AiError {
-  override readonly name = "AiDisabledError";
-}
-
-/** Le serveur du modèle est injoignable ou a répondu par une erreur. */
+/** L'API DeepSeek est injoignable ou a répondu par une erreur HTTP. */
 export class AiUnavailableError extends AiError {
   override readonly name = "AiUnavailableError";
 }
 
-/** Le modèle a répondu, mais sa sortie n'est ni du JSON valide ni au schéma. */
+/** Le modèle a répondu, mais sa sortie n'est ni exploitable ni au schéma. */
 export class AiOutputError extends AiError {
   override readonly name = "AiOutputError";
 }

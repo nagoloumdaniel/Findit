@@ -433,35 +433,34 @@ pour autant. Les requêtes utiles visent les sites carrières et les ATS ouverts
 
 ## Fournisseur IA
 
-| Élément            | Valeur                                                                                         |
-| ------------------ | ---------------------------------------------------------------------------------------------- |
-| Fournisseur retenu | **IA locale via Ollama**, modèle `qwen2.5:7b`                                                  |
-| Accès              | Serveur local `http://localhost:11434`, API HTTP Ollama                                        |
-| Réseau             | **Aucun appel sortant.** Le modèle tourne sur la machine ; ni offre ni CV ne quitte le poste   |
-| Coût               | Nul. Aucun token facturé, aucune clé à gérer                                                   |
-| Matériel           | RTX 2060 6 Go + 32 Go RAM ; modèle 7B quantifié, accéléré GPU                                  |
-| Vérifié le         | 2026-07-17 (Ollama installé et serveur testé ; génération réelle validée à la première brique) |
+| Élément            | Valeur                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| Fournisseur retenu | **DeepSeek API** (platform.deepseek.com), modèles `deepseek-flash` / `deepseek-v4-pro`   |
+| Accès              | API distante, clé `DEEPSEEK_API_KEY` (jamais exposée : `.env` uniquement)                |
+| Réseau             | **Appels sortants vers DeepSeek.** Le contenu envoyé est borné au nécessaire de la tâche |
+| Coût               | Facturé à l'usage (tokens) ; un budget par cycle/mois reste à poser                      |
+| Vérifié le         | 2026-10-06 (client `@findit/ai` migré d'Ollama vers DeepSeek, tests verts)               |
 
-Décision tranchée le 2026-07-17. Un premier choix (Anthropic, API distante) a été retenu puis écarté
-le même jour au profit d'une **IA locale**, pour deux raisons : ne pas payer de tokens à chaque offre,
-et surtout **ne rien envoyer en ligne**. Le modèle tourne sur la machine ; aucune offre, aucun CV,
-aucune donnée ne quitte le poste.
+Décision tranchée le 2026-10-06, qui remplace celle du 2026-07-17 (Ollama local). Le propriétaire
+a choisi **DeepSeek API uniquement** pour la puissance de raisonnement de l'agent. Conséquence
+directe : contrairement à l'IA locale, **du contenu quitte le poste** vers un fournisseur tiers.
 
-Conséquence sur la conformité : la question `ai-train`/`ai-input` de Lever **disparaît**. Ces signaux
-encadrent ce qu'un tiers a le droit de faire d'un contenu qu'on lui **envoie** ; ici on n'envoie rien.
-`ai-train=no` est respecté trivialement - aucun contenu ne part vers un modèle tiers, donc rien ne peut
-servir à en entraîner un. La sous-décision `ai-input` (envoyer une offre à un modèle) n'a plus d'objet
-tant que l'IA reste locale ; elle ne renaîtrait que si un fournisseur distant était réintroduit.
+Règles de conformité qui en découlent :
 
-Le rôle de l'IA reste volontairement étroit, pour le coût comme pour la robustesse : les modèles de CV
-et de lettre sont **pré-conçus et designés à part** ; l'IA ne fait que remplir le texte et produire des
-analyses courtes. Le rendu PDF est déterministe, sans IA.
+- **Minimisation** : n'envoyer à DeepSeek que le nécessaire - contenu public d'offres et consignes
+  génériques. Un CV est une donnée personnelle : il n'est envoyé que pour la structuration et le
+  matching/scoring demandés par le propriétaire, jamais pour autre chose.
+- **`ai-train` / `ai-input`** : ces signaux redeviennent pertinents - un contenu envoyé à un modèle
+  tiers peut en principe servir à l'entraîner. La politique de rétention de DeepSeek est à vérifier
+  et à consigner ici à la première brique réelle qui envoie du contenu.
+- **Clé** : la clé vit dans `.env`, jamais dans le code, un log, une URL ni un dépôt.
 
 Deux règles tiennent quelle que soit la suite :
 
-- **Rien ne sort du poste.** Le serveur Ollama n'est jamais exposé au navigateur ni au réseau public.
-- **Rien n'est inventé.** Une sortie du modèle qui ne valide pas son schéma attendu lève une erreur
+- **Rien d'inventé.** Une sortie du modèle qui ne valide pas son schéma attendu lève une erreur
   explicite plutôt que de laisser passer un texte fabriqué.
+- **Bornes et budget.** Le nombre d'appels LLM et leur coût sont plafonnés par cycle, comme la
+  garde de budget des sources payantes.
 
 ## Démarche pour ouvrir une source
 

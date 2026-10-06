@@ -1,9 +1,9 @@
-export { createOllamaModel } from "./ollama-client.js";
+export { createDeepSeekModel } from "./deepseek-client.js";
 export type {
+  DeepSeekModel,
+  DeepSeekModelConfig,
   FetchLike,
-  OllamaModel,
-  OllamaModelConfig,
   StructuredRequest,
   TextRequest,
-} from "./ollama-client.js";
-export { AiError, AiDisabledError, AiUnavailableError, AiOutputError } from "./errors.js";
+} from "./deepseek-client.js";
+export { AiError, AiOutputError, AiUnavailableError } from "./errors.js";
