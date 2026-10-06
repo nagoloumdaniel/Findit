@@ -39,6 +39,10 @@ Obligatoires :
 IA (DeepSeek) :
 
 - `DEEPSEEK_MODEL` - `deepseek-flash` par défaut, `deepseek-v4-pro` pour le raisonnement fort.
+- `DEEPSEEK_INPUT_USD_PER_MTOK` / `DEEPSEEK_OUTPUT_USD_PER_MTOK` - tarif du compte, en dollars par
+  million de tokens. Facultatifs : les tokens consommés sont relevés dans tous les cas et inscrits
+  dans le détail des actions `EXTRACT`, mais un coût ne se déduit pas sans tarif. Sans eux,
+  `AgentRun.costMicroUsd` reste à zéro.
 
 Agent autonome (worker) :
 

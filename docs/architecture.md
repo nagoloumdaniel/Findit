@@ -98,6 +98,11 @@ AgentRun / AgentAction / AgentError en base
   de contrat, zéro insérée — chaque page payait un appel pour rien. La porte se remplace via
   `pageGate`. C'est un garde-fou de coût, pas un classifieur : un faux positif coûte un appel, un
   faux négatif ferait perdre une offre, donc le vocabulaire est volontairement large.
+- L'usage du modèle est relevé à chaque appel par `@findit/ai` (`usage.input_tokens` /
+  `usage.output_tokens`), cumulé sur le client, et attribué par différence à l'action `EXTRACT` de la
+  page, tentatives refusées comprises. Les tokens apparaissent dans le détail de l'action ; le coût
+  n'est calculé que si `DEEPSEEK_INPUT_USD_PER_MTOK` et `DEEPSEEK_OUTPUT_USD_PER_MTOK` sont fournis —
+  un tarif ne se devine pas. Le coût cumulé atterrit dans `AgentRun.costMicroUsd`.
 - Une page vide est relue une fois de façon bornée (`recoverPage`, câblée sur le crawler, donc
   `robots.txt` revérifié et repli navigateur conservé) avant d'être abandonnée.
 - Les étapes de récupération sont enchaînées par `packages/orchestrator/src/recovery.ts` : relecture,
@@ -271,11 +276,11 @@ ont été supprimées par la migration `20261006120000_agent_and_remove_private`
 Chaque runtime lit la configuration via `@findit/config` et échoue vite si une variable requise est
 invalide.
 
-| Runtime | Variables principales                                                                                                                                                                                                                                                                                                                                                             |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`                                                                                                                                                                                                                                                                                                  |
-| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                                                                                                                                                  |
-| Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON`, `AGENT_OBJECTIVE`, `FRANCETRAVAIL_*`, `TELEGRAM_*`, `APP_URL` |
+| Runtime | Variables principales                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`                                                                                                                                                                                                                                                                                                                                                                 |
+| API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                                                                                                                                                                                                                 |
+| Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_INPUT_USD_PER_MTOK`, `DEEPSEEK_OUTPUT_USD_PER_MTOK`, `AGENT_RUN_ENABLED`, `AGENT_COLLECTION_CRON`, `AGENT_OBJECTIVE`, `FRANCETRAVAIL_*`, `TELEGRAM_*`, `APP_URL` |
 
 `INTERNAL_API_KEY` est **héritée** : `parseApiEnv` l'exige encore (minimum 32 caractères) et l'API
 refuse de démarrer sans elle, mais plus aucun code ne la lit. Il n'y a ni proxy Next, ni

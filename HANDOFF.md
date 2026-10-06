@@ -44,6 +44,13 @@ pièges déjà payés.
   (`extractStructuredOffers`) avant le LLM, relance des seuls échecs, et abandon
   journalisé dans `AgentError` avec `retried = true`. Bornes :
   `maxRecoveries` (5) et `maxAttemptsPerStep` / `maxTotalAttempts` du moteur.
+- **Suivi de l'usage du modèle** : `@findit/ai` lit `usage.input_tokens` /
+  `usage.output_tokens` de chaque réponse, les cumule (`model.usage()`) et les
+  facture à la page dans l'action `EXTRACT` (`AgentAction.costMicroUsd`, puis
+  `AgentRun.costMicroUsd`). Le coût n'est calculé que si
+  `DEEPSEEK_INPUT_USD_PER_MTOK` / `DEEPSEEK_OUTPUT_USD_PER_MTOK` sont fournis ;
+  les tokens sont tracés dans tous les cas. Vérifié sur le réel : un appel
+  `deepseek-flash` a rendu 11 tokens d'entrée, 1 de sortie, 1 appel.
 - **Porte déterministe avant le modèle** (`packages/extract/src/contract.ts`,
   `mentionsPerimeterContract`) : une page hors 2xx est écartée, et une page qui
   ne nomme aucun contrat du périmètre n'appelle pas le modèle. Mesuré sur un run
