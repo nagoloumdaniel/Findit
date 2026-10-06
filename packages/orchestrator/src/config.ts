@@ -22,6 +22,13 @@ export const DEFAULT_MAX_RUNTIME_MS = 5 * 60 * 1000;
  */
 export const DEFAULT_MAX_RECOVERIES = 5;
 
+/**
+ * Nombre maximal de tours de planification. Le premier tour est le plan ; les
+ * suivants sont des révisions décidées après avoir vu le résultat du précédent.
+ * Borner ici empêche une boucle décision → outil → décision qui ne conclut pas.
+ */
+export const DEFAULT_MAX_PLAN_ROUNDS = 3;
+
 /** Pays des recherches web, au sens du moteur. */
 export const DEFAULT_COUNTRY = "fr";
 
@@ -43,6 +50,8 @@ export interface RunAgentOptions {
   readonly maxRuntimeMs?: number;
   /** Relectures maximales d'une page vide, sur l'ensemble du run. */
   readonly maxRecoveries?: number;
+  /** Tours de planification maximaux, premier plan compris. */
+  readonly maxPlanRounds?: number;
   readonly scoreThreshold?: number;
   readonly country?: string;
   readonly language?: string;
@@ -59,6 +68,7 @@ export interface ResolvedOptions {
   readonly maxPages: number;
   readonly maxRuntimeMs: number;
   readonly maxRecoveries: number;
+  readonly maxPlanRounds: number;
   readonly scoreThreshold: number;
   readonly country: string;
   readonly language: string;
@@ -88,6 +98,7 @@ export const resolveOptions = (options: RunAgentOptions): ResolvedOptions => {
     maxPages: options.maxPages ?? DEFAULT_MAX_PAGES,
     maxRuntimeMs: options.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS,
     maxRecoveries: options.maxRecoveries ?? DEFAULT_MAX_RECOVERIES,
+    maxPlanRounds: options.maxPlanRounds ?? DEFAULT_MAX_PLAN_ROUNDS,
     scoreThreshold: options.scoreThreshold ?? DEFAULT_SCORE_THRESHOLD,
     country: options.country ?? DEFAULT_COUNTRY,
     language: options.language ?? DEFAULT_LANGUAGE,
@@ -112,6 +123,9 @@ export const resolveOptions = (options: RunAgentOptions): ResolvedOptions => {
   }
   if (!Number.isInteger(resolved.maxRecoveries) || resolved.maxRecoveries < 0) {
     throw new RunAgentConfigError("maxRecoveries doit être un entier positif ou nul.");
+  }
+  if (!Number.isInteger(resolved.maxPlanRounds) || resolved.maxPlanRounds < 1) {
+    throw new RunAgentConfigError("maxPlanRounds doit être un entier strictement positif.");
   }
   if (
     !Number.isFinite(resolved.scoreThreshold) ||

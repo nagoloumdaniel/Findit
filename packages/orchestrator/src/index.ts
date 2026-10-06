@@ -15,6 +15,7 @@ export {
   DEFAULT_MAX_PAGES_PER_SOURCE,
   DEFAULT_MAX_QUERIES,
   DEFAULT_MAX_RECOVERIES,
+  DEFAULT_MAX_PLAN_ROUNDS,
   DEFAULT_MAX_RUNTIME_MS,
   DEFAULT_RESULT_COUNT,
   RunAgentConfigError,
@@ -24,7 +25,16 @@ export type { RunAgentOptions } from "./config.js";
 export { isHttpUrl, isValidOffer, normalizeTitle } from "./dedup.js";
 
 export { createLlmQueryPlanner, deterministicQueryPlanner } from "./planner.js";
-export type { PlannerModel, QueryPlan, QueryPlanContext, QueryPlanner } from "./planner.js";
+export type {
+  ObservedOffer,
+  ObservedSource,
+  PlannerModel,
+  PlannerObservation,
+  QueryPlan,
+  QueryPlanContext,
+  QueryPlanner,
+  RefineContext,
+} from "./planner.js";
 
 export { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 export type {

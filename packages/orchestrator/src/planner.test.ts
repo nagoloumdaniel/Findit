@@ -88,3 +88,56 @@ describe("createLlmQueryPlanner", () => {
     expect(plan.queries).toEqual([]);
   });
 });
+
+describe("createLlmQueryPlanner.refine", () => {
+  const context = {
+    objective: OBJECTIVE,
+    maxQueries: 5,
+    observation: {
+      executedQueries: ["alternance développeur Île-de-France"],
+      sources: [
+        { url: "https://fr.linkedin.com/jobs/x", domain: "fr.linkedin.com", score: 85, kept: true },
+      ],
+      offers: [{ title: "Développeur", company: "Acme" }],
+      pagesVisited: 3,
+    },
+  };
+
+  it("propose un second tour de requêtes, sans répéter les précédentes", async () => {
+    const planner = createLlmQueryPlanner({
+      model: modelReturning({
+        queries: [
+          { query: "alternance développeur Île-de-France" },
+          { query: "alternance développeur site:jobs.lever.co" },
+        ],
+      }),
+    });
+
+    const plan = await planner.refine?.(context);
+
+    expect(plan).toEqual({
+      queries: [{ query: "alternance développeur site:jobs.lever.co", engine: "brave" }],
+      source: "llm",
+    });
+  });
+
+  it("arrête quand le modèle rend une liste vide", async () => {
+    const planner = createLlmQueryPlanner({ model: modelReturning({ queries: [] }) });
+
+    await expect(planner.refine?.(context)).resolves.toBeNull();
+  });
+
+  it("arrête quand le modèle échoue, plutôt que de rejouer le même tour", async () => {
+    const planner = createLlmQueryPlanner({
+      model: { generateStructured: () => Promise.reject(new Error("panne")) },
+    });
+
+    await expect(planner.refine?.(context)).resolves.toBeNull();
+  });
+
+  it("arrête quand la sortie est hors schéma", async () => {
+    const planner = createLlmQueryPlanner({ model: modelReturning({ queries: "non" }) });
+
+    await expect(planner.refine?.(context)).resolves.toBeNull();
+  });
+});

@@ -36,8 +36,44 @@ export interface QueryPlan {
   readonly source: "llm" | "deterministic";
 }
 
+/** Une source vue au tour précédent, avec le score qui a décidé de sa visite. */
+export interface ObservedSource {
+  readonly url: string;
+  readonly domain: string;
+  readonly score: number;
+  readonly kept: boolean;
+}
+
+/** Une offre retenue jusqu'ici, réduite à ce qui aide à décider. */
+export interface ObservedOffer {
+  readonly title: string;
+  readonly company: string;
+}
+
+/**
+ * Ce que le tour précédent a réellement produit. C'est le « résultat » de la
+ * boucle décision → outil → résultat → décision : sans lui, le second tour
+ * serait aveugle et ne vaudrait pas mieux que le premier.
+ */
+export interface PlannerObservation {
+  readonly executedQueries: readonly string[];
+  readonly sources: readonly ObservedSource[];
+  readonly offers: readonly ObservedOffer[];
+  readonly pagesVisited: number;
+}
+
+export interface RefineContext extends QueryPlanContext {
+  readonly observation: PlannerObservation;
+}
+
 export interface QueryPlanner {
   plan(context: QueryPlanContext): Promise<QueryPlan>;
+  /**
+   * Décide de la suite après un tour, à la lumière de ce qu'il a produit. Rend
+   * `null` pour arrêter : c'est au planificateur de dire qu'il n'a plus rien à
+   * proposer, le run ne devine pas à sa place.
+   */
+  refine?(context: RefineContext): Promise<QueryPlan | null>;
 }
 
 /**
@@ -91,6 +127,82 @@ const normalize = (query: string): string => query.trim().replace(/\s+/gu, " ");
 const keyOf = (query: string): string => normalize(query).toLowerCase();
 
 /**
+ * Normalise, dédoublonne et borne les requêtes d'un plan. `alreadyExecuted`
+ * empêche un second tour de répéter une recherche déjà lancée : sans cela, le
+ * modèle pourrait proposer indéfiniment la même requête.
+ */
+const buildQueries = (
+  items: readonly { readonly query: string }[],
+  maxQueries: number,
+  alreadyExecuted: ReadonlySet<string>,
+): GeneratedSearchQuery[] => {
+  const seen = new Set(alreadyExecuted);
+  const queries: GeneratedSearchQuery[] = [];
+
+  for (const item of items) {
+    const query = normalize(item.query);
+    const key = keyOf(query);
+    if (key === "" || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    queries.push({ query, engine: "brave" });
+    if (queries.length >= maxQueries) {
+      break;
+    }
+  }
+
+  return queries;
+};
+
+/** Rien d'exécuté : le premier plan n'a aucune requête à éviter. */
+const NOTHING_EXECUTED: ReadonlySet<string> = new Set<string>();
+
+/** Second tour : le modèle propose de nouvelles requêtes, ou décide d'arrêter. */
+const refineSchema = z.object({
+  queries: z
+    .array(
+      z.object({
+        query: z.string().min(3).max(200),
+        why: z.string().max(200).optional(),
+      }),
+    )
+    .max(40),
+});
+
+const SYSTEM_REFINE = [
+  "Tu révises, après un premier tour, le plan de recherche d'offres d'un agent de collecte web.",
+  "On te donne ce que le premier tour a produit. Décide s'il faut chercher autrement, ou arrêter.",
+  "Règles strictes :",
+  "- Ne répète jamais une requête déjà exécutée.",
+  "- Vise en priorité les pages d'offre à la source : `site:` sur boards.greenhouse.io, jobs.lever.co, apply.workable.com, jobs.ashbyhq.com, jobs.teamtailor.com.",
+  "- Si les sources conservées sont déjà des pages d'offre et que des offres ont été trouvées, réponds avec un tableau `queries` vide : le run s'arrête.",
+  "- Sinon, propose jusqu'au nombre demandé de nouvelles requêtes.",
+  '- Réponds uniquement par un objet JSON de la forme {"queries":[{"query":"..."}]}, sans texte autour.',
+].join("\n");
+
+const buildRefinePrompt = (context: RefineContext): string => {
+  const { observation } = context;
+  const kept = observation.sources.filter((source) => source.kept).slice(0, 10);
+  const sample = observation.offers.slice(0, 5).map((offer) => offer.title);
+
+  return [
+    `Objectif : ${context.objective}`,
+    `Requêtes déjà exécutées : ${observation.executedQueries.join(" | ") || "aucune"}`,
+    `Pages visitées : ${String(observation.pagesVisited)}`,
+    `Offres retenues : ${String(observation.offers.length)}${
+      sample.length === 0 ? "" : ` — ex. ${sample.join(" | ")}`
+    }`,
+    `Sources conservées : ${
+      kept.length === 0
+        ? "aucune"
+        : kept.map((source) => `${source.domain} (${String(source.score)})`).join(", ")
+    }`,
+    `Propose au plus ${String(context.maxQueries)} nouvelles requêtes, ou un tableau vide pour arrêter.`,
+  ].join("\n");
+};
+
+/**
  * Planificateur piloté par le modèle.
  *
  * Le repli n'est pas un détail : c'est ce qui rend la brique sûre. Panne du
@@ -124,23 +236,40 @@ export const createLlmQueryPlanner = (options: {
         return fallback.plan(context);
       }
 
-      const seen = new Set<string>();
-      const queries: GeneratedSearchQuery[] = [];
-      for (const item of parsed.data.queries) {
-        const query = normalize(item.query);
-        const key = keyOf(query);
-        if (key === "" || seen.has(key)) {
-          continue;
-        }
-        seen.add(key);
-        queries.push({ query, engine: "brave" });
-        if (queries.length >= context.maxQueries) {
-          break;
-        }
-      }
-
+      const queries = buildQueries(parsed.data.queries, context.maxQueries, NOTHING_EXECUTED);
       if (queries.length === 0) {
         return fallback.plan(context);
+      }
+
+      return { queries, source: "llm" };
+    },
+
+    /**
+     * Second tour. Un échec ici n'appelle pas le repli déterministe : rejouer le
+     * même plan ne ferait que répéter un tour déjà exécuté. On arrête.
+     */
+    async refine(context: RefineContext): Promise<QueryPlan | null> {
+      let raw: unknown;
+      try {
+        raw = await options.model.generateStructured<z.infer<typeof refineSchema>>({
+          schema: refineSchema,
+          system: SYSTEM_REFINE,
+          prompt: buildRefinePrompt(context),
+          temperature: options.temperature ?? 0.2,
+        });
+      } catch {
+        return null;
+      }
+
+      const parsed = refineSchema.safeParse(raw);
+      if (!parsed.success) {
+        return null;
+      }
+
+      const executed = new Set(context.observation.executedQueries.map(keyOf));
+      const queries = buildQueries(parsed.data.queries, context.maxQueries, executed);
+      if (queries.length === 0) {
+        return null;
       }
 
       return { queries, source: "llm" };

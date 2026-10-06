@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { runAgent } from "./run-agent.js";
 import type { CrawlSource, ExtractJobs } from "./run-agent.js";
-import type { QueryPlanner } from "./planner.js";
+import type { PlannerObservation, QueryPlanner } from "./planner.js";
 
 /** Une offre minimale et valide (titre, entreprise, URL de candidature). */
 const makeOffer = (title: string, company: string): JobOffer => ({
@@ -770,5 +770,102 @@ describe("runAgent - planificateur", () => {
     const discover = fake.actions.find((action) => action.kind === "DISCOVER");
     expect(discover?.detail).toContain("plan deterministic");
     expect(discover?.costMicroUsd).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Boucle décision → outil → résultat → décision (section 5)
+// ---------------------------------------------------------------------------
+
+describe("runAgent - tours de planification", () => {
+  it("rejoue un tour quand le planificateur le décide, observation en main", async () => {
+    const fake = buildFakePrisma();
+    const observations: PlannerObservation[] = [];
+    let calls = 0;
+    const planner: QueryPlanner = {
+      plan: () =>
+        Promise.resolve({ queries: [{ query: "tour 1", engine: "brave" }], source: "llm" }),
+      refine: (context) => {
+        observations.push(context.observation);
+        calls += 1;
+        return Promise.resolve(
+          calls === 1 ? { queries: [{ query: "tour 2", engine: "brave" }], source: "llm" } : null,
+        );
+      },
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] }),
+      planner,
+    });
+
+    const result = await runAgent("alternance développeur", deps, {
+      maxQueries: 1,
+      maxPlanRounds: 2,
+    });
+
+    expect(
+      fake.actions.filter((action) => action.kind === "DISCOVER").map((action) => action.detail),
+    ).toEqual(["plan llm · 1 requête(s)", "plan llm · 1 requête(s) · tour 2"]);
+    expect(result.searchCount).toBe(2);
+
+    // Le second tour a bien reçu le résultat du premier.
+    expect(observations).toHaveLength(1);
+    expect(observations[0]?.executedQueries).toEqual(["tour 1"]);
+    expect(observations[0]?.pagesVisited).toBe(1);
+    expect(observations[0]?.offers.map((offer) => offer.title)).toEqual(["Développeur"]);
+    expect(observations[0]?.sources[0]).toMatchObject({ domain: "example.com", kept: true });
+  });
+
+  it("s'arrête au premier tour quand les tours sont bornés à un", async () => {
+    const fake = buildFakePrisma();
+    let refineCalls = 0;
+    const planner: QueryPlanner = {
+      plan: () =>
+        Promise.resolve({ queries: [{ query: "tour 1", engine: "brave" }], source: "llm" }),
+      refine: () => {
+        refineCalls += 1;
+        return Promise.resolve(null);
+      },
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      planner,
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPlanRounds: 1 });
+
+    expect(refineCalls).toBe(0);
+    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
+  });
+
+  it("s'arrête quand le planificateur ne propose plus rien", async () => {
+    const fake = buildFakePrisma();
+    let refineCalls = 0;
+    const planner: QueryPlanner = {
+      plan: () =>
+        Promise.resolve({ queries: [{ query: "tour 1", engine: "brave" }], source: "llm" }),
+      refine: () => {
+        refineCalls += 1;
+        return Promise.resolve(null);
+      },
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      planner,
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPlanRounds: 3 });
+
+    expect(refineCalls).toBe(1);
+    expect(fake.actions.filter((action) => action.kind === "DISCOVER")).toHaveLength(1);
   });
 });
