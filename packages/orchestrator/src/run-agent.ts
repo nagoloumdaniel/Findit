@@ -28,7 +28,7 @@ import { deterministicQueryPlanner } from "./planner.js";
 import type { ObservedSource, QueryPlanner } from "./planner.js";
 import { RECOVERY_STRATEGY, runRecovery } from "./recovery.js";
 import { scoreOrderSelector } from "./selector.js";
-import type { SourceCandidate, SourceSelector } from "./selector.js";
+import type { SourceCandidate, SourceSelection, SourceSelector } from "./selector.js";
 
 /** Une source à crawler : l'URL de départ et ses bornes, confiées au crawler. */
 export type CrawlSource = (options: CrawlOptions) => Promise<CrawlResult>;
@@ -476,30 +476,37 @@ export async function runAgent(
        * Phase 2 : le modèle choisit quoi crawler parmi les candidates — ou
        * l'ordre du score s'il n'y a pas de sélecteur. La décision est consignée
        * avec son coût, comme le plan.
+       *
+       * En mode découverte seule, personne ne crawle : payer un sélecteur pour
+       * choisir des sources qu'on n'ouvrira pas serait une dépense pure. Le
+       * POURQUOI est mesuré : la sélection coûte 300 à 600 µ$ par tour.
        */
       const candidates = [...candidatesByUrl.values()]
         .sort((a, b) => b.score - a.score)
         .slice(0, MAX_SELECTION_CANDIDATES);
-      const selectionUsageBefore = deps.model.usage?.();
-      const selection = await selector.select({
-        objective,
-        candidates,
-        maxSources: Math.max(1, config.maxPages - counters.pageCount),
-      });
-      const selectionUsage = usageDelta(selectionUsageBefore, deps.model.usage?.());
-      await deps.runStore.recordAction(runId, {
-        kind: ACTION_KIND.DISCOVER,
-        detail: `sélection ${selection.source} · ${String(selection.urls.length)} source(s) sur ${String(candidates.length)}${
-          errorPagesSkipped === 0
-            ? ""
-            : ` · ${String(errorPagesSkipped)} page(s) en erreur écartée(s)`
-        }`,
-        count: selection.urls.length,
-        costMicroUsd:
-          selectionUsage !== null && deps.modelCost !== undefined
-            ? deps.modelCost(selectionUsage)
-            : 0,
-      });
+      let selection: SourceSelection = { urls: [], source: "score" };
+      if (!config.discoveryOnly) {
+        const selectionUsageBefore = deps.model.usage?.();
+        selection = await selector.select({
+          objective,
+          candidates,
+          maxSources: Math.max(1, config.maxPages - counters.pageCount),
+        });
+        const selectionUsage = usageDelta(selectionUsageBefore, deps.model.usage?.());
+        await deps.runStore.recordAction(runId, {
+          kind: ACTION_KIND.DISCOVER,
+          detail: `sélection ${selection.source} · ${String(selection.urls.length)} source(s) sur ${String(candidates.length)}${
+            errorPagesSkipped === 0
+              ? ""
+              : ` · ${String(errorPagesSkipped)} page(s) en erreur écartée(s)`
+          }`,
+          count: selection.urls.length,
+          costMicroUsd:
+            selectionUsage !== null && deps.modelCost !== undefined
+              ? deps.modelCost(selectionUsage)
+              : 0,
+        });
+      }
 
       /*
        * Phase 3 : crawl et extraction, dans l'ordre choisi. En mode découverte

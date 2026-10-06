@@ -1626,6 +1626,7 @@ describe("runAgent - découverte seule", () => {
     const fake = buildFakePrisma();
     const crawled: string[] = [];
     let extractCalls = 0;
+    let selectorCalls = 0;
     const registered: string[] = [];
 
     const deps = buildDeps(fake, {
@@ -1638,6 +1639,14 @@ describe("runAgent - découverte seule", () => {
         extractCalls += 1;
         return Promise.resolve({ offers: [], rejected: [] });
       },
+      // Payer un sélecteur pour choisir des sources qu'on n'ouvrira pas serait
+      // une dépense pure : il ne doit pas être appelé.
+      sourceSelector: {
+        select: () => {
+          selectorCalls += 1;
+          return Promise.resolve({ urls: [], source: "llm" });
+        },
+      },
       discoverSource: (url) => {
         registered.push(url);
         return Promise.resolve("enregistrée · lever/theodo");
@@ -1649,9 +1658,10 @@ describe("runAgent - découverte seule", () => {
       discoveryOnly: true,
     });
 
-    // Rien n'est crawlé ni extrait : c'est tout l'objet du mode.
+    // Rien n'est crawlé, extrait, ni sélectionné : c'est tout l'objet du mode.
     expect(crawled).toEqual([]);
     expect(extractCalls).toBe(0);
+    expect(selectorCalls).toBe(0);
     expect(result).toMatchObject({ pageCount: 0, sourceCount: 0, extractedCount: 0 });
     // La découverte, elle, continue : c'est ce qui rend.
     expect(registered).toEqual(["https://jobs.lever.co/theodo/abc123"]);
