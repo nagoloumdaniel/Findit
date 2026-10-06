@@ -8,6 +8,8 @@ export type {
 
 export { extractStructuredOffers } from "./structured.js";
 
+export { mentionsPerimeterContract, PERIMETER_CONTRACT_TERMS } from "./contract.js";
+
 export { extractedOfferSchema, extractionResponseSchema, jobOfferSchema } from "./schema.js";
 export type { ExtractedOffer, ExtractionResponse, JobOffer } from "./schema.js";
 

@@ -21,12 +21,12 @@ const makeOffer = (title: string, company: string): JobOffer => ({
   sourceDomain: "example.com",
 });
 
-/** Une page crawlée lisible, avec un texte simple. */
+/** Une page crawlée lisible, avec un texte simple qui nomme un contrat. */
 const makePage = (url: string): CrawledPage => ({
   url,
   depth: 0,
-  html: "<html><body>offre</body></html>",
-  text: "offre",
+  html: "<html><body>offre en alternance</body></html>",
+  text: "offre en alternance",
   status: 200,
   robotsDenied: false,
 });
@@ -225,6 +225,7 @@ interface DepsInput {
   readonly extract: ExtractJobs;
   readonly specializedExtract?: (page: CrawledPage) => ExtractionResult;
   readonly recoverPage?: (url: string) => Promise<CrawledPage | null>;
+  readonly pageGate?: (page: CrawledPage) => boolean;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -541,5 +542,80 @@ describe("runAgent - cascade de récupération", () => {
     await expect(
       runAgent("alternance", deps, { maxQueries: 1, maxRecoveries: -1 }),
     ).rejects.toThrow("maxRecoveries");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Porte déterministe avant le modèle (coût)
+// ---------------------------------------------------------------------------
+
+/** Une page sans aucun contrat du périmètre : un board d'entreprise en CDI. */
+const makeOutOfScopePage = (url: string): CrawledPage => ({
+  ...makePage(url),
+  html: "<html><body>Senior Backend Engineer — CDI — Mexico</body></html>",
+  text: "Senior Backend Engineer — CDI — Mexico",
+});
+
+describe("runAgent - porte déterministe", () => {
+  it("n'appelle ni le modèle ni l'extraction spécialisée sur une page hors contrat", async () => {
+    const fake = buildFakePrisma();
+    let extractCalls = 0;
+    let specializedCalls = 0;
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makeOutOfScopePage("https://example.com/jobs")),
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] });
+      },
+      specializedExtract: () => {
+        specializedCalls += 1;
+        return { offers: [], rejected: [] };
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 0, retainedCount: 0, errorCount: 0 });
+    expect(extractCalls).toBe(0);
+    expect(specializedCalls).toBe(0);
+    expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain(
+      "hors contrat",
+    );
+  });
+
+  it("n'extrait pas une page servie en erreur", async () => {
+    const fake = buildFakePrisma();
+    let extractCalls = 0;
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf({ ...makePage("https://example.com/jobs"), status: 404 }),
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [], rejected: [] });
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 0, errorCount: 0 });
+    expect(extractCalls).toBe(0);
+    expect(fake.actions.find((action) => action.kind === "EXTRACT")?.detail).toContain(
+      "statut 404",
+    );
+  });
+
+  it("laisse passer une page quand l'appelant remplace la porte", async () => {
+    const fake = buildFakePrisma();
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/jobs"),
+      crawl: crawlOf(makeOutOfScopePage("https://example.com/jobs")),
+      extract: () => Promise.resolve({ offers: [makeOffer("Développeur", "Acme")], rejected: [] }),
+      pageGate: () => true,
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ extractedCount: 1, errorCount: 0 });
   });
 });

@@ -13,7 +13,11 @@ import type {
   TerminalRunStatus,
 } from "@findit/agent";
 import type { CrawlOptions, CrawlResult, CrawledPage } from "@findit/crawler";
-import { extractJobsFromPage, extractStructuredOffers } from "@findit/extract";
+import {
+  extractJobsFromPage,
+  extractStructuredOffers,
+  mentionsPerimeterContract,
+} from "@findit/extract";
 import type { ExtractModel, ExtractionResult } from "@findit/extract";
 import type { WebSearchProvider, WebSearchQuery, WebSearchResult } from "@findit/job-connectors";
 
@@ -58,6 +62,12 @@ export interface RunAgentDeps {
    * `robots.txt`. Sans elle, une page vide est ignorée comme avant.
    */
   readonly recoverPage?: (url: string) => Promise<CrawledPage | null>;
+  /**
+   * Porte déterministe avant l'extraction : quand elle rend `false`, le modèle
+   * n'est pas appelé du tout. Défaut : la page doit nommer un contrat du
+   * périmètre (`mentionsPerimeterContract`).
+   */
+  readonly pageGate?: (page: CrawledPage) => boolean;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -152,6 +162,7 @@ export async function runAgent(
   const config = resolveOptions(options);
   const extract = deps.extract ?? extractJobsFromPage;
   const specializedExtract = deps.specializedExtract ?? extractStructuredOffers;
+  const pageGate = deps.pageGate ?? mentionsPerimeterContract;
 
   const runId = await deps.runStore.startRun(objective);
   const deadline = config.now() + config.maxRuntimeMs;
@@ -259,6 +270,21 @@ export async function runAgent(
           });
 
           /*
+           * Statut hors 2xx : la réponse est une erreur, pas une page d'offres.
+           * On ne paie ni relecture ni extraction pour elle. Le statut 0 est
+           * exclu : il signifie « jamais lue » (réseau), pas « erreur servie »,
+           * et c'est la relecture qui le traite.
+           */
+          if (page.status !== 0 && (page.status < 200 || page.status >= 300)) {
+            await deps.runStore.recordAction(runId, {
+              kind: ACTION_KIND.EXTRACT,
+              detail: `${page.url} · statut ${String(page.status)}`,
+              count: 0,
+            });
+            continue;
+          }
+
+          /*
            * Une page sans contenu a épuisé les étapes 1 et 2 du cascade : le
            * crawler a déjà tenté HTTP, puis le navigateur quand le HTML le
            * demandait. On lui offre une dernière relecture bornée, puis on
@@ -305,6 +331,21 @@ export async function runAgent(
               );
               continue;
             }
+          }
+
+          /*
+           * Porte déterministe : une page qui ne nomme aucun contrat du
+           * périmètre ne peut pas porter d'offre du périmètre. Le modèle n'est
+           * donc pas appelé — mesuré sur un run réel, un board hors périmètre
+           * coûtait un appel par page pour des offres toutes rejetées ensuite.
+           */
+          if (!pageGate(usable)) {
+            await deps.runStore.recordAction(runId, {
+              kind: ACTION_KIND.EXTRACT,
+              detail: `${usable.url} · hors contrat`,
+              count: 0,
+            });
+            continue;
           }
 
           /*
