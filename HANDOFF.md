@@ -42,6 +42,17 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Prompt de sélection compacté (numéros au lieu d'URL)** : le modèle recopiait les
+  adresses complètes, payées en entrée **et** en sortie. Il reçoit maintenant une
+  liste numérotée (`3. [90] jobs.lever.co — Alternance développeur`) et répond
+  `{"choix":[3,1]}`. Mesure sur un run borné : sélections **862 → 575 µ$** (−33 %),
+  rendement identique (2 offres extraites, 0 insérée). Les numéros hors liste, les
+  doublons et les non-entiers sont ignorés ; une sortie hors schéma rend l'ordre du
+  score. Nuance vérifiée par audit indépendant : le **run** ne baisse que de 100 µ$
+  (1 687 → 1 587), parce que le plan (700 → 747) et l'extraction (125 → 265) varient
+  d'un run à l'autre — le planificateur est inchangé, c'est la sortie du modèle qui
+  n'est pas reproductible au token près. Le gain structurel est celui de la
+  sélection ; un run isolé ne le montre pas entier.
 - **Run de contrôle après les correctifs** (planificateur + sélecteur + porte de
   conformité + résolution de redirection, mêmes bornes) : 3 tours, 5 pages,
   **aucun doublon de page**, 2 offres extraites, 0 insérée, coût **1 687 µ$** —
