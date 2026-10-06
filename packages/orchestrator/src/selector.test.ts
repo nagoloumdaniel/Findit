@@ -34,6 +34,23 @@ const modelReturning = (value: unknown): PlannerModel => ({
   generateStructured: <T>() => Promise.resolve(value as T),
 });
 
+describe("plafond nul", () => {
+  it("ne rend rien, des deux côtés, quand il n'y a pas de place", async () => {
+    // Contre-exemple trouvé en revue : `slice(0, -1)` rend tout sauf le dernier.
+    for (const maxSources of [0, -1]) {
+      const context = { ...CONTEXT, maxSources };
+      await expect(scoreOrderSelector.select(context)).resolves.toEqual({
+        urls: [],
+        source: "score",
+      });
+      const selector = createLlmSourceSelector({
+        model: modelReturning({ urls: [CONTEXT.candidates[2]!.url] }),
+      });
+      await expect(selector.select(context)).resolves.toEqual({ urls: [], source: "score" });
+    }
+  });
+});
+
 describe("scoreOrderSelector", () => {
   it("rend les meilleurs scores, tronqués au plafond", async () => {
     const selection = await scoreOrderSelector.select(CONTEXT);

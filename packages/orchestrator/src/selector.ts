@@ -44,13 +44,17 @@ export interface SourceSelector {
  */
 export const scoreOrderSelector: SourceSelector = {
   select: ({ candidates, maxSources }) =>
-    Promise.resolve({
-      urls: [...candidates]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, maxSources)
-        .map((candidate) => candidate.url),
-      source: "score",
-    }),
+    Promise.resolve(
+      maxSources <= 0
+        ? { urls: [], source: "score" as const }
+        : {
+            urls: [...candidates]
+              .sort((a, b) => b.score - a.score)
+              .slice(0, maxSources)
+              .map((candidate) => candidate.url),
+            source: "score" as const,
+          },
+    ),
 };
 
 const selectionSchema = z.object({
@@ -100,6 +104,12 @@ export const createLlmSourceSelector = (options: {
 
   return {
     async select(context: SourceSelectionContext): Promise<SourceSelection> {
+      // Sans place pour une source, personne ne choisit : le contrat est le même
+      // des deux côtés, y compris pour un plafond nul ou négatif.
+      if (context.maxSources <= 0) {
+        return { urls: [], source: "score" };
+      }
+
       if (context.candidates.length <= 1) {
         return fallback.select(context);
       }

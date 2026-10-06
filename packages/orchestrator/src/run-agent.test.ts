@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { runAgent } from "./run-agent.js";
 import type { CrawlSource, ExtractJobs } from "./run-agent.js";
+import { deterministicQueryPlanner } from "./planner.js";
 import type { PlannerObservation, QueryPlanner } from "./planner.js";
 import type { SourceSelector } from "./selector.js";
 
@@ -1160,5 +1161,191 @@ describe("runAgent - choix des sources", () => {
 
     expect(crawled).toEqual(["https://example.com/offres?utm_source=brave"]);
     expect(result.pageCount).toBe(1);
+  });
+
+  it("ne re-crawle pas une page déjà atteinte sous un autre chemin (alias de redirection)", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    // Mesuré sur Ivalua : /carrieres et /company/careers mènent à la même page.
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      const finalUrl = options.startUrl.includes("carrieres")
+        ? "https://example.com/company/careers/"
+        : options.startUrl;
+      return Promise.resolve({ ...successCrawl(options.startUrl), pages: [makePage(finalUrl)] });
+    };
+    const search = makeSearch([
+      {
+        url: "https://example.com/carrieres",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/company/careers/",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    // La seconde source pointe sur l'URL finale déjà atteinte : pas de second crawl.
+    expect(crawled).toEqual(["https://example.com/carrieres"]);
+    expect(result.pageCount).toBe(1);
+  });
+
+  it("ne confond pas deux pages distinguées par leur requête", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    // Contre-exemple trouvé en revue : la pagination par requête est suivie par
+    // le crawler du dépôt. Si la clé de mémoire effaçait la requête, la page 2
+    // serait sautée et ses offres perdues — définitivement, la mémoire étant
+    // persistante et sans expiration.
+    const search = makeSearch([
+      {
+        url: "https://example.com/offres?page=1",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/offres?page=2",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual([
+      "https://example.com/offres?page=1",
+      "https://example.com/offres?page=2",
+    ]);
+  });
+
+  it("ne mémorise pas une page lue mais hors budget", async () => {
+    const fake = buildFakePrisma();
+    const crawl: CrawlSource = (options) =>
+      Promise.resolve({
+        ...successCrawl(options.startUrl),
+        pages: [makePage("https://example.com/une"), makePage("https://example.com/deux")],
+      });
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/offres"),
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 1 });
+
+    // La première est dans le budget, la seconde non : elle ne doit pas être
+    // inscrite comme visitée, sinon ses offres seraient sautées à jamais.
+    expect(fake.memories.has("VISITED_URL:example.com/une")).toBe(true);
+    expect(fake.memories.has("VISITED_URL:example.com/deux")).toBe(false);
+  });
+
+  it("borne le crawl par ce qui reste au tour", async () => {
+    const fake = buildFakePrisma();
+    const requested: number[] = [];
+    const crawl: CrawlSource = (options) => {
+      requested.push(options.maxPages);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+
+    // Un planificateur qui révise : 6 pages réparties sur 3 tours au plus, donc
+    // 2 pour ce tour — et le crawler le sait, il ne lit pas 20 pages pour rien.
+    const revisingPlanner: QueryPlanner = {
+      ...deterministicQueryPlanner,
+      refine: () => Promise.resolve(null),
+    };
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/premiere"),
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+      planner: revisingPlanner,
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 6 });
+
+    expect(requested[0]).toBe(2);
+  });
+
+  it("laisse tout le budget au crawler quand il n'y a pas de tour suivant", async () => {
+    const fake = buildFakePrisma();
+    const requested: number[] = [];
+    const crawl: CrawlSource = (options) => {
+      requested.push(options.maxPages);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/premiere"),
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 6 });
+
+    expect(requested[0]).toBe(6);
+  });
+
+  it("paie encore un alias découvert APRÈS la page finale : limite connue", async () => {
+    const fake = buildFakePrisma();
+    const crawled: string[] = [];
+    // Ivalua, sens inverse du test précédent : la page finale passe d'abord, puis
+    // l'alias. Rien ne relie encore les deux adresses avant de les avoir crawlé
+    // l'une et l'autre, donc les deux sont payées. Le corriger demanderait de
+    // résoudre la redirection avant de crawler.
+    const crawl: CrawlSource = (options) => {
+      crawled.push(options.startUrl);
+      return Promise.resolve(successCrawl(options.startUrl));
+    };
+    const search = makeSearch([
+      {
+        url: "https://example.com/company/careers/",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+      {
+        url: "https://example.com/carrieres",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "example.com",
+      },
+    ]);
+
+    const deps = buildDeps(fake, {
+      search,
+      crawl,
+      extract: () => Promise.resolve({ offers: [], rejected: [] }),
+    });
+
+    await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(crawled).toEqual([
+      "https://example.com/company/careers/",
+      "https://example.com/carrieres",
+    ]);
   });
 });

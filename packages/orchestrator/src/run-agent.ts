@@ -134,17 +134,40 @@ interface RunCounters {
 
 /**
  * Clé d'identité d'une URL pour la mémoire. Le POURQUOI : une même page revient
- * du moteur avec des variantes (`?`, `/` final, paramètre de suivi) ; mesuré, la
- * même page a été crawlée aux trois tours d'un run parce que les chaînes
- * différaient. La clé ignore donc requête, fragment, casse et slash final.
+ * du moteur avec des variantes (`/` final, paramètre de suivi) ; mesuré, la même
+ * page a été crawlée aux trois tours d'un run parce que les chaînes différaient.
+ *
+ * La requête est **conservée** hors paramètres de suivi : elle porte souvent
+ * l'identité de la page (`?page=2`, `?gh_jid=...`), et l'effacer ferait sauter des
+ * pages légitimes. Le fragment, lui, est retiré — le crawler le retire aussi avant
+ * de demander la page, donc deux fragments mènent à la même réponse serveur.
  */
+const TRACKING_PARAMS: readonly RegExp[] = [
+  /^utm_/u,
+  /^gclid$/u,
+  /^fbclid$/u,
+  /^msclkid$/u,
+  /^lever-source$/u,
+];
+
 const crawlKey = (url: string): string => {
   try {
     const parsed = new URL(url);
+    for (const name of [...parsed.searchParams.keys()]) {
+      if (TRACKING_PARAMS.some((pattern) => pattern.test(name))) {
+        parsed.searchParams.delete(name);
+      }
+    }
+    parsed.hash = "";
+    parsed.searchParams.sort();
+    const query = parsed.searchParams.toString();
     const path = parsed.pathname.replace(/\/+$/u, "");
-    return `${parsed.hostname.replace(/^www\./u, "").toLowerCase()}${path}`;
+    const host = parsed.hostname.replace(/^www\./u, "").toLowerCase();
+    const port = parsed.port === "" ? "" : `:${parsed.port}`;
+    return `${host}${port}${path}${query === "" ? "" : `?${query}`}`;
   } catch {
-    return url.trim().toLowerCase();
+    // URL illisible : on la garde telle quelle plutôt que de risquer une collision.
+    return url.trim();
   }
 };
 
@@ -214,16 +237,19 @@ const usageSuffix = (usage: ModelUsage | null): string =>
 
 /**
  * Construit les options de crawl d'une source. Le crawler reçoit le temps qui
- * reste au run : une source ne peut pas consommer à elle seule tout le budget.
+ * reste au run **et** ce qui reste du budget de pages du tour : sans cela, il
+ * pouvait lire jusqu'à `maxPagesPerSource` pages pour un tour qui n'en compterait
+ * qu'une, et le surplus était jeté.
  */
 const crawlOptionsFor = (
   startUrl: string,
   options: ResolvedOptions,
   deadline: number,
+  remainingRoundPages: number,
 ): CrawlOptions => ({
   startUrl,
   maxDepth: options.maxDepth,
-  maxPages: options.maxPagesPerSource,
+  maxPages: Math.max(1, Math.min(options.maxPagesPerSource, remainingRoundPages)),
   maxRuntimeMs: Math.max(1, deadline - options.now()),
 });
 
@@ -442,7 +468,9 @@ export async function runAgent(
         // Crawl borné : un échec de source est consigné, le run continue.
         let crawlResult: CrawlResult;
         try {
-          crawlResult = await deps.crawl(crawlOptionsFor(sourceUrl, config, deadline));
+          crawlResult = await deps.crawl(
+            crawlOptionsFor(sourceUrl, config, deadline, roundPageLimit - counters.pageCount),
+          );
         } catch (error) {
           await recordError(ACTION_KIND.CRAWL, errorMessage(error));
           continue;
@@ -466,8 +494,19 @@ export async function runAgent(
 
           // La page compte dans la borne, qu'elle soit lisible ou non.
           counters.pageCount += 1;
-          // Son URL finale aussi : deux sources peuvent mener à la même page.
-          crawledKeys.add(crawlKey(page.url));
+          /*
+           * Mémorisée seulement maintenant, une fois qu'elle entre dans le
+           * budget : une page lue mais jamais traitée (le crawler peut en rendre
+           * plus qu'il n'en reste au tour) ne doit pas être inscrite comme
+           * visitée, sinon ses offres seraient sautées pour toujours.
+           */
+          const pageKey = crawlKey(page.url);
+          crawledKeys.add(pageKey);
+          try {
+            await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, pageKey);
+          } catch (error) {
+            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+          }
           await deps.runStore.recordAction(runId, {
             kind: ACTION_KIND.CRAWL,
             detail: page.url,
