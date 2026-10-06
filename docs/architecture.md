@@ -84,7 +84,8 @@ Porte déterministe avant le modèle
     v
 @findit/extract : extraction spécialisée puis LLM, page par page
     |   données structurées `JobPosting` (JSON-LD) d'abord, déterministes et gratuites ;
-    |   DeepSeek ensuite ; schéma Zod validé après coup, exclusion déterministe des écoles
+    |   DeepSeek ensuite ; schéma Zod validé après coup, exclusion déterministe des écoles,
+    |   et consigne de ne retenir que l'alternance et le stage (le coût naît là)
     v
 Validation puis déduplication par titre normalisé, dans le run
     |

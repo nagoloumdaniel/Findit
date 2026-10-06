@@ -37,6 +37,11 @@ pièges déjà payés.
   DeepSeek (`@findit/extract`), validation (`isValidOffer`), déduplication par
   titre normalisé, persistance (`@findit/persist`). Les erreurs sont consignées
   dans `AgentError` ; les statuts sont RUNNING / SUCCEEDED / FAILED / STOPPED.
+- **Consigne de contrat dans l'extraction** : `SYSTEM_PROMPT` de
+  `packages/extract/src/extract.ts` ne retient que l'alternance et le stage, et
+  garde une offre dont le contrat n'est pas nommé (la validation tranche).
+  Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
+  ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
 - **« 0 insérée » n'est pas une panne, c'est mesuré** : sur un run à 178 rejets,
   **156 étaient des CDI hors périmètre**, 12 des métiers hors périmètre (Bras
   droit CEO, communication…), 6 des dates absentes, 2 des freelances, 1 une date
