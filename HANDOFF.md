@@ -44,6 +44,11 @@ pièges déjà payés.
   (`extractStructuredOffers`) avant le LLM, relance des seuls échecs, et abandon
   journalisé dans `AgentError` avec `retried = true`. Bornes :
   `maxRecoveries` (5) et `maxAttemptsPerStep` / `maxTotalAttempts` du moteur.
+- **Coûts visibles au dashboard** : `AgentService.analytics()` agrège le coût des
+  runs et les tokens des actions `EXTRACT` (`modelCost`), la page Analytics les
+  affiche par jour, et la page Agent donne le coût de chaque run. Les tokens
+  n'ont pas de colonne : ils sont lus dans le détail de l'action
+  (`parseUsageFromDetail`), avec un test qui épingle le format.
 - **Localisation et date corrigées après mesure** : `resolveLocation` lit le code
   postal français (« 92000 Nanterre, France » → 92, alors que la clé de commune
   « 92000 nanterre » ne correspondait à rien et faisait refuser l'offre comme

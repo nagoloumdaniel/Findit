@@ -102,7 +102,9 @@ AgentRun / AgentAction / AgentError en base
   `usage.output_tokens`), cumulé sur le client, et attribué par différence à l'action `EXTRACT` de la
   page, tentatives refusées comprises. Les tokens apparaissent dans le détail de l'action ; le coût
   n'est calculé que si `DEEPSEEK_INPUT_USD_PER_MTOK` et `DEEPSEEK_OUTPUT_USD_PER_MTOK` sont fournis —
-  un tarif ne se devine pas. Le coût cumulé atterrit dans `AgentRun.costMicroUsd`.
+  un tarif ne se devine pas. Le coût cumulé atterrit dans `AgentRun.costMicroUsd`, et le dashboard
+  l'expose : `GET /api/agent/analytics` rend `modelCost` (coût et tokens par jour) et `GET
+/api/agent/runs` porte le coût de chaque run.
 - Une page vide est relue une fois de façon bornée (`recoverPage`, câblée sur le crawler, donc
   `robots.txt` revérifié et repli navigateur conservé) avant d'être abandonnée.
 - Les étapes de récupération sont enchaînées par `packages/orchestrator/src/recovery.ts` : relecture,
