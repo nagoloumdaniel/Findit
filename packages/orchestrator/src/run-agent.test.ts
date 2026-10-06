@@ -1006,8 +1006,10 @@ describe("runAgent - tours de planification", () => {
       maxPlanRounds: 3,
     });
 
-    // 6 pages = 3 tours × 2 pages : chaque tour garde de quoi en faire un autre.
-    expect(result.pageCount).toBe(6);
+    // 6 pages = 3 tours × 2 pages, mais la doublure rend toujours les cinq mêmes
+    // pages : les doublons d'un tour à l'autre ne sont plus comptés, d'où 5 pages
+    // distinctes. Chaque tour garde bien de quoi en faire un autre.
+    expect(result.pageCount).toBe(5);
     expect(refineCalls).toBe(2);
     expect(
       fake.actions
@@ -1263,6 +1265,62 @@ describe("runAgent - choix des sources", () => {
     // inscrite comme visitée, sinon ses offres seraient sautées à jamais.
     expect(fake.memories.has("VISITED_URL:example.com/une")).toBe(true);
     expect(fake.memories.has("VISITED_URL:example.com/deux")).toBe(false);
+  });
+
+  it("ne paie pas deux fois la même page rendue sous deux écritures dans un crawl", async () => {
+    const fake = buildFakePrisma();
+    // Mesuré sur un run réel : `/board` et `/board?` sortaient du même crawl et
+    // étaient comptées et extraites toutes les deux.
+    const crawl: CrawlSource = (options) =>
+      Promise.resolve({
+        ...successCrawl(options.startUrl),
+        pages: [makePage("https://example.com/board"), makePage("https://example.com/board?")],
+      });
+    let extractCalls = 0;
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/offres"),
+      crawl,
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [], rejected: [] });
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(result.pageCount).toBe(1);
+    expect(extractCalls).toBe(1);
+  });
+
+  it("ne re-extrait pas une page déjà visitée par un run antérieur", async () => {
+    const fake = buildFakePrisma();
+    // La mémoire est persistante : une page traitée par un run précédent ne doit
+    // pas être repayée, même si le crawler la rend de nouveau.
+    fake.memories.set("VISITED_URL:example.com/deja-vue", {
+      kind: "VISITED_URL",
+      key: "example.com/deja-vue",
+      value: null,
+    });
+    let extractCalls = 0;
+    const crawl: CrawlSource = (options) =>
+      Promise.resolve({
+        ...successCrawl(options.startUrl),
+        pages: [makePage(options.startUrl), makePage("https://example.com/deja-vue")],
+      });
+
+    const deps = buildDeps(fake, {
+      search: oneSource("https://example.com/offres"),
+      crawl,
+      extract: () => {
+        extractCalls += 1;
+        return Promise.resolve({ offers: [], rejected: [] });
+      },
+    });
+
+    const result = await runAgent("alternance développeur", deps, { maxQueries: 1, maxPages: 4 });
+
+    expect(result.pageCount).toBe(1);
+    expect(extractCalls).toBe(1);
   });
 
   it("borne le crawl par ce qui reste au tour", async () => {

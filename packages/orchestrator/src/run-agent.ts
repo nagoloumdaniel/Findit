@@ -498,20 +498,29 @@ export async function runAgent(
           continue;
         }
 
-        try {
-          await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, memoryKey);
-        } catch (error) {
-          // La mémoire est une aide, pas un garde-fou : la borne de pages
-          // ci-dessous protège déjà la boucle. On consigne et on continue.
-          await recordError(ACTION_KIND.CRAWL, errorMessage(error));
-        }
-        crawledKeys.add(memoryKey);
-
         counters.sourceCount += 1;
 
         for (const page of crawlResult.pages) {
           if (shouldStop() || roundExhausted()) {
             break;
+          }
+
+          /*
+           * Deux écritures de la même page (`/board` et `/board?`) : mesuré sur un
+           * run réel, les deux étaient comptées et extraites. On ne paie la
+           * seconde ni en budget ni en extraction — y compris si elle a déjà été
+           * traitée par un run antérieur, la mémoire étant persistante.
+           */
+          const pageKey = crawlKey(page.url);
+          if (crawledKeys.has(pageKey)) {
+            continue;
+          }
+          try {
+            if (await deps.memoryStore.alreadySeen(MEMORY_KIND.VISITED_URL, pageKey)) {
+              continue;
+            }
+          } catch (error) {
+            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
           }
 
           // La page compte dans la borne, qu'elle soit lisible ou non.
@@ -522,7 +531,6 @@ export async function runAgent(
            * plus qu'il n'en reste au tour) ne doit pas être inscrite comme
            * visitée, sinon ses offres seraient sautées pour toujours.
            */
-          const pageKey = crawlKey(page.url);
           crawledKeys.add(pageKey);
           try {
             await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, pageKey);
@@ -708,6 +716,15 @@ export async function runAgent(
             counters.retainedCount += 1;
             retainedOffers.push(offer);
           }
+        }
+
+        // La source n'est marquée qu'après ses pages : la marquer avant
+        // bloquerait sa propre page, qui porte la même clé qu'elle.
+        crawledKeys.add(memoryKey);
+        try {
+          await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, memoryKey);
+        } catch (error) {
+          await recordError(ACTION_KIND.CRAWL, errorMessage(error));
         }
       }
 
