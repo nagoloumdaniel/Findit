@@ -67,6 +67,15 @@ pièges déjà payés.
   alors la même clé, la seconde page était sautée, et la mémoire étant persistante
   sans expiration la perte était définitive. Trouvé par revue adversariale, pas par
   un test.
+- **Redirections résolues avant le crawl** : `resolveFinalUrl`
+  (`packages/crawler/src/resolve.ts`) fait un HEAD — une GET d'un octet si le
+  serveur refuse HEAD — et rend l'URL finale sans lire la page. L'agent s'en sert
+  avant chaque crawl, donc un alias déjà vu est écarté **sans être payé**.
+  Vérifié sur le réel : `/carrieres`, `/carrieres/`, `/company/careers` et
+  `ivalua.com/company/careers/` mènent tous à `https://www.ivalua.com/company/careers/`.
+  Coût ajouté : une requête d'en-têtes par source candidate, contre un crawl
+  complet évité quand c'est un alias connu. C'est ce qui ferme le sens qui restait
+  ouvert.
 - **Pages non traitées plus jamais mémorisées** : la mémoire inscrivait toutes les
   pages rendues par le crawler, y compris celles jetées par la borne de budget du
   tour ; leurs offres étaient ensuite sautées pour toujours. L'inscription se fait

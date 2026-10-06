@@ -70,9 +70,10 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   Mémoire : les URL sont mémorisées sous une clé normalisée (casse, `www.`, fragment, slash
     |   final et paramètres de suivi ignorés, **requête conservée** : elle porte l'identité de la page,
     |   `?page=2` par exemple). Seules les pages entrées dans le budget du tour sont inscrites comme
-    |   visitées. Limite connue : un alias de redirection découvert après coup (mesuré sur Ivalua :
-    |   `/carrieres` et `/company/careers` mènent à la même page) n'est pas reconnu avant d'avoir été
-    |   crawlé.
+    |   visitées. Avant de crawler, `resolveFinalUrl` résout la redirection par un HEAD (une GET d'un
+    |   octet si le serveur refuse HEAD) : un alias déjà connu est écarté sans être payé. Vérifié sur le
+    |   réel : `/carrieres`, `/carrieres/`, `/company/careers` et `ivalua.com/company/careers/` mènent
+    |   tous à `https://www.ivalua.com/company/careers/`.
     v
 @findit/agent : generateSearchQueries(objective)
     |   repli : requêtes déduites de l'objectif par règles (contrat, techno, lieu, site:), sans modèle
