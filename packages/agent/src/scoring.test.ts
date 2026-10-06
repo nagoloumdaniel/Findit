@@ -45,6 +45,28 @@ describe("scoreSources", () => {
     expect(scored?.reasons).toContain("domaine d'ATS reconnu");
   });
 
+  it("fait remonter une page qui parle de développement", () => {
+    const scored = scoreSources([
+      result({
+        domain: "generique.fr",
+        url: "https://generique.fr/annonces",
+        title: "Annonces",
+        description: "Toutes les offres",
+      }),
+      result({
+        domain: "dev.fr",
+        url: "https://dev.fr/offres",
+        title: "Offres développeur",
+        description: "Alternance développeur web",
+      }),
+    ]);
+
+    const dev = scored.find((source) => source.result.domain === "dev.fr");
+    const generic = scored.find((source) => source.result.domain === "generique.fr");
+    expect(dev?.reasons).toContain("vocabulaire de développement détecté");
+    expect(dev?.score).toBeGreaterThan(generic?.score ?? 100);
+  });
+
   it("pénalise un organisme de formation et l'écarte", () => {
     const [scored] = scoreSources([
       result({

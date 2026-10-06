@@ -40,6 +40,19 @@ describe("generateSearchQueries", () => {
     expect(all.some((q) => q.includes("site:jobs.lever.co"))).toBe(true);
   });
 
+  it("produit une variante par rôle : le métier cible les pages du périmètre", () => {
+    const all = generateSearchQueries("alternance et stage développeur en Île-de-France").map(
+      (q) => q.query,
+    );
+    expect(all.some((q) => q.startsWith("offre développeur alternance"))).toBe(true);
+    expect(all.some((q) => q.includes("développeur stage"))).toBe(true);
+  });
+
+  it("vise un métier du périmètre quand l'objectif n'en nomme aucun", () => {
+    const all = generateSearchQueries("alternance à Paris").map((q) => q.query);
+    expect(all.some((q) => q.includes("développeur"))).toBe(true);
+  });
+
   it("ne duplique jamais deux requêtes identiques", () => {
     const all = generateSearchQueries("alternance stage à Paris").map((q) => q.query.toLowerCase());
     expect(new Set(all).size).toBe(all.length);

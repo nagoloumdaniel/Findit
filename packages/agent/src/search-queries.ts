@@ -70,8 +70,7 @@ const TECHNOLOGY_TERMS: readonly string[] = [
  * Localisations reconnues, pour produire une variante géographique. L'ordre
  * importe : les formes les plus spécifiques viennent d'abord, et la première
  * rencontrée dans l'objectif est retenue.
- */
-const LOCATION_TERMS: readonly string[] = [
+ */ const LOCATION_TERMS: readonly string[] = [
   "ile-de-france",
   "ile de france",
   "paris",
@@ -89,6 +88,32 @@ const LOCATION_TERMS: readonly string[] = [
   "teletravail",
   "remote",
 ];
+
+/**
+ * Termes qui désignent un métier du développement.
+ *
+ * Le POURQUOI : sans eux, un objectif qui dit « développeur » sans citer de
+ * technologie produit des requêtes génériques ; le moteur rend alors des job
+ * boards généralistes dont les listes mélangent tous les métiers, et l'agent
+ * extrait des offres hors périmètre (pâtisserie, presse, vente).
+ */
+const ROLE_TERMS: readonly string[] = [
+  "développeur",
+  "développeuse",
+  "software engineer",
+  "software developer",
+  "ingénieur logiciel",
+  "fullstack",
+  "frontend",
+  "backend",
+  "web",
+  "mobile",
+  "devops",
+  "sre",
+];
+
+/** Métiers visés quand l'objectif ne nomme aucun rôle explicite. */
+const DEFAULT_ROLES: readonly string[] = ["développeur", "développeur web"];
 
 /**
  * Domaines de pages carrière et d'ATS de confiance, ciblés par un `site:`.
@@ -137,6 +162,10 @@ const detectLocation = (normalized: string): string | null => {
   return matches[0] ?? null;
 };
 
+/** Détecte les rôles de développement cités dans l'objectif. */
+const detectRoles = (normalized: string): readonly string[] =>
+  ROLE_TERMS.filter((term) => normalized.includes(normalizeText(term)));
+
 /**
  * Génère les requêtes de recherche d'un objectif, sans appel de modèle.
  *
@@ -158,6 +187,9 @@ export const generateSearchQueries = (objective: string): readonly GeneratedSear
   const contractVariants: readonly ("alternance" | "stage")[] =
     contracts.length > 0 ? contracts : CONTRACTS;
   const technologies = detectTechnologies(normalized);
+  const roles = detectRoles(normalized);
+  // Sans rôle cité, on vise les métiers du périmètre plutôt que rien du tout.
+  const roleVariants = roles.length > 0 ? roles : DEFAULT_ROLES;
   const location = detectLocation(normalized);
 
   const queries: GeneratedSearchQuery[] = [];
@@ -182,25 +214,33 @@ export const generateSearchQueries = (objective: string): readonly GeneratedSear
     push(`${cleaned} stage`);
   }
 
-  // 3. Une variante par technologie, croisée avec le contrat et le lieu.
+  // 3. Un métier du périmètre, croisé avec le contrat et le lieu : c'est ce qui
+  // cible les pages d'offres du périmètre, plutôt qu'une liste tous métiers.
+  for (const contract of contractVariants) {
+    for (const role of roleVariants.slice(0, 2)) {
+      push(`offre ${role} ${contract}${location === null ? "" : ` ${location}`}`);
+    }
+  }
+
+  // 4. Une variante par technologie, croisée avec le contrat et le lieu.
   for (const contract of contractVariants) {
     for (const technology of technologies) {
       push(`${technology} ${contract}${location === null ? "" : ` ${location}`}`);
     }
   }
 
-  // 4. Le contrat rapproché du lieu, pour les recherches géographiques.
+  // 5. Le contrat rapproché du lieu, pour les recherches géographiques.
   if (location !== null) {
     for (const contract of contractVariants) {
       push(`${contract} ${location}`);
     }
   }
 
-  // 5. `site:` sur les domaines de confiance, borné à la première techno.
-  const firstTechnology = technologies[0] ?? "";
+  // 6. `site:` sur les domaines de confiance, borné au métier ou à la techno.
+  const firstTarget = technologies[0] ?? roleVariants[0] ?? "";
   for (const contract of contractVariants) {
     for (const domain of SITE_TARGETS) {
-      push(`${firstTechnology} ${contract} site:${domain}`);
+      push(`${firstTarget} ${contract} site:${domain}`);
     }
   }
 

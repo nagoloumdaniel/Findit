@@ -34,6 +34,36 @@ const OFFER_TERMS: readonly string[] = [
 
 const CONTRACT_TERMS: readonly string[] = ["alternance", "stage", "apprentissage", "internship"];
 
+/**
+ * Termes qui signalent une offre ou une liste de développement.
+ *
+ * Le POURQUOI : un job board généraliste liste tous les métiers. Une page qui
+ * parle de développement a plus de chances de porter des offres du périmètre,
+ * on la fait donc remonter avant les listes tous métiers.
+ */
+const DEV_SIGNALS: readonly string[] = [
+  "developpeur",
+  "developpeuse",
+  "developpement",
+  "software",
+  "fullstack",
+  "full-stack",
+  "frontend",
+  "front-end",
+  "backend",
+  "back-end",
+  "web",
+  "mobile",
+  "devops",
+  "data engineer",
+  "data scientist",
+  "typescript",
+  "javascript",
+  "react",
+  "node",
+  "python",
+];
+
 const LISTING_TERMS: readonly string[] = [
   "jobs",
   "careers",
@@ -124,6 +154,10 @@ const scoreSource = (result: SourceResult): Omit<ScoredSource, "keep"> => {
   if (containsAny(haystack, CONTRACT_TERMS)) {
     score += 20;
     reasons.push("contrat alternance ou stage détecté");
+  }
+  if (containsAny(haystack, DEV_SIGNALS)) {
+    score += 15;
+    reasons.push("vocabulaire de développement détecté");
   }
 
   // 2. Liste d'offres probable : ATS reconnu ou vocabulaire de listing.
