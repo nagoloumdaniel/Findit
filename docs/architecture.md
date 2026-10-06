@@ -66,7 +66,9 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   Sélection : le tour rassemble d'abord les sources notées (phase 1), puis le modèle choisit
     |   lesquelles visiter et dans quel ordre (phase 2, plafonné aux 12 meilleures), puis crawl et
     |   extraction (phase 3). Sans sélecteur : l'ordre du score. Seules des URL candidates reviennent,
-    |   et une sortie vide ou hors schéma rend l'ordre du score.
+    |   et une sortie vide ou hors schéma rend l'ordre du score. En **mode découverte seule**
+    |   (`AGENT_DISCOVERY_ONLY`), la phase 3 est vide : l'extraction de pages d'entreprises n'a jamais
+    |   rendu d'offre du périmètre (0 sur 4 251) alors que la découverte alimente le registre.
     |   Registre : chaque source retenue est présentée au registre (`discoverSource`). Une entreprise
     |   d'ATS à jeton (Greenhouse, Lever, Workday) devient une `CompanySource`, que son connecteur
     |   recollecte en flux complet — l'agent n'a pas à extraire ce que le connecteur sait lire.

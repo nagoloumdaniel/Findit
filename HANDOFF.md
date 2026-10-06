@@ -42,6 +42,18 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **L'agent passe en mode découverte seule** (décision du 2026-10-07). Il planifie,
+  cherche, choisit et enregistre au registre ; il ne crawle ni n'extrait plus. Le
+  POURQUOI est mesuré : l'extraction de pages d'entreprises n'a jamais rendu une
+  offre du périmètre (0 acceptée sur 4 251) pour ~1 600 µ$ par run, alors que la
+  découverte a fait entrer 10 entreprises au registre pour 812 µ$. Réglage
+  `AGENT_DISCOVERY_ONLY` (`.env` et `.env.example`), vrai localement.
+  **Mesure du run allégé** : 3 tours, 15 recherches, **0 crawl, 0 extraction**,
+  **1 222 µ$**, et la source `lever/jobgether` correctement ignorée.
+  **Nuance honnête** : ce run n'a enregistré **aucune source nouvelle** (94 → 94),
+  parce que les entreprises qu'il a trouvées étaient déjà au registre depuis les
+  runs précédents. Le mode supprime un coût certain ; son gain, lui, n'apparaît
+  que les jours où il y a de nouvelles entreprises à découvrir.
 - **Recouvrement mesuré proprement, et plafonds resserrés en conséquence.** Deux
   cycles **identiques dos à dos** aux mêmes plafonds : les deux ont découvert
   **57** offres, accepté **13**, ajouté **0 offre nouvelle**, et coûté 0,052 $ puis
