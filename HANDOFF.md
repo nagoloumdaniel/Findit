@@ -42,6 +42,21 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Les sources fraîchement découvertes sont bien collectées — et le périmètre est
+  bien la cause du rendement nul.** Mesure réelle sur les 10 `CompanySource` que
+  l'agent venait de créer : **10 collectes sur 10, aucun échec**, **4 251 offres**
+  découvertes, **0 acceptée**. Le journal du pipeline (4 251 lignes) dit pourquoi :
+  - **3 899** — « Aucun contrat du périmètre n'est nommé : ni alternance, ni stage. »
+  - 154 freelance, 99 executive, 29 CDI, 8 contractor, 6 CDD, 4 employee, 2 intern
+    (contrat lu hors périmètre) ;
+  - **3** refus à l'étape localisation.
+    Autrement dit : la chaîne agent → registre → connecteur fonctionne de bout en
+    bout, et **91 % des offres publiées par ces entreprises ne nomment aucun contrat
+    du périmètre**. Le « 0 inséré » n'est pas un défaut de code : c'est la structure
+    du marché atteint. Le levier est le choix des sources, pas le filtrage.
+- **Un locataire d'ATS peut être un agrégateur** : `lever/jobgether` a rendu à lui
+  seul 3 501 des 4 251 offres (dette : filtrer les locataires qui sont eux-mêmes
+  des job boards avant de les enregistrer comme entreprises).
 - **L'agent alimente le registre** (décision de périmètre du 2026-10-06) :
   `runAgent` accepte un point d'entrée `discoverSource`, appelé en phase 1 pour
   chaque source retenue par le scoring ; le worker l'implémente
