@@ -20,6 +20,17 @@ const offer = (over: Partial<CollectedOffer> = {}): CollectedOffer => ({
 });
 
 describe("decideIngestion", () => {
+  it("carries the apply link the source gave, and defaults to none", () => {
+    const withLink = decideIngestion(offer({ applyUrl: "https://jobs.acme.test/apply/42" }), NOW);
+    const without = decideIngestion(offer(), NOW);
+
+    if (withLink.outcome === "REJECTED" || without.outcome === "REJECTED") {
+      throw new Error("attendu accepté");
+    }
+    expect(withLink.draft.applyUrl).toBe("https://jobs.acme.test/apply/42");
+    expect(without.draft.applyUrl).toBeNull();
+  });
+
   it("accepts a fresh developer alternance in scope, and assembles it", () => {
     const decision = decideIngestion(offer(), NOW);
 

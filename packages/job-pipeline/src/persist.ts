@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@findit/database";
 import { findBestMatch, type ComparableOffer } from "@findit/job-deduplication";
 
+import { chooseApplyUrl } from "./apply-link.js";
 import type { IngestionDecision, JobDraft } from "./ingest.js";
 import { jobSlug, slugify } from "./slug.js";
 
@@ -50,25 +51,77 @@ const resolveCompany = async (prisma: PrismaClient, name: string): Promise<strin
 /** Borne du lot comparé : au-delà, le titre est trop générique pour décider. */
 const DUPLICATE_CANDIDATES = 25;
 
+/** Ce qu'il faut savoir d'une offre pour élire la canonique et choisir son lien. */
+interface RankedJob {
+  readonly id: string;
+  readonly status: string;
+  readonly canonicalUrl: string;
+  readonly applyUrl: string | null;
+  readonly sources: readonly { readonly priority: number }[];
+}
+
+const RANKED_SELECT = {
+  id: true,
+  status: true,
+  canonicalUrl: true,
+  applyUrl: true,
+  sources: { select: { priority: true } },
+} as const;
+
+/** Rang d'une offre : celui de sa meilleure source. Sans source, zéro. */
+const bestPriority = (job: RankedJob): number =>
+  job.sources.reduce((best, source) => Math.max(best, source.priority), 0);
+
+/**
+ * Les deux offres d'une même publication partagent tout ce qu'on sait d'elles :
+ * l'offre retenue reçoit les liens de l'autre, pour que « où a-t-elle été vue,
+ * et quand » reste lisible sur l'offre que le public voit.
+ */
+const shareSources = async (
+  prisma: PrismaClient,
+  fromJobId: string,
+  toJobId: string,
+): Promise<void> => {
+  const sources = await prisma.jobSource.findMany({
+    where: { jobId: fromJobId },
+    select: { name: true, url: true, priority: true, checkedAt: true },
+  });
+
+  for (const source of sources) {
+    await prisma.jobSource.upsert({
+      where: { jobId_url: { jobId: toJobId, url: source.url } },
+      update: {},
+      create: { jobId: toJobId, ...source },
+    });
+  }
+};
+
+type DuplicateOutcome = "MERGED" | "MERGED_AS_CANONICAL" | "REVIEW" | null;
+
 /*
  * Rattache une offre nouvellement créée à son doublon éventuel. Le lot comparé
  * partage le même titre normalisé - c'est l'index qui borne le coût. Une
- * fusion passe la nouvelle offre en DUPLICATE (la liste publique ne la montre
- * plus deux fois) ; un doute la groupe sans la fusionner, en attendant un
- * contrôle. La décision est écrite avec son score et son détail : réversible.
+ * fusion rend la liste publique à une seule ligne par publication ; un doute
+ * groupe sans fusionner, en attendant un contrôle. La décision est écrite avec
+ * son score et son détail : réversible.
+ *
+ * Qui reste visible ? La source de rang le plus élevé. Une offre vue d'abord sur
+ * un job board puis à la source (l'ATS de l'entreprise) cède donc sa place à la
+ * seconde : la source officielle est toujours la canonique. À rang égal, la plus
+ * ancienne reste.
  */
 const attachDuplicate = async (
   prisma: PrismaClient,
   jobId: string,
   draft: JobDraft,
   context: PersistContext,
-): Promise<"MERGED" | "REVIEW" | null> => {
+): Promise<DuplicateOutcome> => {
   const rows = await prisma.job.findMany({
     where: { normalizedTitle: draft.normalizedTitle, id: { not: jobId } },
     orderBy: { publishedAt: "desc" },
     take: DUPLICATE_CANDIDATES,
     select: {
-      id: true,
+      ...RANKED_SELECT,
       city: true,
       departmentCode: true,
       publishedAt: true,
@@ -109,10 +162,11 @@ const attachDuplicate = async (
 
   const { row } = best.match;
   const score = best.decision.similarity.score;
+  const merged = best.decision.action === "MERGE";
 
   // Le groupe existant est réutilisé ; sinon l'offre déjà en base devient la
   // canonique du groupe créé.
-  const groupId =
+  const groupId: string =
     row.duplicateGroupId ??
     (await prisma.duplicateGroup.create({ data: { canonicalJobId: row.id }, select: { id: true } }))
       .id;
@@ -123,13 +177,36 @@ const attachDuplicate = async (
     });
   }
 
-  const merged = best.decision.action === "MERGE";
+  // La canonique actuelle du groupe : l'offre appariée, ou celle que son groupe
+  // désigne quand l'appariée n'en est qu'un membre déjà fusionné.
+  let incumbent: RankedJob | null = row;
+  if (row.duplicateGroupId !== null) {
+    const group = await prisma.duplicateGroup.findUnique({
+      where: { id: groupId },
+      select: { canonicalJobId: true },
+    });
+    const canonicalId = group?.canonicalJobId ?? row.id;
+    incumbent =
+      canonicalId === row.id
+        ? row
+        : await prisma.job.findUnique({ where: { id: canonicalId }, select: RANKED_SELECT });
+  }
+
+  // Seule une offre publiée peut en détrôner une autre : une offre en
+  // quarantaine ne doit jamais devenir la vitrine d'une publication.
+  const takesOver =
+    merged &&
+    incumbent !== null &&
+    draft.status === "PUBLISHED" &&
+    incumbent.status === "PUBLISHED" &&
+    context.sourcePriority > bestPriority(incumbent);
+
   await prisma.job.update({
     where: { id: jobId },
     data: {
       duplicateGroupId: groupId,
       duplicateConfidence: score,
-      ...(merged ? { status: "DUPLICATE" } : {}),
+      ...(merged && !takesOver ? { status: "DUPLICATE" } : {}),
     },
   });
 
@@ -145,20 +222,73 @@ const attachDuplicate = async (
     },
   });
 
+  if (merged && incumbent !== null) {
+    if (takesOver) {
+      // La nouvelle offre vient d'une source de rang supérieur : elle devient la
+      // canonique du groupe, l'ancienne est masquée mais gardée, avec sa trace.
+      await prisma.duplicateGroup.update({
+        where: { id: groupId },
+        data: { canonicalJobId: jobId },
+      });
+      await prisma.job.update({ where: { id: incumbent.id }, data: { status: "DUPLICATE" } });
+      await prisma.processingLog.create({
+        data: {
+          jobId: incumbent.id,
+          stage: "deduplication",
+          fromStatus: "PUBLISHED",
+          toStatus: "DUPLICATE",
+          succeeded: true,
+          message: `Remplacée par l'offre ${jobId} : source de rang ${String(context.sourcePriority)} contre ${String(bestPriority(incumbent))}.`,
+          correlationId: context.correlationId,
+        },
+      });
+    }
+
+    const winnerId = takesOver ? jobId : incumbent.id;
+    const loserId = takesOver ? incumbent.id : jobId;
+    await shareSources(prisma, loserId, winnerId);
+
+    // Le lien de candidature de la publication : celui de l'employeur, d'où
+    // qu'il vienne, avant celui d'un job board.
+    const winnerCanonicalUrl = takesOver ? draft.canonicalUrl : incumbent.canonicalUrl;
+    const chosen = chooseApplyUrl([
+      { url: incumbent.canonicalUrl, priority: bestPriority(incumbent) },
+      ...(incumbent.applyUrl === null
+        ? []
+        : [{ url: incumbent.applyUrl, priority: bestPriority(incumbent) }]),
+      { url: draft.canonicalUrl, priority: context.sourcePriority },
+      ...(draft.applyUrl === null
+        ? []
+        : [{ url: draft.applyUrl, priority: context.sourcePriority }]),
+    ]);
+    if (chosen !== null) {
+      await prisma.job.update({
+        where: { id: winnerId },
+        data: { applyUrl: chosen === winnerCanonicalUrl ? null : chosen },
+      });
+    }
+  }
+
   await prisma.processingLog.create({
     data: {
       jobId,
       stage: "deduplication",
-      toStatus: merged ? "DUPLICATE" : null,
+      toStatus: merged && !takesOver ? "DUPLICATE" : null,
       succeeded: true,
       message: merged
-        ? `Fusionnée avec l'offre ${row.id} (score ${score.toFixed(2)}).`
+        ? takesOver
+          ? `Fusionnée avec l'offre ${row.id} (score ${score.toFixed(2)}) et devenue canonique : source de rang supérieur.`
+          : `Fusionnée avec l'offre ${row.id} (score ${score.toFixed(2)}).`
         : `Groupée pour contrôle avec l'offre ${row.id} (score ${score.toFixed(2)}).`,
       correlationId: context.correlationId,
     },
   });
 
-  return merged ? "MERGED" : "REVIEW";
+  if (!merged) {
+    return "REVIEW";
+  }
+
+  return takesOver ? "MERGED_AS_CANONICAL" : "MERGED";
 };
 
 const writeJob = async (
@@ -191,6 +321,7 @@ const writeJob = async (
     publishedAt: draft.publishedAt,
     expiresAt: draft.expiresAt,
     canonicalUrl: draft.canonicalUrl,
+    applyUrl: null as string | null,
     schoolRiskScore: draft.schoolRiskScore,
     schoolRiskReasons: [...draft.schoolRiskReasons],
     fraudRiskScore: 0,
@@ -202,8 +333,21 @@ const writeJob = async (
 
   const existing = await prisma.job.findUnique({
     where: { companyId_externalId: { companyId, externalId: draft.externalId } },
-    select: { id: true },
+    select: { id: true, applyUrl: true },
   });
+
+  /*
+   * Lien de candidature : celui que la source donne si c'est l'employeur, la
+   * page de l'offre sinon. Une recollecte ne dégrade jamais un lien déjà choisi
+   * (par exemple celui hérité d'une fusion). Quand il se confond avec la page de
+   * l'offre, rien n'est stocké en plus.
+   */
+  const chosenApplyUrl = chooseApplyUrl([
+    { url: draft.canonicalUrl, priority: context.sourcePriority },
+    ...(draft.applyUrl === null ? [] : [{ url: draft.applyUrl, priority: context.sourcePriority }]),
+    ...(existing?.applyUrl ? [{ url: existing.applyUrl, priority: context.sourcePriority }] : []),
+  ]);
+  common.applyUrl = chosenApplyUrl === draft.canonicalUrl ? null : chosenApplyUrl;
 
   const job = await prisma.job.upsert({
     where: { companyId_externalId: { companyId, externalId: draft.externalId } },

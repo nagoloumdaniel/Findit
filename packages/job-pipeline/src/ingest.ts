@@ -31,6 +31,12 @@ export interface CollectedOffer {
   readonly commitmentLabel: string | null;
   /** Nom du connecteur d'origine : « greenhouse », « lever »… */
   readonly sourceName: string;
+  /**
+   * Lien de candidature quand la source le donne : sur un job board, la page de
+   * l'ATS de l'employeur. Absent pour un ATS natif, dont l'URL est déjà celle
+   * où l'on postule.
+   */
+  readonly applyUrl?: string | null;
 }
 
 /**
@@ -53,6 +59,8 @@ export interface JobDraft {
   readonly publishedAt: Date;
   readonly expiresAt: Date;
   readonly canonicalUrl: string;
+  /** Lien de candidature fourni par la source, ou `null`. */
+  readonly applyUrl: string | null;
   readonly externalId: string;
   readonly companyName: string;
   readonly sourceName: string;
@@ -203,6 +211,7 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
     publishedAt: offer.publishedAt,
     expiresAt: new Date(offer.publishedAt.getTime() + EXTENDED_MAX_AGE_HOURS * MS_PER_HOUR),
     canonicalUrl: offer.url,
+    applyUrl: offer.applyUrl ?? null,
     externalId: offer.sourceJobId,
     companyName: offer.companyName,
     sourceName: offer.sourceName,

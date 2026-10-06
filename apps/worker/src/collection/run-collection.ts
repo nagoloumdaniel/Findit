@@ -137,6 +137,7 @@ export const runCollection = async (
         companyName: (raw.companyName ?? job.companyName).trim(),
         commitmentLabel: null,
         sourceName: job.connector.name,
+        applyUrl: raw.applyUrl ?? null,
       }));
 
       const persisted = await decideAndPersist(offers, job.sourcePriority, deps, correlationId);

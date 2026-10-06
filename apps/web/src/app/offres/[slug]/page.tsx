@@ -175,11 +175,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
 
         <a
           className="source-primary"
-          href={job.canonicalSource?.url ?? job.canonicalUrl}
+          href={job.applyUrl ?? job.canonicalSource?.url ?? job.canonicalUrl}
           target="_blank"
           rel="noreferrer noopener nofollow"
         >
-          Ouvrir sur {job.canonicalSource?.name ?? "la source"}
+          {job.applyUrl === null
+            ? `Ouvrir sur ${job.canonicalSource?.name ?? "la source"}`
+            : "Postuler sur le site de l’entreprise"}
         </a>
 
         {job.sources.length > 1 ? (
