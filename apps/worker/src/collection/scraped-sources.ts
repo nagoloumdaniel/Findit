@@ -2,6 +2,7 @@ import type { WorkerEnv } from "@findit/config";
 import type { SearchTarget } from "@findit/job-connectors";
 import {
   createHelloworkConnector,
+  createIndeedConnector,
   createWttjConnector,
   SOURCE_PRIORITY_JOB_BOARD,
 } from "@findit/job-connectors";
@@ -11,11 +12,12 @@ import type { CollectionJob } from "./run-collection.js";
 /*
  * Ce que le cycle quotidien lit sur chaque job board. Le périmètre produit est
  * l'Île-de-France ; la nature du contrat et le métier sont des filtres de
- * l'acteur, pas de cette recherche. HelloWork lit la région telle quelle ;
- * Welcome to the Jungle la lit comme le centre d'un rayon.
+ * l'acteur quand il les sait faire, sinon des mots-clés relus par la
+ * classification Findit (Indeed n'a pas de filtre de contrat).
  */
 const WTTJ_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France, France" };
 const HELLOWORK_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France" };
+const INDEED_SEARCH: SearchTarget = { query: "alternance développeur", location: "Île-de-France" };
 
 type ScrapedSourcesEnv = Pick<
   WorkerEnv,
@@ -23,6 +25,7 @@ type ScrapedSourcesEnv = Pick<
   | "APIFY_API_TOKEN"
   | "SCRAPING_WTTJ_MAX_ITEMS"
   | "SCRAPING_HELLOWORK_MAX_ITEMS"
+  | "SCRAPING_INDEED_MAX_ITEMS"
 >;
 
 /**
@@ -56,6 +59,15 @@ export const scrapedSourceJobs = (env: ScrapedSourcesEnv): CollectionJob<unknown
         maxItems: env.SCRAPING_HELLOWORK_MAX_ITEMS,
       }),
       target: HELLOWORK_SEARCH,
+      companyName: "",
+      sourcePriority: SOURCE_PRIORITY_JOB_BOARD,
+    },
+    {
+      connector: createIndeedConnector({
+        token: env.APIFY_API_TOKEN,
+        maxItems: env.SCRAPING_INDEED_MAX_ITEMS,
+      }),
+      target: INDEED_SEARCH,
       companyName: "",
       sourcePriority: SOURCE_PRIORITY_JOB_BOARD,
     },

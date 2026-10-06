@@ -6,6 +6,7 @@ import type { RunConnectorDeps } from "@findit/job-connectors";
 import {
   createCycleBudget,
   createHelloworkConnector,
+  createIndeedConnector,
   createPrismaConnectorRunStore,
   createPrismaSpendLedger,
   createWttjConnector,
@@ -15,6 +16,7 @@ import {
   usdToMicroUsd,
   WTTJ_CONNECTOR_NAME,
   HELLOWORK_CONNECTOR_NAME,
+  INDEED_CONNECTOR_NAME,
 } from "@findit/job-connectors";
 
 import { createIngestionPersistence, runCollection } from "./src/collection/run-collection.js";
@@ -32,6 +34,7 @@ import { createIngestionPersistence, runCollection } from "./src/collection/run-
  *
  *   pnpm board:proof -- --max-items 20                    # Welcome to the Jungle
  *   pnpm board:proof -- --source hellowork --max-items 20  # HelloWork
+ *   pnpm board:proof -- --source indeed --max-items 20     # Indeed
  *   pnpm board:proof -- --max-items 20 --keep              # garde les offres
  */
 
@@ -45,6 +48,11 @@ const SOURCES = {
     name: HELLOWORK_CONNECTOR_NAME,
     target: { query: "développeur", location: "Île-de-France" },
     create: (token: string, maxItems: number) => createHelloworkConnector({ token, maxItems }),
+  },
+  indeed: {
+    name: INDEED_CONNECTOR_NAME,
+    target: { query: "alternance développeur", location: "Île-de-France" },
+    create: (token: string, maxItems: number) => createIndeedConnector({ token, maxItems }),
   },
 } as const;
 

@@ -102,6 +102,8 @@ export const workerEnvSchema = z.object({
   SCRAPING_WTTJ_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(30),
   /// Résultats par run pour HelloWork. 40 tient le plan gratuit.
   SCRAPING_HELLOWORK_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(40),
+  /// Résultats par run pour Indeed. 100 tient le plan gratuit.
+  SCRAPING_INDEED_MAX_ITEMS: z.coerce.number().int().min(1).max(100).default(100),
   APIFY_API_TOKEN: z.string().min(1).optional(),
   SCRAPEGRAPH_API_KEY: z.string().min(1).optional(),
 

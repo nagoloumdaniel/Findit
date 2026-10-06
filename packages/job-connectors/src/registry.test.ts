@@ -5,6 +5,7 @@ import { COLLECTION_ALLOWED_STATUSES } from "./access-policy.js";
 import { createFranceTravailConnector } from "./france-travail.js";
 import { greenhouseConnector } from "./greenhouse.js";
 import { createHelloworkConnector } from "./hellowork.js";
+import { createIndeedConnector } from "./indeed.js";
 import { leverConnector } from "./lever.js";
 import { workableConnector } from "./workable.js";
 import { workdayConnector } from "./workday.js";
@@ -61,6 +62,10 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
         createHelloworkConnector({ token: "test", maxItems: 1 }),
         SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
       ],
+      [
+        createIndeedConnector({ token: "test", maxItems: 1 }),
+        SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+      ],
     ] as const;
 
     for (const [connector, accessStatus] of regimes) {
@@ -75,12 +80,11 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
 
   it("holds no line for the sources the register found closed", () => {
     // Ces sources n'ont aucune ligne : aucune exécution possible. Les job boards
-    // s'ouvrent un par un, à leur brique (phase 22) ; Welcome to the Jungle l'est
-    // depuis TASK-306 et a donc quitté cette liste.
+    // s'ouvrent un par un, à leur brique (phase 22) ; Welcome to the Jungle et
+    // HelloWork sont ouverts (TASK-306, TASK-402), Indeed (TASK-403) aussi.
     for (const name of [
       "ashby",
       "linkedin",
-      "indeed",
       "glassdoor",
       "smartrecruiters",
       "smartrecruiters-www",

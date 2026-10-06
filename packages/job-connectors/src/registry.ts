@@ -4,6 +4,7 @@ import type { ConnectorRegistration } from "./access-policy.js";
 import { FRANCE_TRAVAIL_CONNECTOR_NAME } from "./france-travail.js";
 import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { HELLOWORK_CONNECTOR_NAME } from "./hellowork.js";
+import { INDEED_CONNECTOR_NAME } from "./indeed.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
 import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
 import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
@@ -93,6 +94,15 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_10_06,
     notes:
       "Acces TOLERE, non autorise : les conditions de HelloWork interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify solidcode/hellowork-scraper, sans compte ni cookie, contrat alternance/stage et region Ile-de-France filtres cote acteur, 40 resultats par run par defaut (plan gratuit), budget plafonne. L'acteur garde la derniere page entiere quand elle depasse le plafond demande : la charge maximale couvre ce depassement (resultOvershoot 20). Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
+  },
+  {
+    name: INDEED_CONNECTOR_NAME,
+    atsKind: AtsKind.JOB_BOARD,
+    accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_10_06,
+    notes:
+      "Acces TOLERE, non autorise : les conditions d'Indeed interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify curious_coder/indeed-scraper, sans compte ni cookie, pages publiques du sous-domaine fr, mots-cles alternance developpeur - aucun filtre de contrat cote acteur, la classification Findit tranche, 100 resultats par run par defaut (plan gratuit), budget plafonne. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
   },
 ];
 

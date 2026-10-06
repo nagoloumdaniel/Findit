@@ -156,4 +156,13 @@ export {
 } from "./hellowork.js";
 export type { HelloworkConnectorOptions } from "./hellowork.js";
 
+export {
+  INDEED_ACTOR_ID,
+  INDEED_CONNECTOR_NAME,
+  INDEED_MAX_ITEMS_CEILING,
+  createIndeedConnector,
+  mapIndeedItem,
+} from "./indeed.js";
+export type { IndeedConnectorOptions } from "./indeed.js";
+
 export { SOURCE_PRIORITY_JOB_BOARD, SOURCE_PRIORITY_OFFICIAL } from "./source-priority.js";

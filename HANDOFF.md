@@ -368,7 +368,7 @@ n'est cochée** : le propriétaire valide, il ne constate pas.
   le texte extrait est stocké aujourd'hui.
 - Hébergement public du web, de l'API et du worker : la base est en ligne, mais
   le cron vit encore sur le poste, donc pas de collecte quand il est éteint.
-- Les job boards restants : Indeed, Glassdoor, LinkedIn (phase 22,
+- Les job boards restants : Glassdoor, LinkedIn (phase 22,
   un site par brique, chacun sur ordre explicite du propriétaire).
 - Sites carrières par extraction IA (phase 23), pilotage et santé des sources
   (phase 24), refonte de la disposition du site (phase 25).
@@ -651,7 +651,7 @@ porte les phases 20 (base en ligne), 21 (moteur de scraping), 22 (job boards),
 
 Suivant ce que le propriétaire ordonne :
 
-1. **Valider les briques en attente** (TASK-301 à TASK-307, TASK-401, TASK-402) : elles
+1. **Valider les briques en attente** (TASK-301 à TASK-307, TASK-401, TASK-402, TASK-403) : elles
    sont livrées et prouvées, il ne manque que la case cochée.
 2. **Trancher ce qui bloque** : la règle d'affichage public d'une offre de job
    board (seul obstacle à l'allumage de Welcome to the Jungle), Q-1 (le privé
@@ -659,7 +659,7 @@ Suivant ce que le propriétaire ordonne :
 3. **Allumer le cycle des sources scrapées** : tout est câblé, garde de budget
    comprise, mais `SCRAPED_SOURCES_ENABLED` vaut `false`, donc aucun job board
    ne tourne en production.
-4. **Poursuivre la phase 22** : Indeed, puis Glassdoor et LinkedIn,
+4. **Poursuivre la phase 22** : Glassdoor, puis LinkedIn,
    un site par brique et sur ordre explicite.
 
 Ensuite, phases 23 à 25 : extraction déterministe des sites carrières (JSON-LD,
