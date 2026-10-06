@@ -50,6 +50,16 @@ Optionnelles :
 - `FRANCETRAVAIL_CLIENT_ID` / `FRANCETRAVAIL_CLIENT_SECRET` - API officielle
   France Travail (inscription gratuite sur francetravail.io, produit « Offres
   d'emploi v2 ») ; sans elles, la source est simplement absente du cycle.
+- `APIFY_API_TOKEN` - jeton du compte Apify dédié, pour les job boards. Sans
+  lui, aucun job board n'est collecté. Un run dépense du crédit réel : le
+  cycle quotidien des job boards reste éteint tant que `SCRAPED_SOURCES_ENABLED`
+  n'est pas à `true`. Réglages : `SCRAPED_COLLECTION_CRON` (6 h, heure de Paris),
+  `SCRAPING_WTTJ_MAX_ITEMS` (30), et les plafonds de dépense
+  `SCRAPING_BUDGET_MONTHLY_USD` (4,5 pour le plan gratuit) et
+  `SCRAPING_BUDGET_CYCLE_USD` (0,15). Remettre l'interrupteur à `false` et
+  redémarrer le worker retire la planification.
+- `SCRAPEGRAPH_API_KEY` - clé de l'API ScrapeGraphAI (plan gratuit : 500
+  crédits). Réservée aux sites carrières ; voir `docs/legal-compliance.md`.
 - `TELEGRAM_*` - alertes ; simulation par défaut tant que
   `TELEGRAM_NOTIFICATIONS_ENABLED` et `TELEGRAM_DRY_RUN` ne sont pas réglés.
 - `RESUME_RETENTION_HOURS` - rétention des CV importés (24 par défaut).

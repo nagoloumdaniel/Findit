@@ -433,10 +433,22 @@ Variables d'environnement concernées : `AI_PROVIDER` (`disabled` | `ollama`,
 
 ## 10. Prochaines briques, dans l'ordre
 
-1. **Suivi des candidatures** : dossier liant offre, CV, lettre, statut et
-   historique.
-2. **Interface privée** minimale : profil, import CV, score, lettre, PDF.
-3. Analyse GitHub, commandes du bot Telegram, dettes courtes (Workable dans le
+Mise à jour du 2026-10-05 (pivot) : le propriétaire veut un véritable outil de
+scraping multi-sources (Apify, ScrapeGraphAI déjà installé, Playwright) sur les
+sites carrières tech **et** les job boards (LinkedIn, WTTJ, HelloWork, Glassdoor,
+Indeed, autres), avec une refonte de la disposition du site ; la gestion des CV
+ne change pas. `roadmap.md` porte maintenant les phases 21 (moteur), 22 (job
+boards), 23 (sites carrières par extraction IA), 24 (pilotage) et 25 (refonte du
+site). Q-4 est tranchée. Le registre de conformité n'est **pas encore réécrit** :
+tant que TASK-301 n'est pas livrée, aucun connecteur de job board ne doit tourner.
+Aucune ligne de code écrite. Premier ordre à donner : TASK-301.
+
+1. **Décisions Q-1 à Q-7** (`CAHIER_DES_CHARGES.md` section 25) : sans elles,
+   ni la base en ligne (TASK-201) ni Apify (TASK-301) ne démarrent.
+2. **Base en ligne** (phase 20, TASK-202 à TASK-204) puis migration et bascule.
+3. **Apify** (phase 21) : uniquement sur sources autorisées au registre ; ne
+   jamais utiliser un acteur LinkedIn, Indeed, Glassdoor ou WTTJ.
+4. Analyse GitHub, commandes du bot Telegram, dettes courtes (Workable dans le
    cycle, dédup persistée).
 
 Le score, l'export PDF du CV et la lettre sont faits côté moteur et API ; il

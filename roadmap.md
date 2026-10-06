@@ -2,17 +2,17 @@
 
 ## 1. Informations generales
 
-| Champ                 | Valeur                                                                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Nom du projet         | Findit                                                                                                                                                   |
-| Objectif              | Agreger des offres d'alternance et de stage developpeur en Ile-de-France, puis aider le proprietaire a analyser son CV, ses projets et ses candidatures. |
-| Source de verite      | `roadmap.md`, alignee avec `HANDOFF.md` le 2026-07-25                                                                                                    |
-| Branche analysee      | `main`                                                                                                                                                   |
-| Commit analyse        | `b418bfc1b20ad1c2f405867ec9295fc452fa4379`                                                                                                               |
-| Date du dernier audit | 2026-07-24                                                                                                                                               |
-| Environnement teste   | Windows, PowerShell, Node `v24.18.0`, pnpm `11.13.1`, PostgreSQL Docker, Redis Docker                                                                    |
-| Statut global         | Socle public avance et testable ; extension personnelle encore majoritairement a construire                                                              |
-| Progression estimee   | 45 % environ, estimation d'audit et non mesure contractuelle                                                                                             |
+| Champ                 | Valeur                                                                                                                                                                                                            |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nom du projet         | Findit                                                                                                                                                                                                            |
+| Objectif              | Meilleur outil de scraping d'offres d'alternance et de stage developpeur en Ile-de-France (sites carrieres tech, job boards, ATS), puis aider le proprietaire a analyser son CV, ses projets et ses candidatures. |
+| Source de verite      | `roadmap.md`, alignee avec `HANDOFF.md` le 2026-07-25                                                                                                                                                             |
+| Branche analysee      | `main`                                                                                                                                                                                                            |
+| Commit analyse        | `b418bfc1b20ad1c2f405867ec9295fc452fa4379`                                                                                                                                                                        |
+| Date du dernier audit | 2026-07-24                                                                                                                                                                                                        |
+| Environnement teste   | Windows, PowerShell, Node `v24.18.0`, pnpm `11.13.1`, PostgreSQL Docker, Redis Docker                                                                                                                             |
+| Statut global         | Socle public avance et testable ; extension personnelle encore majoritairement a construire                                                                                                                       |
+| Progression estimee   | 45 % environ, estimation d'audit et non mesure contractuelle                                                                                                                                                      |
 
 Deux mondes restent separes :
 
@@ -86,6 +86,10 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 
 ### Ce qui manque
 
+- Base de donnees en ligne : la base reste PostgreSQL Docker local (phase 20, TASK-201 a TASK-208).
+- Hebergement public du web, de l'API et du worker (TASK-207).
+- Moteur de scraping multi-sources (phases 21 a 24) : Apify, ScrapeGraphAI et rendu Playwright ne sont pas encore integres ; perimetre tranche le 2026-10-05, registre a reecrire (TASK-301).
+- Refonte de la disposition du site : navigation a plusieurs espaces, badge de source, page Mon CV, page Sources (phase 25).
 - Conservation chiffree et versionnee du binaire original du CV.
 - Messages recruteurs et export DOCX (CV et lettre s'exportent deja en PDF).
 - Analyse GitHub et selection de projets.
@@ -100,6 +104,12 @@ Complexite indicative : `XS`, `S`, `M`, `L`, `XL`.
 - Risque donnees personnelles : le CV source se supprime et expire desormais, mais le binaire original n'est ni conserve chiffre ni versionne.
 - Risque securite locale : ferme le 2026-07-26 - la variable obsolete `OPENAI_API_KEY` a ete retiree du `.env` local ; revoquer la cle chez OpenAI si elle etait reelle.
 - Historique Git : un incident Brave a existe et est documente comme traite ; ne jamais remettre de valeur reelle dans `.env.example`.
+- Conformite du scraping elargi (2026-10-05) : le proprietaire a tranche - LinkedIn, Welcome to the Jungle, HelloWork, Glassdoor, Indeed et autres job boards sont collectes (Q-4 tranchee, C-1 levee, phase 21). Les conditions d'utilisation de ces plateformes interdisent la collecte automatisee : risque civil assume (blocage d'IP, d'acces, de compte), a ecrire au registre (TASK-301). Garde-fous gardes : pas de compte, pas de cookie, pas de CAPTCHA contourne, URL d'origine obligatoire, budget plafonne.
+- Publication d'offres de job boards sur un site public (2026-10-05) : republier du contenu tiers expose plus que le simple usage personnel. Proposition : extrait court et lien d'origine en public, description complete reservee au matching prive (TASK-301, a confirmer).
+- Contrat Apify (2026-10-06) : la clause 11.1 des conditions generales impose d'indemniser Apify en cas d'extraction depuis des sources non autorisees ; le compte Apify du proprietaire est expose (suspension, reclamation). Compte dedie, budget plafonne, decision du proprietaire a confirmer avant tout run sur un job board (TASK-302).
+- Fragilite des acteurs Apify (2026-10-05) : acteurs tiers, mis a jour par des developpeurs independants ; un job board qui change son HTML casse l'acteur. Acteur de secours par source et surveillance des taux d'echec (TASK-303, TASK-601).
+- Donnees privees en ligne : la regle « rien ne sort du poste » (decisions 2026-07-17 et 2026-07-24) doit etre reecrite avant toute ecriture de CV ou de profil sur une base distante (contradiction C-4).
+- IA locale et site heberge : Ollama sur le poste ne sera pas joignable depuis un site en ligne (contradiction C-5).
 
 ## 4. Stack detectee
 
@@ -651,30 +661,505 @@ Vision : plus d'offres reelles sans attendre la seule saison Greenhouse/Lever/Wo
 - [!] LinkedIn (posts et emplois) : REFUS de conformite maintenu - les conditions LinkedIn interdisent la collecte automatisee, aucune API publique pour cet usage (registre, verifie 2026-07-17). La voie legale equivalente est en place : les offres LinkedIn pointent presque toujours vers l'ATS de l'entreprise, que Findit collecte a la source
 - [x] « Google sites carrieres » : la voie legale est la recherche Brave (site: sur les ATS autorises, tous couverts a chaque cycle) + le scan direct des sites carrieres de l'annuaire - scraper Google directement est interdit par ses conditions, comme LinkedIn
 
+### Phase 20 - Base de donnees en ligne (ordre du proprietaire, 2026-10-05)
+
+Vision : la base n'est plus sur le poste. Cadrage : `CAHIER_DES_CHARGES.md`, F-016, Q-1, Q-3, Q-5, C-4.
+Identifiants TASK-XXX : introduits le 2026-10-05 pour les nouvelles briques ; les phases precedentes gardent leur numerotation.
+
+- [ ] TASK-201 - Trancher le perimetre des donnees en ligne (Q-1) et la conservation des candidatures (Q-8)
+  - Priorite : P0
+  - Complexite : XS
+  - Dependances : aucune
+  - Fichiers concernes : `CAHIER_DES_CHARGES.md` section 25, `docs/legal-compliance.md` (regle « rien ne sort du poste »)
+  - Criteres d'acceptation :
+    - Decision ecrite : offres publiques seules, ou offres et donnees privees.
+    - Si le prive part en ligne : chiffrement en transit exige et regle reecrite dans `legal-compliance.md`.
+  - Tests : aucun (decision)
+  - Resultat :
+
+- [ ] TASK-202 - Creer la base PostgreSQL en ligne
+  - Priorite : P0
+  - Complexite : S
+  - Dependances : TASK-201, Q-3 tranchee (proposition : Neon)
+  - Fichiers concernes : `.env.example` (nom de variable seulement), `docs/deployment.md`
+  - Criteres d'acceptation :
+    - Version PostgreSQL et pgvector confirmees ; TLS obligatoire.
+    - Role applicatif dedie, sans droit de reinitialisation.
+    - Aucun mot de passe dans le depot ni dans les journaux.
+    - Sauvegardes du fournisseur, rétention notee.
+  - Tests : connexion depuis le poste avec TLS ; refus sans TLS
+  - Resultat :
+
+- [ ] TASK-203 - Appliquer les migrations sur la base en ligne
+  - Priorite : P0
+  - Complexite : S
+  - Dependances : TASK-202
+  - Fichiers concernes : `packages/database/prisma/migrations/`, `packages/database/prisma/schema.prisma`
+  - Criteres d'acceptation :
+    - `prisma migrate deploy` passe sur base vide, sans reinitialisation.
+    - Diff de schema vide ensuite.
+  - Tests : `pnpm --filter @findit/database prisma:validate` ; diff de schema
+  - Resultat :
+
+- [ ] TASK-204 - Basculer `DATABASE_URL` par environnement et valider la configuration
+  - Priorite : P0
+  - Complexite : S
+  - Dependances : TASK-203
+  - Fichiers concernes : `packages/config/src/env.ts`, `packages/config/src/env.test.ts`, `packages/database/src/client.ts`
+  - Criteres d'acceptation :
+    - Une URL distante sans TLS fait echouer le demarrage avec un message sans secret.
+    - La validation Zod existante reste la seule porte d'entree.
+  - Tests : tests de configuration (cas valide, cas sans TLS, cas vide)
+  - Resultat :
+
+- [ ] TASK-205 - Transferer les donnees de reference vers la base en ligne
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : TASK-203
+  - Fichiers concernes : `packages/database/import-companies.mjs`, `pnpm registry:sync`
+  - Criteres d'acceptation :
+    - Compteurs `Connector` (13) et `CompanySource` (30) identiques a l'audit du 2026-07-24, ou ecarts expliques.
+    - Les donnees privees ne sont transferees que si TASK-201 le permet.
+  - Tests : comptage avant/apres
+  - Resultat :
+
+- [ ] TASK-206 - Decider Redis (BullMQ) : gere ou local (Q-5)
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : TASK-207
+  - Criteres d'acceptation :
+    - Politique d'eviction compatible BullMQ verifiee dans la documentation du fournisseur.
+    - Le verrou de concurrence du worker fonctionne sur la cible.
+  - Tests : cycle worker reel contre la cible
+  - Resultat :
+
+- [ ] TASK-207 - Choisir l'hebergeur du worker, de l'API et du web (Q-6)
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-201
+  - Criteres d'acceptation :
+    - Un hote toujours allume pour le worker (cron de 4 h).
+    - API et Redis non exposes publiquement ; web en HTTPS.
+    - Ollama reste sur le poste, sauf decision Q-2 contraire.
+  - Tests : smoke production (`GET /health`, une collecte)
+  - Resultat :
+
+- [ ] TASK-208 - Realigner la documentation sur la base en ligne et la fenetre de fraicheur
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : TASK-204, TASK-207
+  - Fichiers concernes : `README.md` (fenetre 24 h, PostgreSQL local), `docs/architecture.md` (Workable, deduplication), `HANDOFF.md` (espace `/espace` retire), `docs/deployment.md`
+  - Criteres d'acceptation :
+    - Aucune phrase ne dit « local seulement » si la base est en ligne.
+    - La fenetre par defaut correspond a la decision Q-7.
+  - Tests : `git diff --check`, `pnpm format:check`
+  - Resultat :
+
+### Phase 21 - Moteur de scraping multi-sources (ordre du proprietaire, 2026-10-05 - PRIORITAIRE, remplace le cadrage Apify borne)
+
+Vision : Findit devient un veritable outil de scraping d'offres. Trois familles de sources : (1) sites carrieres des entreprises tech, (2) job boards (LinkedIn, Welcome to the Jungle, HelloWork, Glassdoor, Indeed et autres), (3) ATS et API officielles deja en place. Les outils : Apify (acteurs du Store, cloud), ScrapeGraphAI (installe sur le poste, extraction par IA locale), Playwright (rendu JavaScript), connecteurs natifs existants. Le CV, le matching, les lettres et le suivi des candidatures ne bougent pas : ils se nourrissent d'un flux d'offres beaucoup plus large.
+
+**Decision du proprietaire, 2026-10-05 (annule Q-4, C-1 et le refus de conformite du 2026-07-17 pour ces sites)** : LinkedIn, Welcome to the Jungle, HelloWork, Glassdoor, Indeed et les autres job boards sont collectes. Le risque est assume par le proprietaire et doit etre ecrit dans `docs/legal-compliance.md` (TASK-301) : les conditions d'utilisation de ces plateformes interdisent la collecte automatisee ; la consequence realiste est civile (blocage d'IP, d'acces ou de compte), pas penale, mais elle existe. Le registre reste la porte d'entree : un connecteur sans ligne datee ne tourne pas.
+
+Garde-fous conserves (non negociables, proposes par l'assistant) :
+
+- Aucun compte, aucun login, aucun cookie : seules les pages publiques sont lues. Un acteur qui exige un compte LinkedIn ou Glassdoor est ecarte.
+- Aucun CAPTCHA contourne, aucune furtivite dans le code Findit : `undetected-playwright` (installe) n'est pas utilise.
+- Acteurs Apify annoncant un contournement d'anti-bot (« bypasses », « survives the anti-bot wall », « stealth ») ecartes. Les proxys propres a un acteur sont hors de notre code : ils sont notes dans le registre comme risque, pas ignores.
+- Chaque offre garde son URL d'origine ; une offre sans URL d'origine est rejetee (regle « rien d'invente »).
+- Cadence et volume bornes par source ; budget Apify plafonne par cycle et par mois ; interrupteur par source.
+- Affichage public des offres de job boards : titre, entreprise, lieu, date, extrait court et lien vers l'origine. Description complete conservee pour le matching prive. [PROPOSITION, a confirmer]
+
+Architecture cible :
+
+```text
+Cycle worker
+    |
+    +--> Registre Connector (statut, cadence, budget, interrupteur)
+    |
+    +--> ScrapeProvider (interface commune, sortie = RawJob)
+          +--> Natif        : Greenhouse, Lever, Workable, Workday, France Travail
+          +--> Apify        : job boards et sites difficiles (acteurs epingles)
+          +--> ScrapeGraphAI: sites carrieres sans ATS reconnu (service local, Ollama)
+    |
+    +--> Normalisation / classification / deduplication inter-sources / ingestion
+```
+
+Ordre d'execution recommande : TASK-301 a 303, puis 305 avant 304 (le plafond avant le premier run), 306 sur Welcome to the Jungle puis HelloWork (pages publiques, sans compte), 307, puis phase 22. La phase 25 (disposition du site) peut avancer en parallele cote conception.
+
+- [~] TASK-301 - Enregistrer la decision et rouvrir le registre de conformite
+  - Priorite : P0
+  - Complexite : S
+  - Dependances : aucune
+  - Fichiers concernes : `docs/legal-compliance.md` (section LinkedIn/Indeed/Glassdoor/WTTJ, regles absolues, statuts), `packages/database/prisma/schema.prisma` (statut additif `OWNER_ACCEPTED_SCRAPING`), `packages/job-connectors/src/registry.ts`, `CAHIER_DES_CHARGES.md` (Q-4, C-1, C-2, RM-010 a RM-013)
+  - Criteres d'acceptation :
+    - Decision, date, auteur et risque ecrits ; les regles absolues reecrites en gardant les garde-fous ci-dessus.
+    - Nouveau statut d'acces distinct de `PUBLIC_FEED` : un acces tolere n'est jamais presente comme autorise.
+    - Le garde-fou structurel accepte ce statut et refuse toujours `PROHIBITED` et `DISABLED_PENDING_PERMISSION`.
+  - Tests : tests registre et garde-fou ; migration additive sans derive
+  - Resultat : fait le 2026-10-05, validation du proprietaire attendue. Regime `OWNER_ACCEPTED_SCRAPING` ajoute (migration additive `20261005100000_owner_accepted_scraping`, appliquee sur la base Neon en ligne), accepte par `decideCollectionAccess` ; `PROHIBITED`, `DISABLED_PENDING_PERMISSION`, `SEARCH_ENGINE_DISCOVERY_ONLY` et `MANUAL_IMPORT` restent refuses, delai de 90 jours inchange (3 tests ajoutes). `docs/legal-compliance.md` (statut, regles absolues, decision datee) et `CAHIER_DES_CHARGES.md` (C-1, RM-010, RM-011) reecrits. Aucun job board n'est encore ouvert : chaque site passera au nouveau regime dans sa propre brique (phase 22). Incident corrige : le role applicatif `findit_app` n'est pas proprietaire de l'enum, donc `migrate deploy` a laisse une ligne d'historique echouee ; valeur ajoutee en tant que proprietaire (`neondb_owner`, via l'outil Neon), puis `migrate resolve` (rolled-back puis applied) ; `migrate deploy` ensuite : aucune migration en attente.
+
+- [~] TASK-302 - Lire et dater les conditions d'Apify et de chaque acteur retenu
+  - Priorite : P0
+  - Complexite : S
+  - Dependances : TASK-301
+  - Fichiers concernes : `docs/legal-compliance.md` (section « Apify », datee)
+  - Criteres d'acceptation :
+    - Conditions d'Apify lues et datees ; fiche de chaque acteur lue et datee.
+    - Une ligne par acteur : identifiant epingle, version, statut, date, proxys, exigence de compte.
+  - Tests : aucun (revue)
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. Conditions generales d'Apify (en vigueur le 2026-07-09) et politique d'utilisation acceptable (2026-02-20) lues, 10 fiches d'acteurs lues par `fetch-actor-details`, section datee dans `docs/legal-compliance.md` (statut, date de modification, declarations par acteur). Constat a traiter : la clause 11.1 d'Apify impose d'indemniser Apify si le service extrait des donnees de sources non autorisees, donc le risque des job boards porte aussi sur le compte Apify du proprietaire (suspension, indemnisation), pas seulement sur Findit ; compte dedie recommande. Ecartes : `memo23/*` (contournement de l'anti-bot annonce) et `stealth_mode/*`. Reserves : `shahidirfan/Jungle-Job-Scraper` (rotation de jetons), `shahidirfan/HelloWork-Jobs-Scraper` ("stealthy", proxy optionnel), `valig/indeed-jobs-scraper` (proxys cites). Aucun acteur lance : les fiches sont des declarations, le run reel borne (TASK-306) tranche.
+
+- [~] TASK-303 - Selectionner les acteurs par source
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : TASK-302
+  - Notes : recherche reelle `search-actors` le 2026-10-05, aucun acteur lance. Candidats (statistiques du Store a la date, a revalider par `fetch-actor-details`) :
+    - Welcome to the Jungle : `bebity/welcome-to-the-jungle-jobs-scraper` (filtres `postedWithinDays`, `city`, `contractType`, `maxItems`, environ 0,0003 $ l'offre), `shahidirfan/Jungle-Job-Scraper` (note 4,64), `logiover/welcome-to-the-jungle-jobs-scraper` (annonce « sans login »).
+    - HelloWork : `shahidirfan/HelloWork-Jobs-Scraper` (note 5/5 sur 8 avis), `solidcode/hellowork-scraper` (`datePosted`, `contractType`, 0,95 $ les 1 000), `blackfalcondata/hellowork-scraper` (mode incremental).
+    - LinkedIn : `curious_coder/linkedin-jobs-scraper` (167 000 utilisateurs, 4,59), `cheap_scraper/linkedin-job-scraper` (dedoublonnage integre), `bebity/linkedin-jobs-scraper`. A verifier avant tout : l'acteur doit fonctionner sans compte.
+    - Glassdoor : `valig/glassdoor-jobs-scraper` (0,4 $ les 1 000, filtre `daysOld`), `cheap_scraper/glassdoor-jobs-scraper-remove-duplicate-jobs`. `memo23/*` annonce de contourner l'anti-bot : ecarte par critere.
+    - Indeed : `valig/indeed-jobs-scraper` (`datePosted`, 0,1 $ les 1 000), `curious_coder/indeed-scraper`, `kaix/indeed-scraper`.
+  - Criteres d'acceptation :
+    - Pour chaque acteur : schema d'entree lu, absence de compte exigee, proxys et annonces d'anti-bot notes, cout par evenement, date de derniere mise a jour, un acteur de secours par source.
+    - Choix epingle par identifiant dans le registre.
+  - Tests : `fetch-actor-details` sur chaque acteur retenu
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. Un acteur et un secours par source, epingles dans `docs/legal-compliance.md` (section « Choix retenus ») avec l'entree prevue, les ecarts de filtre (LinkedIn n'a pas de fenetre de 3 jours, refiltree a l'ingestion), la correspondance champ par champ vers `RawJob` lue sur les schemas de sortie reels, et le cout. Retenus : `bebity/welcome-to-the-jungle-jobs-scraper`, `solidcode/hellowork-scraper`, `curious_coder/linkedin-jobs-scraper`, `valig/glassdoor-jobs-scraper`, `curious_coder/indeed-scraper`. Constats : (1) `RawJob` n'a pas de champ de lien de candidature, a ajouter (optionnel) en TASK-304 pour la fusion de TASK-307 ; (2) Glassdoor ne donne qu'un age en jours, la date ne sera jamais plus precise ; (3) HelloWork peut renvoyer un employeur nul (regle « Inconnu ») ; (4) cout d'environ 0,43 $ par cycle des cinq sources a 100 resultats, soit environ 77 $ par mois a la cadence de 4 h contre environ 13 $ a une collecte par jour : les job boards passent a une fois par jour (TASK-602). Aucun acteur lance. Compte Apify dedie et risque de la clause 11.1 confirmes par le proprietaire le 2026-10-06.
+
+- [~] TASK-305 - Plafond de depense par cycle et par mois
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : aucune
+  - Fichiers concernes : `packages/config/src/env.ts`, `packages/job-connectors`, `apps/worker/src/collection/`
+  - Criteres d'acceptation :
+    - Budget maximal par cycle et par mois configurable ; depassement = arret de la source, les autres continuent.
+    - Cout de chaque run consigne dans `ConnectorRun`.
+    - `maxItems` impose a chaque appel d'acteur.
+  - Tests : test worker avec budget fictif (nomme comme tel)
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. Plan Apify reel : gratuit, 5 $ de credit par mois (confirme par le proprietaire) ; defauts `SCRAPING_BUDGET_MONTHLY_USD=4.5` (5 $ moins 10 % de marge) et `SCRAPING_BUDGET_CYCLE_USD=0.15` (30 cycles quotidiens sous 4,5 $), modifiables sans toucher au code. `packages/job-connectors/src/spend-budget.ts` : montants en micro-dollars entiers, cout maximal d'un run (demarrage + resultats + details), refus d'un appel sans plafond de resultats valide (`UnboundedRunError`), billet de reservation par run, refus `CYCLE_BUDGET_EXCEEDED` ou `MONTH_BUDGET_EXCEEDED` qui arrete la source sans arreter le cycle ; `spend-ledger.ts` relit le cumul du mois dans `ConnectorRun`, donc un redemarrage du worker ne le remet pas a zero ; `ConnectorRun.costMicroUsd` (migration additive `20261006090000_connector_run_cost`) et `recordCost` dans le journal de runs. 14 tests de budget + 2 tests de configuration. Prouve sur la base Neon reelle : cout de 4,46 $ ecrit puis relu (cumul 4 460 000), run estime a 0,02 $ autorise, run estime a 0,10 $ refuse en `MONTH_BUDGET_EXCEEDED`, base nettoyee (cumul revenu a 0). Reste a brancher dans le connecteur Apify (TASK-304), qui n'existe pas encore : la garde n'est donc pas encore appelee par le cycle. Incident repete : `findit_app` ne peut pas modifier le schema, colonne ajoutee par le proprietaire de la base via l'outil Neon puis `migrate resolve --applied` ; a trancher en phase 20 (URL proprietaire pour les migrations).
+
+- [~] TASK-304 - Abstraction `ScrapeProvider` et connecteur Apify generique
+  - Priorite : P1
+  - Complexite : L
+  - Dependances : TASK-303, TASK-305
+  - Fichiers concernes : `packages/job-connectors/src/` (interface + fournisseur Apify), `packages/job-connectors/src/registry.ts`, `apps/worker/src/collection/cycle-deps.ts`, `packages/config/src/env.ts` (`APIFY_API_TOKEN`)
+  - Criteres d'acceptation :
+    - Interface commune dont la sortie est `RawJob` ; les connecteurs natifs existants ne changent pas.
+    - `RawJob` recoit un champ optionnel de lien de candidature (additif) : les connecteurs natifs ne le renseignent pas, les acteurs qui le donnent le remplissent.
+    - Token lu cote serveur, jamais journalise ; entree par acteur validee par Zod ; sortie d'acteur revalidee par Zod avant ingestion (une sortie hors schema = erreur explicite, pas une valeur fabriquee).
+    - Une table de correspondance par acteur vers `RawJob` (employeur, lieu, date, URL d'origine, contrat).
+    - Acteur indisponible, run en echec, budget depasse : la source s'arrete, le cycle continue.
+    - Chaque run passe par la garde de TASK-305 : `assertBoundedMaxItems`, cout maximal estime, `authorize` avant l'appel, `recordCost` puis `settle` apres ; sources executees de la moins couteuse a la plus couteuse pour que le plafond du cycle sacrifie la plus chere.
+    - Plafonds de resultats du plan gratuit (WTTJ 30, HelloWork 40, LinkedIn 20, Glassdoor 60, Indeed 100), lus en configuration.
+  - Tests : doubles de l'API Apify (nommes comme tels) ; cas budget, acteur absent, token absent, sortie invalide
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. `createApifyConnector` (`packages/job-connectors/src/apify.ts`) : un acteur epingle, entree construite et bornee, plafond de resultats exige a la construction, depart du run avec `maxTotalChargeUsd` egal au pire cout estime (coupure cote Apify, a constater au premier run reel), sondage cadence a 2 s avec abandon et arret du run apres 150 sondages, jeu de donnees lu avec `limit`, jeton dans l'en-tete `Authorization` seulement (jamais dans une URL, aucun test ne le retrouve dans les requetes). Cout reel calcule depuis `chargedEventCounts` et `usageTotalUsd` (le plus eleve des deux) ; evenement sans prix connu ou cout non rendu = pire cas retenu et signale ; un run raye garde sa facture. Elements illisibles ecartes avec une notice `ItemsDropped` consignee, tous illisibles = erreur explicite. Contrat des connecteurs etendu, sans toucher aux connecteurs natifs : `estimateCostMicroUsd` optionnel (sa presence rend la garde de budget obligatoire), `reportCostMicroUsd` et `reportNotice` dans le contexte, `RawJob.applyUrl` optionnel. `runRecordedConnector` : autorisation de budget AVANT d'ouvrir le run (refus = erreur consignee, pas de run, cycle poursuivi), cout consigne dans `ConnectorRun.costMicroUsd` puis billet clos, `runConnector` refuse un connecteur payant sans autorisation. Nouveau type d'ATS `JOB_BOARD` (migration additive `20261006100000_job_board_ats`, appliquee sur Neon). Budget cable dans `createCycleDeps` ; `APIFY_API_TOKEN` et `SCRAPEGRAPH_API_KEY` ajoutes a la configuration du worker (facultatifs). 17 tests (faux serveur Apify nomme comme tel) : cas nominal, sans garde, budget du mois epuise, acteur en echec, run sans fin, elements illisibles, prix inconnu, cout non declare, `runConnector` sans autorisation. Controles : format, typecheck 30/30, lint 30/30, test 30/30, build 17/17. Aucun acteur reel lance et aucun connecteur monte dans le cycle : la table de correspondance de chaque site est ecrite dans sa brique (phase 22), le premier run reel est TASK-306.
+
+- [~] TASK-306 - Preuve reelle bornee, une source a la fois
+  - Priorite : P1
+  - Complexite : S
+  - Dependances : TASK-304, TASK-305
+  - Criteres d'acceptation :
+    - Un run reel (Welcome to the Jungle d'abord, puis HelloWork), 20 offres au plus.
+    - Offres en base avec leur URL d'origine, zero echec, cout constate, donnees de test nettoyees.
+  - Tests : cycle reel borne ; constat en base
+  - Resultat : fait le 2026-10-06 sur le vrai reseau, validation du proprietaire attendue. Compte Apify dedie, plan FREE (5 $ par mois, plafond de 5 $ aussi applique par Apify). Run 1 (20 offres, `pnpm board:proof -- --max-items 20`) : 20 vues, 7 creees en base (6 publiees + 1 doublon fusionne par la deduplication), 13 rejetees au tri, zero echec, 5 requetes, cout 0,01605 $ egal au pire cas, URL d'origine presente sur chaque offre, base revenue exactement a son etat d'avant apres nettoyage (compteurs identiques). Constats reels : (1) les evenements facturables s'appellent `job` (0,0003 $), `job-details` (0,0005 $), `apify-actor-start` (0,00005 $), `article` et `organization` (0,0004 $), table de prix du connecteur renseignee ; (2) `maxTotalChargeUsd` est bien applique par Apify (option du run = 0,01605, posee par notre appel) ; (3) un run de 20 offres dure environ 6 s ; (4) BUG TROUVE ET CORRIGE PAR CE RUN : les compteurs d'evenements facturables ne sont pas a jour quand le statut devient terminal - le run 2 (5 offres) a consigne 0,00005 $ pour 0,00405 $ factures ; correction : relecture finale du run apres le statut terminal plus un plancher calcule depuis les offres recues (jamais moins que leur cout au tarif de la fiche), 2 tests de non-regression, ligne du registre corrigee de 50 a 4 050 micro-dollars ; run 3 de verification : 5 offres, cout consigne 0,00405 $ = facture Apify ; (5) cumul du mois consigne 0,02415 $, l'usage affiche par Apify est legerement superieur (environ 0,4 %, transfert de donnees) : la marge de 10 % sous le plafond couvre l'ecart ; (6) rendement faible de la requete : 7 acceptees sur 20 puis 0 sur 5 - la recherche « developpeur » ramene des metiers non techniques que l'on paie avant de les rejeter (voir TASK-401) ; (7) bug de classification B009 releve sur des offres reelles. Aucun connecteur de job board n'est monte dans le cycle.
+
+- [~] TASK-307 - Deduplication inter-sources et lien de candidature canonique
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-306
+  - Fichiers concernes : `packages/job-deduplication`, `packages/job-pipeline/src/persist.ts`
+  - Criteres d'acceptation :
+    - La meme offre vue sur LinkedIn, Indeed et l'ATS de l'entreprise donne une seule offre publiee ; la source native ou officielle est la canonique.
+    - Le lien de candidature pointe vers l'ATS de l'entreprise quand il est connu.
+    - Les sources secondaires restent tracees (ou l'offre a-t-elle ete vue, quand).
+  - Tests : cas de fusion multi-sources ; preuve sur PostgreSQL reel
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue. (1) Election de la canonique par rang de source (`SOURCE_PRIORITY_OFFICIAL` 100, `SOURCE_PRIORITY_JOB_BOARD` 40, `packages/job-connectors/src/source-priority.ts`) : a la fusion, l'offre de rang le plus eleve reste publiee ; une offre vue d'abord sur un job board cede sa place a l'ATS de l'entreprise (masquee en DUPLICATE, jamais supprimee, avec une trace `ProcessingLog`) ; a rang egal la plus ancienne reste ; une offre en quarantaine ne detrone jamais une offre publiee ; quand l'offre appariee est deja membre d'un groupe, l'election se joue contre la canonique du groupe. (2) Les sources de l'offre masquee sont recopiees sur la canonique (`JobSource`), donc « ou et quand l'offre a ete vue » reste lisible sur l'offre que le public voit. (3) Lien de candidature : `chooseApplyUrl` (`packages/job-pipeline/src/apply-link.ts`) - un lien d'employeur l'emporte toujours sur un lien de job board connu (WTTJ, LinkedIn, Indeed, Glassdoor, HelloWork et quelques autres), puis le rang, puis le premier ; `RawJob.applyUrl` -> `CollectedOffer` -> `JobDraft` -> `Job.applyUrl` (colonne deja presente, aucune migration) ; une recollecte ne degrade jamais un lien deja choisi ; la page de detail affiche « Postuler sur le site de l'entreprise » vers ce lien quand il existe. 15 tests de persistance et 7 de lien ajoutes. Prouve sur la base Neon reelle avec des offres de test nommees (4 scenarios, 13 verifications OK) : job board puis ATS natif (l'ATS devient la canonique, les deux sources tracees), ATS puis job board (l'ATS reste, source du board tracee), job board seul avec lien employeur (lien stocke), deux job boards (le plus ancien reste et herite du lien employeur de l'autre) ; base revenue exactement a son etat d'avant. Constat releve par la preuve, non corrige (B010) : la similarite d'entreprise fusionne des entreprises aux noms voisins (« X Alpha SAS » et « X Gamma SAS ») des que titre, date et description coincident. Reste a faire : les connecteurs de job boards doivent utiliser `SOURCE_PRIORITY_JOB_BOARD` (TASK-401).
+
+- [ ] TASK-308 - ScrapeGraphAI dans le moteur : zero cout, et repli quand le budget Apify est epuise
+  - Priorite : P1
+  - Complexite : L
+  - Dependances : TASK-304, TASK-502
+  - Notes : ordre du proprietaire du 2026-10-06 (« utilise aussi scrapegraphai »). Le plan Apify gratuit (5 $ par mois) est serre ; ScrapeGraphAI est disponible de deux facons : l'API cloud v2 (cle `SCRAPEGRAPH_API_KEY` fournie et validee le 2026-10-06, plan gratuit de 500 credits) et la bibliotheque locale avec Ollama, sans cout. Il prend trois roles : (1) fournisseur des sites carrieres sans ATS reconnu dont `robots.txt` autorise `FinditBot` (phase 23) - usage conforme aux conditions de ScrapeGraphAI ; (2) repli de Welcome to the Jungle et HelloWork quand le budget Apify est epuise ou que leur acteur casse - MAIS les conditions de ScrapeGraphAI imposent de respecter celles des sites cibles : tant que le proprietaire n'a pas confirme ce risque pour ce fournisseur (comme pour Apify le 2026-10-06), ce repli n'utilise que la bibliotheque locale, jamais l'API cloud ; (3) a decider apres mesure : en faire le fournisseur principal de ces deux sources pour reserver le credit Apify a LinkedIn, Indeed et Glassdoor. LinkedIn, Indeed et Glassdoor n'ont pas de repli local : leur protection anti-bot imposerait de la contourner, ce qui reste interdit.
+  - Criteres d'acceptation :
+    - Un `ScrapeProvider` ScrapeGraphAI aux memes contrats que le fournisseur Apify (sortie `RawJob`, registre, garde de conformite).
+    - Le repli ne se declenche que sur `MONTH_BUDGET_EXCEEDED`, `CYCLE_BUDGET_EXCEEDED` ou acteur en echec, jamais sans trace ; volume et duree bornes ; identite annoncee, aucun module de furtivite.
+    - Sortie revalidee par Zod ; un champ absent reste absent.
+  - Tests : double de service (nomme) ; passage reel sur Welcome to the Jungle et HelloWork
+  - Resultat :
+
+### Phase 22 - Job boards, un site par brique (ordre du proprietaire, 2026-10-05)
+
+Chaque brique suit le meme protocole : registre date, acteur epingle, filtres serveur (alternance et stage, developpeur, Ile-de-France, fraicheur 3 jours), `maxItems`, run reel borne, offres en base, zero echec. Ordre propose du plus sur au plus fragile ; une brique = un ordre explicite du proprietaire.
+
+- [~] TASK-401 - Welcome to the Jungle
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-306
+  - Criteres d'acceptation : contrat, ville, anciennete filtres cote acteur ; lien ATS d'apply conserve quand l'acteur le donne ; offres collectees en base sans compte.
+  - Rendement (constate en TASK-306, 7 acceptees sur 20 puis 0 sur 5) : l'acteur propose un filtre `profession` (famille de metiers) et `searchInTitleOnly` ; a mesurer pour ne plus payer 0,0008 $ des offres rejetees ensuite. Objectif : plus de la moitie des offres payees acceptees.
+  - Tests : double d'acteur + run reel borne
+  - Resultat : fait le 2026-10-06, validation du proprietaire attendue ; le cycle quotidien est LIVRE MAIS ETEINT (decision a prendre). Rendement mesure sur le reel : la requete « developpeur » ne ramenait plus rien combinee au filtre de metier, et seule la famille `profession=global_tech` SANS mot-cle ramene des offres tech ; l'offre WTTJ en alternance et stage tech sur 3 jours dans un rayon de 50 km autour de Paris est mince (5 offres, 2 acceptees dont un doublon fusionne, 3 rejetees au tri) : le cout d'un run passe de 0,016 $ a 0,004 $ (l'objectif « plus de la moitie acceptee » n'est pas atteint, 40 % - la limite est l'offre disponible, pas le filtre ; les sous-familles `tech__dev_*` ne ramenaient que 2 offres, toutes du doublon Galadrim). Cycle : `SOURCE_PRIORITY_JOB_BOARD` (40) sur les offres de job board, planification dediee quotidienne a 6 h Paris (`SCRAPED_COLLECTION_CRON`) dans la meme file en concurrence 1 que le cycle de 4 h (jamais de chevauchement), sources triees du moins cher au plus cher, memes ingestion, journal de runs, garde de budget et notifications Telegram que le cycle natif. Interrupteur `SCRAPED_SOURCES_ENABLED` ETEINT PAR DEFAUT (chaque run depense du credit reel) et jeton Apify exige : sinon aucune source montee, aucune depense ; interrupteur coupe puis worker redemarre = planification retiree (verifie sur le vrai Redis avec une file jetable : creee, idempotente, retiree sans travail differe restant). `SCRAPING_WTTJ_MAX_ITEMS` (30 par defaut, maximum absolu 100). Tests : 4 de sources montees, 2 du cycle, 3 de l'aiguillage des travaux, 3 de configuration. Format, typecheck, lint, test 30/30, build 17/17. Pour allumer : `SCRAPED_SOURCES_ENABLED=true` dans `.env`, puis redemarrer le worker. A decider avant : republier sur le site public du contenu de job board (extrait court et lien d'origine, proposition de TASK-301) n'est pas encore implemente - les offres collectees apparaitraient entieres.
+
+- [ ] TASK-402 - HelloWork
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-306
+  - Criteres d'acceptation : mots-cles alternance/stage, Ile-de-France, date de publication ; employeur extrait sans invention.
+  - Tests : double d'acteur + run reel borne
+  - Resultat :
+
+- [ ] TASK-403 - Indeed
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-306
+  - Criteres d'acceptation : filtres `fromDays` et contrat ; URL d'origine et lien externe d'apply resolu quand disponible.
+  - Tests : double d'acteur + run reel borne
+  - Resultat :
+
+- [ ] TASK-404 - Glassdoor
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-306
+  - Criteres d'acceptation : offres seules (pas d'avis ni de salaires scrapes, hors besoin) ; acteur sans compte et sans annonce de contournement.
+  - Tests : double d'acteur + run reel borne
+  - Resultat :
+
+- [ ] TASK-405 - LinkedIn (offres publiques, sans compte)
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-306
+  - Criteres d'acceptation : uniquement l'acteur qui lit les pages d'offres publiques ; aucun cookie, aucun profil, aucune donnee de recruteur stockee ; lien d'origine conserve ; abandon et mise a l'arret de la source si l'acteur exige un compte.
+  - Tests : double d'acteur + run reel borne
+  - Resultat :
+
+- [ ] TASK-406 - Autres sources, API officielles d'abord
+  - Priorite : P2
+  - Complexite : L
+  - Dependances : TASK-304
+  - Notes : pistes a verifier une par une (aucune verifiee a ce jour) : API publique La Bonne Alternance (alternance, officielle), 1jeune1solution, Jobijoba, Free-Work, Welcome-like startups boards, Station F jobs, WorkInStartups, JobTeaser (compte probable : a ecarter si oui). Une API officielle passe avant tout scraping.
+  - Criteres d'acceptation : une ligne de registre par source avec statut reel et date ; un connecteur natif des qu'une API officielle existe.
+  - Tests : un run reel borne par source retenue
+  - Resultat :
+
+### Phase 23 - Sites carrieres des entreprises tech par extraction IA (ordre du proprietaire, 2026-10-05)
+
+Vision : les 430 entreprises de l'annuaire n'ont pas toutes un ATS reconnu (le scan du 2026-07-27 en a rattache 26). Pour les autres, une cascade de la methode la moins chere a la plus couteuse : ATS reconnu, donnees structurees de la page (JSON-LD `JobPosting`, sitemap, `__NEXT_DATA__`), rendu Playwright, puis ScrapeGraphAI (Ollama local). Le LLM local lit a 21 tokens/s : il ne passe qu'en dernier recours et avec un budget de temps.
+
+- [ ] TASK-501 - Extraction deterministe des pages carrieres
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : aucune
+  - Fichiers concernes : `packages/job-connectors/src/careers-scan*`
+  - Criteres d'acceptation :
+    - JSON-LD `JobPosting`, sitemaps d'offres et donnees embarquees (`__NEXT_DATA__`) lus avant tout LLM.
+    - `robots.txt` lu d'abord ; un refus est respecte pour les sites carrieres (regle conservee : la derogation du 2026-10-05 ne couvre que les job boards nommes).
+  - Tests : pages de test figees (nommees comme telles) + passage reel sur 10 entreprises
+  - Resultat :
+
+- [ ] TASK-502 - Fournisseur ScrapeGraphAI (API cloud v2 pour les sites carrieres autorises, bibliotheque locale sinon)
+  - Priorite : P1
+  - Complexite : L
+  - Dependances : TASK-501
+  - Fichiers concernes : nouveau dossier `services/scrape-graph/` (Python, `scrapegraphai` 2.3.0 et `playwright` deja installes), `packages/job-connectors`
+  - Criteres d'acceptation :
+    - Appels privilegies, ordre du proprietaire du 2026-10-06 : `search` (retrouver la page carrieres d'une entreprise), `crawl` (parcourir un site carrieres ; un seul job de crawl sur le plan gratuit) et `extract` (schema d'offre en JSON) ; `scrape` en dernier recours.
+    - Mode cloud (API v2 `extract` avec schema d'offre, solde lu par `/credits` avant chaque cycle, plafond en credits pose apres mesure du cout d'un premier appel) reserve aux pages publiques de sites carrieres dont `robots.txt` autorise `FinditBot` ; plan gratuit = donnees reutilisables par ScrapeGraphAI, donc jamais un CV, un profil, une lettre ni une donnee privee.
+    - Mode local (service lie a `127.0.0.1`, modele Ollama `qwen2.5:7b`, aucun envoi vers un tiers) pour tout ce qui ne doit pas depenser de credit ni quitter le poste.
+    - Schema d'offre strict ; sortie revalidee par Zod cote Node ; champ absent = absent.
+    - Delai et nombre de pages bornes par entreprise ; mise en cache pour ne pas relire une page inchangee.
+  - Tests : schema + double de service (nomme) ; un passage reel sur 3 sites sans ATS
+  - Resultat :
+
+- [ ] TASK-503 - Rendu JavaScript et pagination
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-501
+  - Criteres d'acceptation : Playwright standard (identite annoncee, aucun module furtif) ; pagination et « charger plus » geres ; delai entre pages.
+  - Tests : passage reel sur 3 sites a rendu client
+  - Resultat :
+
+- [ ] TASK-504 - Reexaminer les ATS fermes sous la nouvelle regle
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-301
+  - Notes : Ashby, SmartRecruiters, Recruitee, Teamtailor, Personio, SuccessFactors ont ete fermes ou non verifies. Leurs pages d'offres sont publiques ; chacun redevient candidat si sa ligne de registre est reecrite apres verification reelle (flux, robots.txt, conditions).
+  - Criteres d'acceptation : une ligne de registre par ATS avec statut reel et date ; un connecteur natif par ATS retenu, plus rapide et moins cher qu'un acteur.
+  - Tests : preuve reelle bornee par ATS
+  - Resultat :
+
+- [ ] TASK-505 - Etendre et segmenter l'annuaire d'entreprises tech
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-501
+  - Criteres d'acceptation : segmentation tech/non tech ; passage planifie hebdomadaire ; entreprises « site illisible » listees avec la raison au lieu d'etre perdues en silence.
+  - Tests : compteurs avant/apres, rejouable sans doublon
+  - Resultat :
+
+### Phase 24 - Pilotage et qualite du scraping (ordre du proprietaire, 2026-10-05)
+
+- [ ] TASK-601 - Sante des sources
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-304
+  - Fichiers concernes : `apps/api` (routes gardees), `ConnectorRun`
+  - Criteres d'acceptation : par source, dernier run, offres vues et acceptees, taux d'echec, cout, derniere erreur ; une source qui tombe a zero offre plusieurs cycles de suite est signalee (Telegram, hors simulation).
+  - Tests : API + preuve sur base reelle
+  - Resultat :
+
+- [ ] TASK-602 - Cadence par famille de source et interrupteurs
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-601
+  - Criteres d'acceptation : decision du proprietaire du 2026-10-06 : tout ce qui est scrape (job boards via Apify, sites carrieres via ScrapeGraphAI) tourne 1 fois par jour (cron dedie, par exemple 06 h heure de Paris), les ATS natifs restent a 4 h ; interrupteur par source sans redeploiement.
+  - Tests : test scheduler + cycle reel
+  - Resultat :
+
+- [ ] TASK-603 - Pertinence : etiquetage de la fraicheur et du taux d'acceptation par source
+  - Priorite : P2
+  - Complexite : S
+  - Dependances : TASK-601
+  - Criteres d'acceptation : pour chaque source, part d'offres alternance/stage developpeur IDF acceptees ; les sources a faible rendement sont revues.
+  - Tests : requetes de comptage sur base reelle
+  - Resultat :
+
+### Phase 25 - Refonte de la disposition du site (ordre du proprietaire, 2026-10-05)
+
+Vision : le site passe d'une liste d'offres avec un panneau CV a un outil de veille a plusieurs espaces, ou la source de chaque offre est visible et ou le CV pilote la recherche. Cette phase reprend les cases ouvertes de la phase 17 (page unique avec filtres repliables, cartes, matching). Methode : `brainstorming` puis `frontend-design` avant tout code, maquettes validees par le proprietaire, une page par ordre. Regle du port 3100 et regle du tiret (jamais de tiret cadratin) maintenues.
+
+Disposition proposee (a valider) :
+
+```text
+Barre de navigation : Offres | Mon CV | Candidatures | Sources
+/                 Offres : recherche texte OU par CV, filtres repliables, badge de source sur chaque carte
+/offres/[slug]    Detail : origine, lien de candidature, score si CV charge
+/cv               Mon CV : import, structure, ameliorations, export PDF et DOCX, versions
+/candidatures     Suivi (existe)
+/sources          Transparence publique : sources actives, fraicheur, volume
+/admin/scraping   Prive : sante des sources, budget, interrupteurs (TASK-601)
+```
+
+- [ ] TASK-701 - Architecture d'information et maquettes
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : aucune
+  - Criteres d'acceptation : parcours, navigation et maquettes desktop et mobile valides par le proprietaire avant implementation.
+  - Tests : revue
+  - Resultat :
+
+- [ ] TASK-702 - Navigation et gabarit commun
+  - Priorite : P1
+  - Complexite : M
+  - Dependances : TASK-701
+  - Fichiers concernes : `apps/web/src/app/layout.tsx`, `apps/web/src/components/`
+  - Criteres d'acceptation : barre de navigation a quatre entrees, etat actif, responsive, accessible au clavier.
+  - Tests : tests composants + verification navigateur desktop et mobile
+  - Resultat :
+
+- [ ] TASK-703 - Page Offres : filtres repliables, tri, badge de source, mode texte ou CV
+  - Priorite : P1
+  - Complexite : L
+  - Dependances : TASK-701
+  - Criteres d'acceptation : filtres (dates, metiers, contrats, departements, presence, source) dans un volet replie par defaut, tiroir sur mobile ; badge « ATS officiel / Job board » et nom de la source sur chaque carte ; carte avec lien externe seul si l'extraction a echoue ; mode CV inchange (score, lettre, suivi).
+  - Tests : tests composants + parcours reel
+  - Resultat :
+
+- [ ] TASK-704 - Page Mon CV
+  - Priorite : P1
+  - Complexite : L
+  - Dependances : TASK-701
+  - Criteres d'acceptation : import, structure, faits extraits, ameliorations detaillees exploitables hors application, export PDF et DOCX ; aucune regression de la retention, de la suppression ni du garde-fou « rien d'invente ».
+  - Tests : tests composants + API + parcours reel avec le vrai CV
+  - Resultat :
+
+- [ ] TASK-705 - Page Sources (publique) et page admin du scraping (privee)
+  - Priorite : P2
+  - Complexite : M
+  - Dependances : TASK-601
+  - Criteres d'acceptation : liste des sources avec statut, fraicheur et volume ; l'admin n'est jamais indexee et reste derriere le proxy serveur.
+  - Tests : tests composants + verification navigateur
+  - Resultat :
+
+- [ ] TASK-706 - Verification visuelle et accessibilite
+  - Priorite : P2
+  - Complexite : S
+  - Dependances : TASK-703, TASK-704
+  - Criteres d'acceptation : desktop et mobile sans chevauchement, contrastes, navigation clavier ; reprend la case ouverte de la phase 2.
+  - Tests : Playwright ou verification navigateur, `web-design-guidelines`
+  - Resultat :
+
 ## 11. Bugs connus
 
-| ID   | Bug                                                 | Gravite | Reproduction                                    | Cause probable                                       | Correctif propose                        | Statut |
-| ---- | --------------------------------------------------- | ------- | ----------------------------------------------- | ---------------------------------------------------- | ---------------------------------------- | ------ |
-| B001 | `pnpm format:check` echouait                        | P0      | `pnpm format:check`                             | `packages/ai/src/ollama-client.test.ts` non Prettier | Reformater le fichier                    | Ferme  |
-| B002 | Documentation historique obsolete                   | P1      | Lire `README.md` et `docs/architecture.md`      | Docs non realignees apres phases recentes            | Recrire les sections d'etat/architecture | Ferme  |
-| B003 | Workable actif mais non execute par le cycle worker | P1      | Lire `apps/worker/src/collection/cycle-deps.ts` | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever     | Ajouter une voie `SearchTarget`          | Ferme  |
-| B004 | Deduplication non persistee                         | P1      | `rg decideDuplicate apps packages`              | Moteur pur non appele par ingestion                  | Branchee dans `persistDecision`          | Ferme  |
-| B005 | `.env` local contient `OPENAI_API_KEY` obsolete     | P1      | Comparaison cles `.env` / `.env.example`        | Ancien choix fournisseur distant                     | Retiree du `.env` local                  | Ferme  |
-| B006 | Pas de CI/CD                                        | P2      | Absence de dossier `.github`                    | Non implemente                                       | Ajouter workflow GitHub Actions          | Ouvert |
+| ID   | Bug                                                                                                                                                                         | Gravite | Reproduction                                                                                                                                                       | Cause probable                                                                                              | Correctif propose                                                                                                                                      | Statut |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| B001 | `pnpm format:check` echouait                                                                                                                                                | P0      | `pnpm format:check`                                                                                                                                                | `packages/ai/src/ollama-client.test.ts` non Prettier                                                        | Reformater le fichier                                                                                                                                  | Ferme  |
+| B002 | Documentation historique obsolete                                                                                                                                           | P1      | Lire `README.md` et `docs/architecture.md`                                                                                                                         | Docs non realignees apres phases recentes                                                                   | Recrire les sections d'etat/architecture                                                                                                               | Ferme  |
+| B003 | Workable actif mais non execute par le cycle worker                                                                                                                         | P1      | Lire `apps/worker/src/collection/cycle-deps.ts`                                                                                                                    | `TOKEN_CONNECTORS` ne porte que Greenhouse/Lever                                                            | Ajouter une voie `SearchTarget`                                                                                                                        | Ferme  |
+| B004 | Deduplication non persistee                                                                                                                                                 | P1      | `rg decideDuplicate apps packages`                                                                                                                                 | Moteur pur non appele par ingestion                                                                         | Branchee dans `persistDecision`                                                                                                                        | Ferme  |
+| B005 | `.env` local contient `OPENAI_API_KEY` obsolete                                                                                                                             | P1      | Comparaison cles `.env` / `.env.example`                                                                                                                           | Ancien choix fournisseur distant                                                                            | Retiree du `.env` local                                                                                                                                | Ferme  |
+| B007 | Documentation en retard : `docs/architecture.md` dit Workable non lance et deduplication non persistee ; `HANDOFF.md` cite un espace `/espace` absent de `apps/web/src/app` | P1      | Lire `docs/architecture.md` et `apps/web/src/app`                                                                                                                  | Docs non realignees apres UX v3 et phases 16 a 19                                                           | Realigner (TASK-208)                                                                                                                                   | Ouvert |
+| B008 | `README.md` annonce une fenetre par defaut de 24 h                                                                                                                          | P2      | Lire `README.md` section Perimetre                                                                                                                                 | Ordre du 2026-07-27 non reporte dans le README                                                              | Realigner selon Q-7 (TASK-208)                                                                                                                         | Ouvert |
+| B006 | Pas de CI/CD                                                                                                                                                                | P2      | Absence de dossier `.github`                                                                                                                                       | Non implemente                                                                                              | Ajouter workflow GitHub Actions                                                                                                                        | Ouvert |
+| B009 | La classification accepte « Business Developer » comme metier developpeur                                                                                                   | P2      | `pnpm board:proof -- --max-items 20` le 2026-10-06 : « Business developer BtoB - Stage » (Franprix) et « Business Developer - Stage 4-6 mois » (AlumnEye) publiees | Le mot anglais « developer » est pris pour le metier                                                        | Titres commerciaux lus avant le mot « developer » (`COMMERCIAL_PHRASES` dans `role.ts`), sauf si le titre nomme aussi un metier d'ingenierie ; 3 tests | Ferme  |
+| B010 | La deduplication fusionne deux entreprises aux noms voisins                                                                                                                 | P2      | Preuve TASK-307, 2026-10-06 : « Preuve307 Alpha SAS » et « Preuve307 Gamma SAS », meme titre, meme date, meme description, fusionnees                              | Seuil de similarite d'entreprise a 0,3 (`COMPANY_MIN`), trop bas quand le nom est surtout un suffixe commun | Formes juridiques ignorees, nom contenu dans l'autre = variante a 0,85, seuil `COMPANY_MIN` releve de 0,3 a 0,5 ; 5 tests                              | Ferme  |
 
 ## 12. Decisions techniques
 
-| Date       | Decision                                             | Justification                                           | Consequences                                   |
-| ---------- | ---------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------- |
-| 2026-07-16 | Monorepo pnpm/Turborepo, Next.js, NestJS, worker     | Separation web/API/traitements et evolution par briques | Structure `apps/*` et `packages/*`             |
-| 2026-07-17 | Alternance et stage restent stockables               | Ne pas detruire le perimetre valide et les stages reels | L'affichage par defaut favorise l'alternance   |
-| 2026-07-17 | Registre de conformite obligatoire                   | Ne pas collecter sans permission constatee              | `Connector` decide ce qui peut tourner         |
-| 2026-07-17 | Brave sert uniquement a decouvrir                    | Ses conditions interdisent de stocker les resultats     | Resultats transitoires, jamais en base         |
-| 2026-07-24 | IA locale via Ollama `qwen2.5:7b`                    | Cout nul et aucune donnee envoyee a un tiers            | `AI_PROVIDER=ollama`, sortie Zod revalidee     |
-| 2026-07-24 | Le rendu CV/lettre doit etre deterministe            | Eviter de regenerer un document entier par offre        | IA limitee au texte/analyse, pas au design PDF |
-| 2026-07-24 | Roadmap et cases restent sous validation utilisateur | Methode demandee par le proprietaire                    | Aucune nouvelle case cochee pendant cet audit  |
+| Date       | Decision                                                 | Justification                                               | Consequences                                                                        |
+| ---------- | -------------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 2026-07-16 | Monorepo pnpm/Turborepo, Next.js, NestJS, worker         | Separation web/API/traitements et evolution par briques     | Structure `apps/*` et `packages/*`                                                  |
+| 2026-07-17 | Alternance et stage restent stockables                   | Ne pas detruire le perimetre valide et les stages reels     | L'affichage par defaut favorise l'alternance                                        |
+| 2026-07-17 | Registre de conformite obligatoire                       | Ne pas collecter sans permission constatee                  | `Connector` decide ce qui peut tourner                                              |
+| 2026-07-17 | Brave sert uniquement a decouvrir                        | Ses conditions interdisent de stocker les resultats         | Resultats transitoires, jamais en base                                              |
+| 2026-07-24 | IA locale via Ollama `qwen2.5:7b`                        | Cout nul et aucune donnee envoyee a un tiers                | `AI_PROVIDER=ollama`, sortie Zod revalidee                                          |
+| 2026-07-24 | Le rendu CV/lettre doit etre deterministe                | Eviter de regenerer un document entier par offre            | IA limitee au texte/analyse, pas au design PDF                                      |
+| 2026-07-24 | Roadmap et cases restent sous validation utilisateur     | Methode demandee par le proprietaire                        | Aucune nouvelle case cochee pendant cet audit                                       |
+| 2026-10-05 | Scraping elargi aux job boards et aux sites carrieres    | Ordre du proprietaire : meilleur outil de scraping possible | Registre reecrit (TASK-301), risque CGU assume, garde-fous gardes                   |
+| 2026-10-05 | Cascade de collecte : natif, Apify, ScrapeGraphAI        | Du moins cher et du plus fiable au plus couteux             | Interface `ScrapeProvider`, LLM local en dernier recours                            |
+| 2026-10-06 | Sources scrapees : 1 cycle par jour ; plan Apify gratuit | Ordre du proprietaire ; 5 $ de credit par mois              | Plafonds de resultats par source, garde de budget (TASK-305), cron dedie (TASK-602) |
 
 ## 13. Journal d'avancement
+
+### Decisions en attente (2026-10-05)
+
+Aucune n'est tranchee. Chacune a une valeur par defaut proposee dans `CAHIER_DES_CHARGES.md` section 25.
+
+- Q-1 : les donnees privees (profil, CV, lettres, candidatures) peuvent-elles etre en base en ligne ? Defaut : non, publier d'abord les offres publiques.
+- Q-2 : l'IA reste-t-elle locale (Ollama) ? Defaut : oui, fonctions IA reservees au proprietaire.
+- Q-3 : fournisseur de base en ligne ? Defaut : Neon.
+- Q-4 : TRANCHEE le 2026-10-05 par le proprietaire : toutes les sources, job boards inclus (LinkedIn, WTTJ, HelloWork, Glassdoor, Indeed, autres). Voir phase 21.
+- Q-5 : Redis gere ou local ? Defaut : gere si le worker est heberge, local sinon.
+- Q-6 : hebergeur web, API et worker ? Pas de defaut impose.
+- Q-7 : fenetre de fraicheur, 24 h, 72 h, ou les deux ? Defaut : 3 jours par defaut, filtre 24 h conserve.
+- Q-8 : conservation des candidatures ? Defaut : jusqu'a suppression par l'utilisateur, revue annuelle.
+
+### 2026-10-06 - decisions de cadence et de plan, plafond de depense (TASK-305)
+
+- Decisions du proprietaire : une collecte par jour pour les sites scrapes (les ATS natifs restent a 4 h) ; plan Apify gratuit, 5 $ de credit par mois ; ScrapeGraphAI utilise aussi (nouvelle brique TASK-308 : zero cout, repli de WTTJ et HelloWork). Compte Apify dedie et risque de la clause 11.1 confirmes.
+- Consequence chiffree : meme a une collecte par jour, 100 resultats par source (13 $ par mois) depassent le credit ; plafonds du plan gratuit fixes a 30, 40, 20, 60 et 100 resultats (environ 4,1 $ par mois).
+- Taches : TASK-301 et TASK-302 faites, TASK-303 (choix des acteurs) et TASK-305 (plafond de depense) faites, en attente de validation. Aucun acteur Apify lance.
+- Bugs B009 et B010 fermes (ordre du proprietaire) : un titre « Business Developer » ou « Developpeur commercial » n'est plus un metier de developpeur (sauf titre d'ingenierie qui cite le developpement commercial comme domaine) ; deux entreprises aux noms voisins (« X Alpha SAS », « X Gamma SAS ») ne fusionnent plus, les formes juridiques ne comptant plus dans la ressemblance. Tests ecrits avant le correctif (echec constate, puis succes) ; format, typecheck, lint, test 30/30, build 17/17.
+- TASK-401 faite (en attente de validation) : Welcome to the Jungle dans un cycle quotidien a 6 h, livre mais ETEINT par defaut (`SCRAPED_SOURCES_ENABLED`) ; filtre de metier tech, cout d'un run ramene de 0,016 $ a 0,004 $.
+- TASK-307 faite (en attente de validation) : election de la canonique par rang de source, partage des sources, lien de candidature employeur ; prouvee sur la base reelle. Bug B010 releve.
+- TASK-306 faite sur le reel (en attente de validation) : premier run Apify, 0,016 $ ; bug de sous-declaration du cout trouve et corrige, voir son resultat. Preference du proprietaire notee : ScrapeGraphAI via `search`, `crawl` et `extract` (TASK-502).
+- TASK-304 faite (en attente de validation) : connecteur Apify generique branche sur la garde de budget, voir son resultat. Cle ScrapeGraphAI recue du proprietaire, rangee dans `.env` (ignore par git), validee par `GET /credits` (plan gratuit, 500 credits) ; ses conditions de service ont ete lues : elles imposent de respecter robots.txt et les conditions des sites cibles, donc le cloud ne sert pas les job boards sans confirmation du proprietaire. Aucun acteur Apify ni extraction ScrapeGraph lance.
+- Controles : voir la ligne de verification de TASK-305 ; migrations `20261005100000_owner_accepted_scraping` et `20261006090000_connector_run_cost` appliquees sur la base Neon.
+
+### 2026-10-05 (suite) - pivot : outil de scraping multi-sources et refonte du site
+
+- Ordre du proprietaire : transformer Findit en veritable outil de scraping (Apify, ScrapeGraphAI deja installe, autres), sur les sites carrieres des entreprises tech et sur les job boards (LinkedIn, Welcome to the Jungle, HelloWork, Glassdoor, Indeed, autres), tout en gardant la gestion des CV, et reorganiser la disposition du site.
+- Roadmap modifiee : phase 21 reecrite (moteur multi-sources, remplace le cadrage Apify borne), phases 22 (job boards), 23 (sites carrieres par extraction IA), 24 (pilotage) et 25 (refonte du site) ajoutees ; Q-4 tranchee ; risques et decisions techniques mis a jour. Phases 17, 19 et 20 inchangees ; la base en ligne (phase 20) reste necessaire pour heberger le volume, le scraping peut demarrer en local.
+- Verification reelle : `search-actors` Apify appele 5 fois (WTTJ, HelloWork, LinkedIn, Glassdoor, Indeed), candidats releves dans TASK-303 ; `pip list` confirme `scrapegraphai` 2.3.0, `scrapegraph-py` 2.3.1, `playwright` 1.63.0. Aucun acteur lance, aucune ligne de code modifiee, aucune case cochee.
+- Point de vigilance consigne : les CGU de ces plateformes interdisent la collecte automatisee ; garde-fous proposes (pas de compte, pas de CAPTCHA contourne, pas de furtivite dans notre code, URL d'origine obligatoire, extrait court en public) a confirmer par le proprietaire.
+- Prochaine brique proposee, sur ordre : TASK-301 (registre), puis 302, 303, 305, 304, 306 sur Welcome to the Jungle.
+
+### 2026-10-05 - cadrage cahier des charges, base en ligne et Apify
+
+- Taches ajoutees : phase 20 (TASK-201 a TASK-208, base en ligne) et phase 21 (TASK-301 a TASK-307, Apify). Bugs B007 et B008 ouverts. Contradictions C-1 a C-7 documentees dans `CAHIER_DES_CHARGES.md` section 26.
+- Livrable cree : `CAHIER_DES_CHARGES.md`. Pas de PDF : aucun outil de conversion verifie.
+- Verification reelle : outil Apify `search-actors` appele deux fois (« job postings », « career pages ») ; resultats utilises pour les contradictions C-1 et C-2. Aucun acteur n'a ete lance.
+- Aucune ligne de code modifiee. Aucune case cochee.
+- Conclusion de cadrage : Apify ne doit pas tourner avant la decision Q-4 ; la base en ligne ne doit pas recevoir de donnees privees avant la decision Q-1.
 
 ### 2026-07-27 - deduplication persistee (B004) et cahier des charges v2
 
@@ -832,3 +1317,7 @@ Vision : plus d'offres reelles sans attendre la seule saison Greenhouse/Lever/Wo
 - [ ] Donnees personnelles minimises, exportables/supprimables selon decision juridique.
 - [ ] Production deployable avec HTTPS, sauvegardes, monitoring, alertes et rollback.
 - [ ] Documentation finale conforme a l'etat reel du code.
+- [ ] Base de donnees de production en ligne, TLS, sauvegardee, migrations appliquees sans derive (phase 20).
+- [ ] Moteur de scraping multi-sources (Apify, ScrapeGraphAI, natif) plafonne en depense, avec registre date par source (phases 21 a 24).
+- [ ] Job boards collectes sans compte, avec URL d'origine et dedoublonnage inter-sources (phase 22).
+- [ ] Disposition du site refondue et verifiee sur desktop et mobile (phase 25).
