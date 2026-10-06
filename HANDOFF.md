@@ -42,6 +42,15 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Run de contrôle après les trois dernières briques** (requêtes citées +
+  découverte ciblée + porte de conformité), même bornes : 3 tours, 8 pages,
+  **0 offre extraite**, aucun refus de conformité, coût **1 028 µ$** — contre
+  5 419 µ$ avant le ciblage. Le détail : 4 racines de board traversées
+  (`liste ATS`), 4 pages d'offre écartées (`hors contrat`, donc CDI). La chaîne
+  est devenue bon marché, conforme et précise ; **le rendement reste nul parce
+  que, dans le périmètre autorisé, les pages atteintes sont des CDI**. Les offres
+  d'alternance et de stage vivent surtout sur les job boards enregistrés, que le
+  cycle natif collecte déjà via leurs connecteurs.
 - **Le contrat entre guillemets dans les requêtes** : mesuré contre Brave sur
   `jobs.lever.co`, `développeur alternance` ramenait 1 titre du périmètre sur 10,
   `développeur "alternance"` en ramenait 6 ; `-CDI` n'apportait rien, et
