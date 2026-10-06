@@ -10,6 +10,7 @@ import type {
 } from "@findit/job-connectors";
 import {
   buildDiscoveryQueries,
+  canonicalAtsHost,
   collectDiscoveries,
   GREENHOUSE_CONNECTOR_NAME,
   LEVER_CONNECTOR_NAME,
@@ -53,7 +54,9 @@ export const toDiscoveredSource = (
     connectorName: known.connectorName,
     atsKind,
     atsIdentifier: known.target.atsIdentifier,
-    atsHost,
+    // Un seul hôte par connecteur : deux hôtes du même ATS créaient deux sources
+    // pour la même entreprise, donc une double collecte (mesuré sur `doctolib`).
+    atsHost: canonicalAtsHost(known.connectorName, atsHost),
   };
 };
 
