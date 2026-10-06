@@ -67,6 +67,11 @@ Planification : planificateur LLM ou déterministe (`packages/orchestrator/src/p
     |   lesquelles visiter et dans quel ordre (phase 2, plafonné aux 12 meilleures), puis crawl et
     |   extraction (phase 3). Sans sélecteur : l'ordre du score. Seules des URL candidates reviennent,
     |   et une sortie vide ou hors schéma rend l'ordre du score.
+    |   Registre : chaque source retenue est présentée au registre (`discoverSource`). Une entreprise
+    |   d'ATS à jeton (Greenhouse, Lever, Workday) devient une `CompanySource`, que son connecteur
+    |   recollecte en flux complet — l'agent n'a pas à extraire ce que le connecteur sait lire.
+    |   Workable collecte par requête, pas par entreprise : rien à enregistrer. Un hôte inconnu relève
+    |   du registre dynamique, qui lit `robots.txt` avant toute visite.
     |   Mémoire : les URL sont mémorisées sous une clé normalisée (casse, `www.`, fragment, slash
     |   final et paramètres de suivi ignorés, **requête conservée** : elle porte l'identité de la page,
     |   `?page=2` par exemple). Seules les pages entrées dans le budget du tour sont inscrites comme

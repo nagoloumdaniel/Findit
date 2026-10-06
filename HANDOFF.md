@@ -42,6 +42,28 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **L'agent alimente le registre** (décision de périmètre du 2026-10-06) :
+  `runAgent` accepte un point d'entrée `discoverSource`, appelé en phase 1 pour
+  chaque source retenue par le scoring ; le worker l'implémente
+  (`apps/worker/src/collection/register-discovery.ts`) en reconnaissant l'URL
+  (`recognizeTarget`) puis en enregistrant l'entreprise (`registerDiscoveredSource`).
+  Une entreprise d'ATS à jeton entre au registre, et son connecteur en recollecte
+  tout le flux — sans que l'agent ait à payer l'extraction.
+  **Mesure réelle** : 84 → 94 `CompanySource` (+10) en un run de 812 µ$, là où
+  25 runs d'agent précédents n'en avaient créé aucune.
+- **Ce qui n'est PAS enregistrable, et pourquoi** : seuls Greenhouse, Lever et
+  Workday se collectent **par jeton** (`TOKEN_CONNECTOR_ATS`). Workable collecte
+  par **requête** : lui donner une entreprise n'aurait pas de sens, et l'ajouter
+  aux `site:` de la découverte brûlerait du quota pour des cibles jetées. Les
+  hôtes inconnus relèvent du registre dynamique, qui exige de lire `robots.txt`.
+- **Le journal distingue « nouvelle » de « déjà connue »** : `registerDiscoveredSource`
+  rend désormais `created`. Sans cela, l'agent annonçait « enregistrée » 36 fois
+  pour 10 sources réellement créées — la même entreprise revue à chaque tour.
+- **Dette connue — Greenhouse a deux hôtes** : le registre est unique par
+  `(entreprise, domaine)`, or `boards.greenhouse.io` et `job-boards.greenhouse.io`
+  sont deux domaines. Mesuré : `doctolib` porte deux `CompanySource`, une par hôte,
+  donc une collecte en double (absorbée ensuite par la déduplication des offres).
+  Le corriger demande de normaliser l'hôte du connecteur, côté registre.
 - **Pages que la source annonce en erreur écartées** : les boards Greenhouse
   reviennent du moteur sous la forme `?error=true` (offre supprimée) et
   consommaient résolution de redirection et crawl sans jamais porter d'offre. Le
