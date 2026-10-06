@@ -259,6 +259,8 @@ export async function runAgent(
           await deps.runStore.recordAction(runId, {
             kind: ACTION_KIND.EXTRACT,
             detail: page.url,
+            // Le compteur `extracted` compte les offres trouvées, pas les pages.
+            count: extraction.offers.length,
           });
 
           // Validation puis déduplication par titre normalisé, dans ce run.

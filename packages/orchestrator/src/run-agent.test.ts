@@ -304,13 +304,14 @@ describe("runAgent", () => {
     const storeAction = fake.actions.find((action) => action.kind === "STORE");
     expect(storeAction?.detail).toBe("3");
 
-    // Les compteurs du run, tenus par le run-store.
+    // Les compteurs du run, tenus par le run-store. `extracted` compte les
+    // offres trouvées (deux par page ici), pas les pages extraites.
     const run = fake.runs.get("run-1");
     expect(run?.status).toBe("SUCCEEDED");
     expect(run?.counters).toMatchObject({
       searches: 1,
       pages: 2,
-      extracted: 2,
+      extracted: 4,
       duplicates: 1,
       inserted: 1,
       errors: 0,
