@@ -107,6 +107,29 @@ const JOB_BOARD_DOMAINS: readonly string[] = [
   "francetravail.fr",
 ];
 
+/**
+ * Signaux d'une page de résultats de moteur ou d'agrégateur. Ces pages listent
+ * des offres sans en porter une seule : les crawler coûte cher et rend peu. Le
+ * malus les fait passer derrière les pages d'offre, il ne les écarte pas.
+ */
+const SEARCH_PAGE_SIGNALS: readonly string[] = [
+  "/q-",
+  "srch_",
+  "?q=",
+  "search=",
+  "/recherche",
+  "/emploi-",
+];
+
+/** Nombre de segments de chemin non vides d'une URL, 0 si elle est illisible. */
+const pathSegmentCount = (url: string): number => {
+  try {
+    return new URL(url).pathname.split("/").filter((segment) => segment !== "").length;
+  } catch {
+    return 0;
+  }
+};
+
 /** Signaux d'un organisme de formation ou d'une école, à écarter. */
 const SCHOOL_SIGNALS: readonly string[] = [
   "ecole",
@@ -164,6 +187,15 @@ const scoreSource = (result: SourceResult): Omit<ScoredSource, "keep"> => {
   if (ATS_HOSTS.some((suffix) => domain === suffix || domain.endsWith(`.${suffix}`))) {
     score += 30;
     reasons.push("domaine d'ATS reconnu");
+
+    // Sur un ATS, la racine du board n'est qu'une liste ; une URL plus profonde
+    // (identifiant d'offre, candidature) porte l'offre à la source, souvent
+    // accompagnée de ses données structurées. C'est le meilleur rendement du
+    // crawl, donc ce qui passe en premier.
+    if (pathSegmentCount(result.url) >= 2) {
+      score += 25;
+      reasons.push("page d'offre individuelle probable");
+    }
   } else if (containsAny(haystack, LISTING_TERMS)) {
     score += 20;
     reasons.push("page de liste d'offres probable");
@@ -182,6 +214,10 @@ const scoreSource = (result: SourceResult): Omit<ScoredSource, "keep"> => {
   if (JOB_BOARD_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))) {
     score += 10;
     reasons.push("job board connu");
+  }
+  if (containsAny(url, SEARCH_PAGE_SIGNALS)) {
+    score -= 15;
+    reasons.push("page de recherche agrégée probable");
   }
   if (containsAny(domain, SCHOOL_SIGNALS)) {
     score -= 50;

@@ -193,54 +193,76 @@ export const generateSearchQueries = (objective: string): readonly GeneratedSear
   const location = detectLocation(normalized);
 
   const queries: GeneratedSearchQuery[] = [];
-  const push = (query: string): void => {
+  const seen = new Set<string>();
+  const primary: string[] = [];
+  const secondary: string[] = [];
+
+  const add = (target: string[], query: string): void => {
     const trimmed = query.trim().replace(/\s+/gu, " ");
     const key = normalizeText(trimmed);
-    if (key === "") {
+    if (key === "" || seen.has(key)) {
       return;
     }
-    if (queries.some((existing) => normalizeText(existing.query) === key)) {
-      return;
-    }
-    queries.push({ query: trimmed, engine: DEFAULT_ENGINE });
+    seen.add(key);
+    target.push(trimmed);
   };
 
   // 1. L'objectif tel quel : le moteur sait le reformuler, et on ne perd rien.
-  push(cleaned);
+  const first = cleaned.trim().replace(/\s+/gu, " ");
+  seen.add(normalizeText(first));
+  queries.push({ query: first, engine: DEFAULT_ENGINE });
 
-  // 2. Contrat absent de l'objectif : on ajoute une variante par contrat.
-  if (contracts.length === 0) {
-    push(`${cleaned} alternance`);
-    push(`${cleaned} stage`);
+  const firstTarget = technologies[0] ?? roleVariants[0] ?? "";
+
+  // 2. Les pages de source d'abord, une par couple contrat × domaine de
+  // confiance : c'est là que vivent les offres, à la source, alors qu'une liste
+  // d'agrégateur coûte cher à crawler et rend peu.
+  for (const contract of contractVariants) {
+    for (const domain of SITE_TARGETS) {
+      add(primary, `${firstTarget} ${contract} site:${domain}`);
+    }
   }
 
-  // 3. Un métier du périmètre, croisé avec le contrat et le lieu : c'est ce qui
+  // 3. Puis la découverte large : contrat absent, métier, lieu, technologie.
+  if (contracts.length === 0) {
+    add(secondary, `${cleaned} alternance`);
+    add(secondary, `${cleaned} stage`);
+  }
+
+  // Un métier du périmètre, croisé avec le contrat et le lieu : c'est ce qui
   // cible les pages d'offres du périmètre, plutôt qu'une liste tous métiers.
   for (const contract of contractVariants) {
     for (const role of roleVariants.slice(0, 2)) {
-      push(`offre ${role} ${contract}${location === null ? "" : ` ${location}`}`);
+      add(secondary, `offre ${role} ${contract}${location === null ? "" : ` ${location}`}`);
     }
   }
 
-  // 4. Une variante par technologie, croisée avec le contrat et le lieu.
-  for (const contract of contractVariants) {
-    for (const technology of technologies) {
-      push(`${technology} ${contract}${location === null ? "" : ` ${location}`}`);
-    }
-  }
-
-  // 5. Le contrat rapproché du lieu, pour les recherches géographiques.
+  // Le contrat rapproché du lieu, pour les recherches géographiques.
   if (location !== null) {
     for (const contract of contractVariants) {
-      push(`${contract} ${location}`);
+      add(secondary, `${contract} ${location}`);
     }
   }
 
-  // 6. `site:` sur les domaines de confiance, borné au métier ou à la techno.
-  const firstTarget = technologies[0] ?? roleVariants[0] ?? "";
+  // Une variante par technologie, croisée avec le contrat et le lieu.
   for (const contract of contractVariants) {
-    for (const domain of SITE_TARGETS) {
-      push(`${firstTarget} ${contract} site:${domain}`);
+    for (const technology of technologies) {
+      add(secondary, `${technology} ${contract}${location === null ? "" : ` ${location}`}`);
+    }
+  }
+
+  // 4. Une requête de source pour une requête large : quand `maxQueries` tronque
+  //    la liste, les deux natures de requête survivent au lieu de sacrifier les
+  //    sources, qui sont justement celles qui rendent des offres.
+  const depth = Math.max(primary.length, secondary.length);
+  for (let index = 0; index < depth; index += 1) {
+    const sourceQuery = primary[index];
+    if (sourceQuery !== undefined) {
+      queries.push({ query: sourceQuery, engine: DEFAULT_ENGINE });
+    }
+    const broadQuery = secondary[index];
+    if (broadQuery !== undefined) {
+      queries.push({ query: broadQuery, engine: DEFAULT_ENGINE });
     }
   }
 

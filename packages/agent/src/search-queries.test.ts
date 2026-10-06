@@ -65,4 +65,15 @@ describe("generateSearchQueries", () => {
       expect(query.engine).toBe("brave");
     }
   });
+
+  it("garde les deux natures de requête dans un budget tronqué", () => {
+    const first = generateSearchQueries("alternance et stage développeur en Île-de-France")
+      .slice(0, 10)
+      .map((query) => query.query);
+
+    // Sans cela, un run à 10 requêtes perd soit les pages de source (qui portent
+    // les offres), soit la découverte large.
+    expect(first.some((query) => query.includes("site:"))).toBe(true);
+    expect(first.some((query) => !query.includes("site:"))).toBe(true);
+  });
 });

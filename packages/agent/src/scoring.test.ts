@@ -122,4 +122,47 @@ describe("scoreSources", () => {
     ]);
     expect(scored[0]?.score).toBeGreaterThanOrEqual(scored[1]?.score ?? 0);
   });
+
+  it("fait passer une page d'offre à la source avant la racine du board", () => {
+    const scored = scoreSources([
+      result({
+        domain: "boards.greenhouse.io",
+        url: "https://boards.greenhouse.io/acme",
+        title: "Acme - Jobs",
+        description: "Nos offres d'alternance",
+      }),
+      result({
+        domain: "boards.greenhouse.io",
+        url: "https://boards.greenhouse.io/acme/jobs/4606134004",
+        title: "Développeur full stack",
+        description: "Alternance",
+      }),
+    ]);
+
+    expect(scored[0]?.result.url).toContain("/jobs/");
+    expect(scored[0]?.reasons).toContain("page d'offre individuelle probable");
+    expect(scored[1]?.reasons).not.toContain("page d'offre individuelle probable");
+  });
+
+  it("rétrograde une page de recherche d'agrégateur sans l'écarter", () => {
+    const scored = scoreSources([
+      result({
+        domain: "fr.indeed.com",
+        url: "https://fr.indeed.com/q-stage-developpeur-emplois.html",
+        title: "Stage développeur",
+        description: "Des offres d'emploi",
+      }),
+      result({
+        domain: "jobs.lever.co",
+        url: "https://jobs.lever.co/theodo/19acaa5d-159c-4ca9-a39c-f5a2ed5ffcd5",
+        title: "Développeur",
+        description: "Alternance",
+      }),
+    ]);
+
+    const aggregator = scored.find((source) => source.result.domain === "fr.indeed.com");
+    expect(aggregator?.reasons).toContain("page de recherche agrégée probable");
+    expect(aggregator?.keep).toBe(true);
+    expect(scored[0]?.result.domain).toBe("jobs.lever.co");
+  });
 });
