@@ -10,6 +10,7 @@ import {
   createWttjConnector,
   loadRegistration,
   microUsdToUsd,
+  SOURCE_PRIORITY_JOB_BOARD,
   usdToMicroUsd,
   WTTJ_CONNECTOR_NAME,
 } from "@findit/job-connectors";
@@ -103,7 +104,13 @@ const main = async (): Promise<void> => {
           connector: createWttjConnector({ token: env.APIFY_API_TOKEN, maxItems }),
           target: { query: "développeur", location: "Île-de-France, France" },
           companyName: "",
-          sourcePriority: 100,
+          /*
+           * Le rang du cycle reel, pas celui d'un ATS : la preuve doit arbitrer
+           * les sources comme la production. Avec le rang officiel, une offre de
+           * job board deja presente en base serait elue canonique a tort, et le
+           * nettoyage laisserait l'offre officielle en doublon.
+           */
+          sourcePriority: SOURCE_PRIORITY_JOB_BOARD,
         },
       ],
       {
