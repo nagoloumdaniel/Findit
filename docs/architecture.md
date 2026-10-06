@@ -104,6 +104,16 @@ AgentRun / AgentAction / AgentError en base
   consommait tout le run et `refine` n'était jamais appelé — mesuré avant correction : 8 pages prises
   par le premier tour, un seul tour exécuté. Après correction, le même run a fait 3 tours et le modèle
   a affiné ses requêtes vers les `site:` ATS. Un planificateur sans `refine` garde tout le budget.
+- **Porte de conformité des sources** (`packages/job-connectors/src/board-access.ts`) : avant de
+  crawler une source découverte, l'agent consulte le registre (`Connector`). Un domaine connu
+  (LinkedIn, Glassdoor, Indeed, HelloWork, WTTJ, France Travail, hôtes d'ATS Greenhouse/Lever/
+  Workable/Workday) doit avoir un connecteur actif dont le régime autorise la collecte ; sinon la
+  source est refusée et le refus est consigné (`source refusée · … · NO_CONNECTOR`). Un domaine
+  inconnu reste gouverné par `robots.txt`. Mesuré sur le registre réel : `fr.linkedin.com` et
+  `www.glassdoor.fr` sont fermés (`NO_CONNECTOR`), `fr.indeed.com` et `www.hellowork.com` ouverts
+  (`OWNER_ACCEPTED_SCRAPING`). Limite connue : la liste des domaines est bornée à ceux que le
+  registre et `docs/legal-compliance.md` nomment ; un agrégateur absent des deux passe pour un site
+  carrière.
 - Une page hors 2xx (réponse d'erreur servie) n'est ni relue ni extraite : c'est une réponse, pas une
   page d'offres. Le statut 0 reste traité par la relecture, puisque « jamais lue » n'est pas « erreur ».
 - Avant l'extraction, une **porte déterministe** lit le même contenu que le modèle recevrait : si la

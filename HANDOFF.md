@@ -42,6 +42,15 @@ pièges déjà payés.
   garde une offre dont le contrat n'est pas nommé (la validation tranche).
   Mesure avant/après, même run borné : offres extraites 226 → 5, tokens de sortie
   ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
+- **Porte de conformité des sources découvertes** : l'agent consulte le registre
+  avant de crawler (`decideDiscoveredSourceAccess`,
+  `packages/job-connectors/src/board-access.ts`, branchée par le worker et
+  `run-agent-once.ts`). Un job board connu sans connecteur actif est refusé et le
+  refus est journalisé (`source refusée · … · NO_CONNECTOR`). Vérifié sur le
+  registre réel : LinkedIn et Glassdoor fermés, Indeed et HelloWork ouverts.
+  Auparavant, l'agent crawait n'importe quel domaine rendu par Brave — LinkedIn et
+  Glassdoor compris, qu'aucun connecteur ne couvre. `docs/legal-compliance.md`
+  reste l'autorité ; la liste des domaines y est bornée.
 - **Découverte ciblée sur les pages d'offre** : la racine d'un board d'ATS
   (`isAtsBoardListing`, `packages/agent/src/scoring.ts`) est traversée mais pas
   extraite — ses pages d'offre le sont. Mesure sur un run borné de 8 pages :
