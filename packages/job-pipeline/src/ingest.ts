@@ -190,7 +190,17 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
   });
 
   if (school.excluded) {
-    return { outcome: "REJECTED", stage: "école", reasons: school.reasons };
+    /*
+     * Le nom de l'employeur est mis dans les motifs, pas seulement dans l'offre :
+     * les offres écartées ne sont pas stockées, donc sans cela une école refusée
+     * ne laisse aucune trace exploitable — mesuré le 2026-10-07, il a fallu
+     * chercher dans les 861 entreprises pour la retrouver.
+     */
+    return {
+      outcome: "REJECTED",
+      stage: "école",
+      reasons: [`Employeur écarté : « ${offer.companyName} ».`, ...school.reasons],
+    };
   }
 
   const workModeKnown = location.workMode !== null;

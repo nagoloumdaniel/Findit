@@ -176,7 +176,15 @@ const prepareOffer = (offer: JobOffer, now: Date): PreparedOffer => {
       school.reasons.length > 0
         ? school.reasons.join(" ")
         : "Offre d'école ou d'organisme de formation.";
-    return { ok: false, reason: `École ou organisme de formation : ${detail}` };
+    /*
+     * Le nom de l'employeur est dans le motif : les offres écartées ne sont pas
+     * stockées, donc sans lui une école refusée ne laisse aucune trace qu'on
+     * puisse relire (constat du 2026-10-07).
+     */
+    return {
+      ok: false,
+      reason: `École ou organisme de formation : « ${offer.company} » — ${detail}`,
+    };
   }
 
   // Contrat et métier. Seule une offre acceptée est publiable : un contrat hors

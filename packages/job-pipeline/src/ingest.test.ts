@@ -144,6 +144,11 @@ describe("decideIngestion", () => {
     );
 
     expect(decision).toMatchObject({ outcome: "REJECTED", stage: "école" });
+    // Les offres écartées ne sont pas stockées : le nom de l'employeur doit donc
+    // être dans les motifs, sinon l'école refusée ne laisse aucune trace.
+    if (decision.outcome === "REJECTED") {
+      expect(decision.reasons[0]).toContain("Campus Numérique");
+    }
   });
 
   it("writes the measured school risk onto an accepted offer", () => {

@@ -212,4 +212,20 @@ describe("persistOffers - rejets", () => {
     expect(result.rejected).toHaveLength(1);
     expect(prisma.job.create).not.toHaveBeenCalled();
   });
+
+  it("rejette une offre d'école en nommant l'employeur", async () => {
+    const prisma = createPrisma();
+
+    // Les offres écartées ne sont pas stockées : sans le nom dans le motif, une
+    // école refusée ne laisse aucune trace qu'on puisse relire.
+    const result = await persistOffers(
+      [offer({ company: "ISCOD", title: "Alternance Développeur Front-End" })],
+      depsFor(prisma),
+    );
+
+    expect(result.inserted).toBe(0);
+    expect(result.rejected).toHaveLength(1);
+    expect(result.rejected[0]?.reason).toContain("ISCOD");
+    expect(prisma.job.create).not.toHaveBeenCalled();
+  });
 });
