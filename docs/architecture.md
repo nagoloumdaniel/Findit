@@ -236,19 +236,21 @@ plus.
 
 Toutes publiques : aucune route ne porte de garde ni d'en-tête d'authentification.
 
-| Méthode | Chemin                 | État                                  |
-| ------- | ---------------------- | ------------------------------------- |
-| `GET`   | `/health`              | Santé API                             |
-| `GET`   | `/api/jobs`            | Liste et recherche d'offres           |
-| `GET`   | `/api/jobs/stats`      | Compteurs 24 h / 72 h                 |
-| `GET`   | `/api/jobs/filters`    | Valeurs de filtres réellement en base |
-| `GET`   | `/api/jobs/:slug`      | Détail d'offre                        |
-| `GET`   | `/api/agent/runs`      | Liste des runs                        |
-| `GET`   | `/api/agent/stats`     | Compteurs de l'agent                  |
-| `GET`   | `/api/agent/analytics` | Analytique de l'agent                 |
-| `GET`   | `/api/agent/sources`   | Sources suivies                       |
-| `GET`   | `/api/agent/runs/:id`  | Détail d'un run                       |
-| `POST`  | `/api/matching/score`  | Score CV/offre, corps `{ cvText }`    |
+| Méthode | Chemin                      | État                                                                         |
+| ------- | --------------------------- | ---------------------------------------------------------------------------- |
+| `GET`   | `/health`                   | Santé API                                                                    |
+| `GET`   | `/api/jobs`                 | Liste et recherche d'offres                                                  |
+| `GET`   | `/api/jobs/stats`           | Compteurs 24 h / 72 h                                                        |
+| `GET`   | `/api/jobs/filters`         | Valeurs de filtres réellement en base                                        |
+| `GET`   | `/api/jobs/:slug`           | Détail d'offre                                                               |
+| `GET`   | `/api/agent/runs`           | Liste des runs                                                               |
+| `GET`   | `/api/agent/stats`          | Compteurs de l'agent                                                         |
+| `GET`   | `/api/agent/analytics`      | Analytique de l'agent                                                        |
+| `GET`   | `/api/agent/sources`        | Sources suivies                                                              |
+| `GET`   | `/api/agent/runs/:id`       | Détail d'un run — 404 si inconnu                                             |
+| `POST`  | `/api/matching/score`       | Score CV/offre, corps `{ cvText }` — 200                                     |
+| `GET`   | `/api/matching/history`     | Matchings passés, **sans le CV**                                             |
+| `GET`   | `/api/matching/history/:id` | Un matching avec son CV — 200 ; 404 si inconnu ; 400 si identifiant malformé |
 
 Le site Next.js porte `GET /`, `GET /offres/:slug`, `GET /dashboard` et les sections
 `/dashboard/{analytics,sources,jobs,crawls,agent,matching,logs,config}`. Il n'y a plus de page

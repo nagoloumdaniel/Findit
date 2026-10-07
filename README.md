@@ -38,24 +38,24 @@ Railway construit le worker avec Railpack depuis la racine (`RAILPACK_BUILD_CMD=
 
 ## Fonctionnalités
 
-| Élément                  | État                   | Détail                                                                                                                                             |
-| ------------------------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Site public              | Disponible             | Liste, recherche par texte, filtres repliables, pagination, fiche d'offre ; `force-dynamic` conservé sur l'accueil et la fiche                     |
-| Thème clair / sombre     | Disponible             | Sélecteur Clair / Sombre / Système et script anti-flash dans le `<head>` (`layout.tsx`) ; mouvement dans `motion.css`                              |
-| Squelettes de chargement | Disponible             | 11 `loading.tsx` adossés à un composant `Skeleton` à 7 variantes                                                                                   |
-| Cache des données        | Disponible             | 60 s pour les offres et les statistiques, 300 s pour les filtres et le détail ; `no-store` pour tout ce qui est propre à une session               |
-| Espace personnel `/moi`  | Disponible             | Profil, CV, compétences, langues, expériences, liens et matchings passés                                                                           |
-| Dashboard d'exploitation | Partiel                | `/dashboard` et 8 sections ; Jobs, Crawls, Logs et Configuration restent des états vides                                                           |
-| Garde d'accès            | Un mot de passe unique | `/moi` **et** `/dashboard` passent par `apps/web/src/proxy.ts` : mot de passe (`PROFILE_PASSWORD`) échangé contre un cookie signé ; pas de comptes |
-| API des offres           | Disponible             | `GET /api/jobs`, `/api/jobs/stats`, `/api/jobs/filters`, `/api/jobs/:slug`                                                                         |
-| API de l'agent           | Disponible             | `GET /api/agent/runs`, `/stats`, `/analytics`, `/sources`, `/runs/:id`                                                                             |
-| Matching CV / offres     | Disponible via l'API   | `POST /api/matching/score` (corps `{ cvText }`), `GET /api/matching/history`, `GET /api/matching/history/:id` ; CV structuré par DeepSeek          |
-| API de profil            | Serveur à serveur      | `GET` / `PUT /api/profile`, protégés par l'en-tête `x-internal-key` (`ProfileKeyGuard`)                                                            |
-| Agent autonome           | Éteint par défaut      | Activé par `AGENT_RUN_ENABLED=true` avec `DEEPSEEK_API_KEY` ; cron `AGENT_COLLECTION_CRON` (défaut `0 8 * * *`, Paris)                             |
-| Agent — découverte seule | Allumé dans `.env`     | `AGENT_DISCOVERY_ONLY=true` : le modèle cherche, choisit et enregistre des entreprises (`CompanySource`) sans crawler ni extraire                  |
-| Reprise en cascade       | Disponible             | CDC §4.7 : relecture bornée, `JobPosting` JSON-LD avant le LLM, relance des échecs, abandon journalisé (`retried`)                                 |
-| Registre de conformité   | Disponible             | Table `Connector`, synchronisée par `pnpm registry:sync` ; une source découverte passe une porte (`board-access.ts`) avant toute visite            |
-| Alertes Telegram         | Éteintes par défaut    | Nouvelles offres idempotentes ; commandes `/start`, `/status`, `/latest`, `/help`                                                                  |
+| Élément                  | État                   | Détail                                                                                                                                                                                                          |
+| ------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Site public              | Disponible             | Liste, recherche par texte, filtres repliables, pagination, fiche d'offre ; `force-dynamic` conservé sur l'accueil et la fiche                                                                                  |
+| Thème clair / sombre     | Disponible             | Sélecteur Clair / Sombre / Système et script anti-flash dans le `<head>` (`layout.tsx`) ; mouvement dans `motion.css`                                                                                           |
+| Squelettes de chargement | Disponible             | 11 `loading.tsx` adossés à un composant `Skeleton` à 7 variantes                                                                                                                                                |
+| Cache des données        | Disponible             | 60 s pour les offres et les statistiques, 300 s pour les filtres et le détail ; `no-store` pour tout ce qui est propre à une session                                                                            |
+| Espace personnel `/moi`  | Disponible             | Profil, CV, compétences, langues, expériences, liens et matchings passés                                                                                                                                        |
+| Dashboard d'exploitation | Partiel                | `/dashboard` et 8 sections ; Jobs, Crawls, Logs et Configuration restent des états vides                                                                                                                        |
+| Garde d'accès            | Un mot de passe unique | `/moi` **et** `/dashboard` passent par `apps/web/src/proxy.ts` : mot de passe (`PROFILE_PASSWORD`) échangé contre un cookie signé ; pas de comptes                                                              |
+| API des offres           | Disponible             | `GET /api/jobs`, `/api/jobs/stats`, `/api/jobs/filters`, `/api/jobs/:slug`                                                                                                                                      |
+| API de l'agent           | Disponible             | `GET /api/agent/runs`, `/stats`, `/analytics`, `/sources`, `/runs/:id`                                                                                                                                          |
+| Matching CV / offres     | Disponible via l'API   | `POST /api/matching/score` → 200 (corps `{ cvText }`), `GET /api/matching/history` (sans le CV), `GET /api/matching/history/:id` → 200, 404 si inconnu, 400 si identifiant malformé ; CV structuré par DeepSeek |
+| API de profil            | Serveur à serveur      | `GET` / `PUT /api/profile`, protégés par l'en-tête `x-internal-key` (`ProfileKeyGuard`)                                                                                                                         |
+| Agent autonome           | Éteint par défaut      | Activé par `AGENT_RUN_ENABLED=true` avec `DEEPSEEK_API_KEY` ; cron `AGENT_COLLECTION_CRON` (défaut `0 8 * * *`, Paris)                                                                                          |
+| Agent — découverte seule | Allumé dans `.env`     | `AGENT_DISCOVERY_ONLY=true` : le modèle cherche, choisit et enregistre des entreprises (`CompanySource`) sans crawler ni extraire                                                                               |
+| Reprise en cascade       | Disponible             | CDC §4.7 : relecture bornée, `JobPosting` JSON-LD avant le LLM, relance des échecs, abandon journalisé (`retried`)                                                                                              |
+| Registre de conformité   | Disponible             | Table `Connector`, synchronisée par `pnpm registry:sync` ; une source découverte passe une porte (`board-access.ts`) avant toute visite                                                                         |
+| Alertes Telegram         | Éteintes par défaut    | Nouvelles offres idempotentes ; commandes `/start`, `/status`, `/latest`, `/help`                                                                                                                               |
 
 ## Sources de collecte
 

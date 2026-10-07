@@ -421,6 +421,8 @@ Ce que cela change :
 - **Plafond en crédits** : 500 crédits au total sur le plan gratuit, coût par appel non mesuré. Avant chaque cycle, `GET /credits` (gratuit) donne le solde ; un plafond en crédits, distinct du plafond en dollars d'Apify, sera posé à la brique TASK-502 après mesure sur un premier appel.
 - Limites du plan gratuit constatées : un seul job de `crawl` et un seul `monitor`.
 
+**Décision : ScrapeGraphAI n'est pas retenu** (`2026-10-07`). L'évaluation ci-dessus reste — elle explique _pourquoi_ : les job boards sont interdits par ses conditions, et le plan gratuit réutilise les données envoyées. La clé a donc été **retirée du `.env`** : elle n'était lue par aucun code, et la garder laissait croire que le fournisseur était branché. Réouvrir cette porte suppose de traiter les deux points ci-dessus, pas seulement de remettre une clé.
+
 ## Moteurs de recherche
 
 ### Brave Search

@@ -115,16 +115,17 @@ sources,runs/:id}`, `POST /api/matching/score`, `GET /api/matching/history{,/:id
   (`createLlmQueryPlanner`) et les sources à crawler (`createLlmSourceSelector`),
   voit le résultat du tour et décide via `refine` ; l'extraction et l'arrêt restent
   fixes.
-- **Dettes ouvertes** (détail : [roadmap.md](roadmap.md)) : `.claude/` (~100 Mo)
-  suivi par git — retrait de l'index en cours au 2026-10-07 (`/.claude/` ajouté au
-  `.gitignore`) ; clés mortes dans `.env` (`SCRAPEGRAPH_API_KEY`,
-  `DATABASE_URL_OWNER` absentes du schéma et de tout code — au moins ces deux) ;
-  couverture des contrôleurs de l'API faible (20-50 %) ; `packages/shared` n'est
-  plus sans test (`job-scope.test.ts`, 10 tests) ; règle de date
-  recopiée dans `packages/job-connectors/src/linkedin.ts` (le paquet ne dépend pas
-  de `@findit/shared`) ; `canonicalAtsHost` ne couvre que Greenhouse ; les hôtes
-  inconnus de `collectDiscoveries` (`unknownHosts`) ne sont pas enregistrés et
-  restent gouvernés par `robots.txt`.
+- **Dettes ouvertes** (détail : [roadmap.md](roadmap.md)) : **presque toutes résolues
+  le 2026-10-07** — `.claude/` retiré du suivi et purgé de l'historique (dépôt 76,5 Mo
+  → 1,3 Mo) ; `SCRAPEGRAPH_API_KEY` retirée du `.env` (évaluation non retenue, conservée
+  dans `docs/legal-compliance.md`) ; couverture des contrôleurs de l'API portée à
+  **100 %**, ce qui a révélé trois défauts de contrat corrigés (`history/:id` inconnu
+  rendait 200 + `null` au lieu de 404 ; `POST /score` rendait 201 au lieu de 200 ;
+  `:id` sans validation, désormais 400) ; règle de date **dédupliquée** (`linkedin.ts`
+  importe `endOfDayIfDateOnly`) ; `canonicalAtsHost` couvre les deux variantes Greenhouse
+  observées en base ; `unknownHosts`, calculé sans consommateur, est **journalisé** dans
+  la ligne de cycle. **Reste ouvert** : ces hôtes inconnus sont journalisés mais
+  toujours pas enregistrés au registre dynamique — un arbitrage, pas un oubli.
 - **Questions ouvertes** : Q-1 (hébergement) est **tranchée** (Vercel + Railway) ;
   restent Q-2 (auth) et Q-3 (sources de départ du MVP).
 
