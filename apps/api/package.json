@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/main.ts",
-    "lint": "eslint src vitest.config.ts vitest.setup.ts --max-warnings=0",
+    "lint": "eslint src api vitest.config.ts vitest.setup.ts --max-warnings=0",
     "start": "node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

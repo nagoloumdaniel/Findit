@@ -7,5 +7,12 @@
     "emitDecoratorMetadata": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "vitest.config.ts", "vitest.setup.ts"]
+  /*
+   * `api/**` porte l'entrée serverless Vercel. Le POURQUOI de l'inclure ici :
+   * sans cela elle échappait au typecheck et au lint du dépôt — un fichier de
+   * production qu'aucune porte ne vérifiait (constat du 2026-10-07). Le build
+   * (`tsconfig.build.json`) garde son `include` sur `src` : Vercel compile
+   * lui-même la fonction, elle n'a rien à faire dans `dist`.
+   */
+  "include": ["src/**/*.ts", "api/**/*.ts", "vitest.config.ts", "vitest.setup.ts"]
 }

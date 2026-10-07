@@ -4,6 +4,15 @@ generator client {
   engineType   = "client"
   runtime      = "nodejs"
   moduleFormat = "esm"
+  /*
+   * Piège classique de Prisma en serverless (Vercel/Lambda) : le moteur de
+   * requête est un binaire natif compilé pour la machine de build. Sans cible
+   * Linux, la fonction se construit puis échoue à l'exécution avec
+   * « Query engine library for current platform could not be found ».
+   * `native` garde le poste de développement, `rhel-openssl-3.0.x` couvre
+   * l'image d'exécution Amazon Linux de Vercel.
+   */
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

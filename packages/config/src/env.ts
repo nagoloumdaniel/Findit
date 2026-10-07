@@ -38,7 +38,15 @@ export const apiEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   DATABASE_URL: databaseUrl,
-  REDIS_URL: url,
+  /*
+   * Pas de `REDIS_URL` ici : l'API ne parle pas à Redis — vérifié le 2026-10-07,
+   * ni import ni dépendance (`bullmq`/`ioredis`) dans `apps/api`. Seul le worker
+   * s'en sert, et il a son propre schéma (`parseWorkerEnv`). L'exiger obligeait à
+   * poser une fausse URL sur un hébergement sans Redis (Vercel), ce qui masquait
+   * une dépendance qui n'existe pas. Optionnel pour ne rien casser si la variable
+   * traîne encore dans un environnement.
+   */
+  REDIS_URL: url.optional(),
   CORS_ORIGIN: origin.default("http://localhost:3100"),
   INTERNAL_API_KEY: z.string().min(32),
   /*
