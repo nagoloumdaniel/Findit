@@ -39,23 +39,22 @@ export class LinkedinInputError extends Error {
 }
 
 /*
- * Tarifs dérivés du registre, qui donne les deux seuls points dont on dispose :
- * 100 résultats → 0,20 $ (ligne « Coût ») et 20 résultats → 0,040 $ (ligne
- * « plan gratuit »). La droite passe par l'origine, soit 0,002 $ le résultat.
- * Aucun frais de démarrage n'en est déduit : ce serait l'inventer. S'il existe,
- * le premier run réel le révélera — l'événement `apify-actor-start` n'a pas de
- * prix connu ici, donc le coût retenu sera le relevé réel d'Apify, jamais une
- * estimation plus basse (voir `costOf` dans `apify.ts`).
+ * Tarifs relevés le 2026-10-07 sur la fiche de l'acteur (API Apify), plan
+ * gratuit : `apify-default-dataset-item` 0,002 $ (niveau FREE ; 0,001 $ sur un
+ * plan payant) et `apify-actor-start` 0,00005 $ (un événement par Go de
+ * mémoire, minimum un). Vérifié sur le run réel du 2026-10-07 : 14 résultats et
+ * 1 démarrage = 0,02805 $, exactement l'`usageTotalUsd` rendu par Apify.
  */
-const PRICING = { startMicroUsd: 0, perResultMicroUsd: 2000 };
+const PRICING = { startMicroUsd: 50, perResultMicroUsd: 2000 };
 
 /*
- * Un seul événement est tarifé d'après la déduction ci-dessus. `apify-actor-start`
- * reste volontairement hors table : prix non mesuré, donc repli sur le coût réel
- * plutôt qu'un zéro inventé.
+ * Les deux seuls événements facturés par cet acteur, au prix de la fiche.
+ * Sans eux, `apify.ts` signalait un prix inconnu et retenait le pire cas, plus
+ * cher que le run réel.
  */
 const EVENT_PRICES: Readonly<Record<string, number>> = {
   "apify-default-dataset-item": 2000,
+  "apify-actor-start": 50,
 };
 
 /*
@@ -82,6 +81,12 @@ const itemSchema = z.object({
   description: z.string().nullish(),
 });
 
+/** Une date seule, sans heure : le format réellement rendu par l'acteur. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
+
+/** Fin d'une journée UTC : minuit plus un jour, moins une milliseconde. */
+const DATE_ONLY_END_OFFSET_MS = 24 * 60 * 60 * 1000 - 1;
+
 const parseDate = (value: string | number | null | undefined): Date | null => {
   if (value === null || value === undefined) {
     return null;
@@ -91,7 +96,20 @@ const parseDate = (value: string | number | null | undefined): Date | null => {
   }
 
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  /*
+   * LinkedIn ne rend qu'un jour (« 2026-10-04 »), que `new Date` place à minuit
+   * UTC. Une date seule couvre sa journée entière : sans cela, l'offre du
+   * surlendemain tombe dès le début du 4e jour. Même règle que
+   * `endOfDayIfDateOnly` dans `packages/shared/src/job-scope.ts`, que le pipeline
+   * applique aux dates à minuit UTC (ce paquet ne dépend pas de `@findit/shared`).
+   */
+  return typeof value === "string" && DATE_ONLY.test(value.trim())
+    ? new Date(parsed.getTime() + DATE_ONLY_END_OFFSET_MS)
+    : parsed;
 };
 
 /**
@@ -120,6 +138,11 @@ export const mapLinkedinItem = (item: unknown): RawJob => {
   }
 
   const job = parsed.data;
+  /*
+   * L'acteur rend `applyUrl: ""` quand il n'y a pas de lien de candidature :
+   * une chaîne vide n'est pas un lien, elle vaut absence.
+   */
+  const applyUrl = job.applyUrl?.trim();
 
   return {
     sourceJobId: job.id,
@@ -129,7 +152,7 @@ export const mapLinkedinItem = (item: unknown): RawJob => {
     descriptionHtml: job.descriptionHtml ?? job.description ?? null,
     publishedAt: parseDate(job.postedAt),
     companyName: job.companyName,
-    applyUrl: job.applyUrl ?? null,
+    applyUrl: applyUrl === undefined || applyUrl === "" ? null : applyUrl,
     /*
      * `rawContent` est une projection en liste blanche, contrairement aux autres
      * connecteurs qui recopient l'élément entier : le registre interdit de
@@ -144,7 +167,7 @@ export const mapLinkedinItem = (item: unknown): RawJob => {
       companyName: job.companyName,
       location: job.location ?? null,
       postedAt: job.postedAt ?? null,
-      applyUrl: job.applyUrl ?? null,
+      applyUrl: applyUrl === undefined || applyUrl === "" ? null : applyUrl,
       description: job.description ?? null,
       descriptionHtml: job.descriptionHtml ?? null,
     }),

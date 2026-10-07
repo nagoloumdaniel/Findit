@@ -12,7 +12,7 @@ import type {
   JobRoleCategory,
   JobWorkMode,
 } from "@findit/shared";
-import { EXTENDED_MAX_AGE_HOURS } from "@findit/shared";
+import { EXTENDED_MAX_AGE_HOURS, endOfDayIfDateOnly } from "@findit/shared";
 
 /**
  * Une offre telle qu'un connecteur l'a rendue, plus ce que la source sait
@@ -165,7 +165,14 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
     };
   }
 
-  const ageHours = (now.getTime() - offer.publishedAt.getTime()) / MS_PER_HOUR;
+  /*
+   * Une source qui ne donne qu'un jour (« 2026-10-04 ») est lue à minuit UTC :
+   * sans élargir la journée, l'offre du surlendemain tombe dès le début du 4e
+   * jour. La date publiée stockée reste celle de la source ; seule la décision
+   * (fraîcheur et expiration) utilise la journée entière.
+   */
+  const publishedAt = endOfDayIfDateOnly(offer.publishedAt);
+  const ageHours = (now.getTime() - publishedAt.getTime()) / MS_PER_HOUR;
   if (ageHours > EXTENDED_MAX_AGE_HOURS) {
     return {
       outcome: "REJECTED",
@@ -219,7 +226,7 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
     city: location.city,
     departmentCode: location.departmentCode,
     publishedAt: offer.publishedAt,
-    expiresAt: new Date(offer.publishedAt.getTime() + EXTENDED_MAX_AGE_HOURS * MS_PER_HOUR),
+    expiresAt: new Date(publishedAt.getTime() + EXTENDED_MAX_AGE_HOURS * MS_PER_HOUR),
     canonicalUrl: offer.url,
     applyUrl: offer.applyUrl ?? null,
     externalId: offer.sourceJobId,

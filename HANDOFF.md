@@ -245,6 +245,47 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **LinkedIn : verdict après mesure (2026-10-07).** Deux runs réels bornés (20
+  résultats) : **0,02810 $** dépensés, **0 offre francilienne d'alternance**
+  acceptée. L'acteur `curious_coder/linkedin-jobs-scraper` **ignore la zone
+  demandée** — son `inputUrl` portait bien `location=Île-de-France, France` et les
+  **14/14** offres rendues sont en Bretagne (Brest, Guipavas, Plouzané). Les trois
+  offres fraîches ont toutes été rejetées en aval. La ligne `Connector` est
+  **`DISABLED`** : à 0,04 $/jour pour zéro offre, la source ne se paie pas.
+  **Attention** : `registry.ts` la déclare `ACTIVE`, donc un `pnpm registry:sync`
+  la réactiverait, et `SCRAPED_SOURCES_ENABLED` est allumé par défaut.
+  - Le barème est désormais **établi, pas estimé** : `apify-default-dataset-item`
+    0,002 $ et `apify-actor-start` 0,00005 $, vérifiés contre la facture réelle du
+    run 1 (14 × 0,002 + 0,00005 = **0,02805 $**). Le registre ne connaissait que le
+    prix par résultat, d'où une notice `CostUnknown` et une **borne haute** à
+    0,04000 $.
+  - **Le journal de dépense sur-évalue ces deux runs** : 0,04000 $ consignés
+    contre 0,02805 $ puis 0,00005 $ réels, soit **0,05190 $** de trop. C'est
+    volontairement conservateur (le coût n'est jamais effacé, il protège la garde
+    de budget), mais le cumul du mois affiche **0,47175 $** là où la dépense
+    LinkedIn réelle est de 0,02810 $.
+- **Un correctif de date qui dépasse LinkedIn (2026-10-07).** L'acteur rend
+  `postedAt` en **date seule** (`AAAA-MM-JJ`). Interprétée à minuit UTC, une offre
+  du surlendemain tombait sous le seuil strict de 72 h. Nouvel export
+  `endOfDayIfDateOnly` (`packages/shared/src/job-scope.ts`), utilisé par
+  `ingest.ts` **pour le seuil et pour `expiresAt`** et par le connecteur LinkedIn.
+  **La date stockée reste celle de la source** (sinon l'affichage glisserait au
+  lendemain à Paris). Sources concernées : **HelloWork, Welcome to the Jungle,
+  France Travail** quand elles datent sans heure ; **Indeed non** (époque en ms).
+  Effet : une offre datée D n'est plus écartée dès le début de J+3 mais jusqu'à la
+  fin de J+3 — fenêtre élargie de moins de 24 h, aucun affichage changé. Deux
+  tests échouent sans le correctif, dans `ingest.test.ts` et `linkedin.test.ts`.
+- **Ce qui a été refusé, mesure à l'appui.** Un **pré-filtre Île-de-France** dans
+  le connecteur LinkedIn : inutile, puisque 14/14 offres sont bretonnes — il ferait
+  passer les découvertes de 3 à 0 sans qu'aucune offre soit acceptée. Et le canal
+  des **posts LinkedIn**, mesuré puis refusé (voir `docs/legal-compliance.md`) :
+  0 offre sur 6 posts pour 0,03005 $, et l'identité de l'auteur toujours rendue.
+- **Une erreur de procédure, assumée.** Le second run LinkedIn a été lancé contre
+  le `dist` **non reconstruit** : les correctifs (prix, date, `applyUrl`) n'ont donc
+  pas été exercés par ce run, qui a de plus rendu un dataset vide. La remesure du
+  rendement a été refaite **hors ligne sur le dataset réel déjà payé** (lecture
+  Apify gratuite), sans troisième run. Leçon : `prove-board` consomme `dist` —
+  reconstruire avant de mesurer.
 - **Le cycle de 6 h a tourné pour de vrai (2026-10-07, 06 h 00 Paris).** Premier
   cycle planifié depuis que la file a un consommateur : trois connecteurs,
   **34 découvertes / 9 acceptées**, **0,0312 $** de dépense (plafond 0,15 $ par

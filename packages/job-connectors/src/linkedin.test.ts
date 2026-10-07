@@ -153,6 +153,24 @@ describe("mapLinkedinItem", () => {
     );
   });
 
+  it("étend une date seule à sa journée entière, comme le pipeline", () => {
+    // L'acteur rend « 2026-10-04 », que `new Date` place à minuit UTC. Une date
+    // seule couvre sa journée : sinon l'offre du surlendemain tombe dès le
+    // début du 4e jour et une offre légitime est perdue.
+    expect(mapLinkedinItem({ ...item, postedAt: "2026-10-04" }).publishedAt).toEqual(
+      new Date("2026-10-04T23:59:59.999Z"),
+    );
+  });
+
+  it("traite un lien de candidature vide comme absent", () => {
+    expect(mapLinkedinItem({ ...item, applyUrl: "" }).applyUrl).toBeNull();
+    expect(mapLinkedinItem({ ...item, applyUrl: "   " }).applyUrl).toBeNull();
+    expect(mapLinkedinItem({ ...item, applyUrl: null }).applyUrl).toBeNull();
+    expect(mapLinkedinItem({ ...item, applyUrl: "https://x.test/a" }).applyUrl).toBe(
+      "https://x.test/a",
+    );
+  });
+
   it("accorde une description sans balise quand l'acteur n'en donne pas d'HTML", () => {
     expect(mapLinkedinItem({ ...item, description: "Le poste" }).descriptionHtml).toBe("Le poste");
   });
@@ -183,14 +201,15 @@ describe("createLinkedinConnector", () => {
     expect(LINKEDIN_ACTOR_ID).toBe("curious_coder/linkedin-jobs-scraper");
   });
 
-  it("déclare le pire coût du registre : 20 résultats → 0,040 $, 100 → 0,20 $", () => {
-    expect(connector.estimateCostMicroUsd?.(target)).toBe(40_000);
+  it("déclare le pire coût réel de l'acteur : 20 résultats + démarrage = 0,04005 $", () => {
+    // 20 x 0,002 $ (niveau FREE) + 0,00005 $ de démarrage = 0,04005 $.
+    expect(connector.estimateCostMicroUsd?.(target)).toBe(40_050);
     expect(
       createLinkedinConnector({
         token: "t",
         maxItems: LINKEDIN_MAX_ITEMS_CEILING,
       }).estimateCostMicroUsd?.(target),
-    ).toBe(200_000);
+    ).toBe(200_050);
   });
 
   it("refuse un plafond au-dessus du maximum, ou absent", () => {
@@ -249,6 +268,18 @@ describe("createLinkedinConnector", () => {
     const { context } = fakeApify([stale]);
 
     await expect(connector.collect({} as never, target, context)).resolves.toEqual([]);
+  });
+
+  it("garde l'offre datée du surlendemain, que la date seule faisait tomber", async () => {
+    // Sans l'extension à la journée, « 2026-10-04 » vaut minuit UTC : 3 j 12 h
+    // au 2026-10-07 12 h, donc au-delà de 72 h, et l'offre était perdue.
+    const dayThree = { ...item, id: "j-3", postedAt: "2026-10-04" };
+    const dayFour = { ...item, id: "j-4", postedAt: "2026-10-03" };
+    const { context } = fakeApify([dayThree, dayFour]);
+
+    const jobs = await connector.collect({} as never, target, context);
+
+    expect(jobs.map((job) => job.sourceJobId)).toEqual(["j-3"]);
   });
 
   it("rend toutes les offres quand limitPerSource est atteint pile, et lit au plus ce plafond", async () => {

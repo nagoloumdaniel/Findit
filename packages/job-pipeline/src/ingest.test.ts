@@ -85,6 +85,33 @@ describe("decideIngestion", () => {
     expect(decision).toMatchObject({ outcome: "REJECTED", stage: "fraîcheur" });
   });
 
+  it("treats a date without time as its whole day, not its first instant", () => {
+    // « 2026-07-14 » vaut minuit UTC. Lu au premier instant, l'offre a 84 h et
+    // tomberait ; la source ne dit pourtant que « publiée le 14 ».
+    const decision = decideIngestion(
+      offer({ publishedAt: new Date("2026-07-14T00:00:00.000Z") }),
+      NOW,
+    );
+
+    expect(decision.outcome).toBe("ACCEPTED");
+    if (decision.outcome === "REJECTED") throw new Error("attendu accepté");
+    // La date stockée reste minuit : c'est la décision qui élargit la journée.
+    expect(decision.draft.publishedAt.toISOString()).toBe("2026-07-14T00:00:00.000Z");
+    // L'expiration suit la même référence, sinon l'offre naîtrait déjà expirée.
+    expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-17T23:59:59.999Z");
+  });
+
+  it("keeps the 72-hour window at its real bound, not four whole days", () => {
+    // Le 13 à minuit : journée élargie au 13 à 23 h 59, + 72 h = 16 à 23 h 59,
+    // déjà passé le 17 à 12 h. Une date seule ne repousse pas le seuil d'un jour.
+    const decision = decideIngestion(
+      offer({ publishedAt: new Date("2026-07-13T00:00:00.000Z") }),
+      NOW,
+    );
+
+    expect(decision).toMatchObject({ outcome: "REJECTED", stage: "fraîcheur" });
+  });
+
   it("rejects an offer with no reliable date rather than quarantining it", () => {
     // La quarantaine suppose une offre stockable ; sans date, elle ne l'est pas.
     const decision = decideIngestion(offer({ publishedAt: null }), NOW);

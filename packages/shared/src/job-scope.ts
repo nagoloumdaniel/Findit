@@ -44,6 +44,28 @@ export type IleDeFranceDepartment = (typeof ILE_DE_FRANCE_DEPARTMENTS)[number];
 export const DEFAULT_MAX_AGE_HOURS = 24;
 export const EXTENDED_MAX_AGE_HOURS = 72;
 
+/// Millisecondes d'une journée, moins une : la fin d'une journée UTC.
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Une date sans heure désigne une journée entière.
+ *
+ * Le POURQUOI : plusieurs sources ne donnent qu'un jour (« 2026-10-04 »), que
+ * `new Date` place à minuit UTC. Comparer ce minuit à un seuil de 72 h fait
+ * tomber l'offre dès le début du 4e jour, alors que la source dit seulement
+ * qu'elle est du 4. Une date à minuit UTC exactement est donc étendue à la fin
+ * de sa journée ; une date horodatée n'est jamais touchée. La date publiée
+ * stockée, elle, reste celle de la source : seule la décision de fraîcheur (et
+ * l'expiration qui en découle) élargit la journée.
+ */
+export const endOfDayIfDateOnly = (date: Date): Date =>
+  date.getUTCHours() === 0 &&
+  date.getUTCMinutes() === 0 &&
+  date.getUTCSeconds() === 0 &&
+  date.getUTCMilliseconds() === 0
+    ? new Date(date.getTime() + DAY_MS - 1)
+    : date;
+
 /// Fenêtres de fraîcheur proposées à l'utilisateur. Aucune valeur au-delà de
 /// EXTENDED_MAX_AGE_HOURS n'est acceptable : une offre plus ancienne ne doit
 /// jamais être affichée.
