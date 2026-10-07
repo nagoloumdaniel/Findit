@@ -72,6 +72,16 @@ export default async function HomePage({ searchParams }: PageProps) {
             {stats.data.publishedLast72h === 0
               ? "Aucune offre publiée durant les 3 derniers jours."
               : `${stats.data.publishedLast72h} offre${stats.data.publishedLast72h > 1 ? "s" : ""} publiée${stats.data.publishedLast72h > 1 ? "s" : ""} durant les 3 derniers jours.`}
+            {/*
+              Les deux comptes ne mesurent pas la même chose : ce paragraphe compte
+              tout ce qui est publié, la liste n'affiche que ce qui entre dans le
+              périmètre (métiers et contrats du projet). Sans cette précision,
+              « 12 offres publiées » au-dessus de « 3 offres » se lit comme une
+              erreur — constat du 2026-10-07, corrigé ici.
+            */}
+            {jobs.ok && jobs.data.total < stats.data.publishedLast72h
+              ? ` ${String(jobs.data.total)} ${jobs.data.total > 1 ? "correspondent" : "correspond"} au périmètre affiché ci-dessous.`
+              : null}
             {stats.data.lastPublishedAt
               ? ` Dernière publication le ${exactDateTime(stats.data.lastPublishedAt)}.`
               : null}
