@@ -245,6 +245,13 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **Le cycle de 6 h a tourné pour de vrai (2026-10-07, 06 h 00 Paris).** Premier
+  cycle planifié depuis que la file a un consommateur : trois connecteurs,
+  **34 découvertes / 9 acceptées**, **0,0312 $** de dépense (plafond 0,15 $ par
+  cycle), et **0 nouvelle offre** — les mêmes annonces reviennent, la
+  déduplication les reconnaît. Le worker et Redis étaient vivants au moment du
+  déclenchement ; c'est la preuve que la planification, le consommateur et la
+  garde de budget fonctionnent ensemble.
 - **En ligne et fonctionnel (2026-10-07).** **Web** : https://finditfr.vercel.app
   (projet Vercel `finditfr`, racine `apps/web`). **API** :
   https://finditfr-api.vercel.app (projet `finditfr-api`, racine `apps/api`,
