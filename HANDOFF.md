@@ -245,6 +245,63 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **Trou des écoles fermé (2026-10-07).** Cinq offres d'écoles étaient **publiées**
+  (ISCOD ×3, IRIS, EEMI Paris) alors que la règle est de les ignorer. Le détecteur
+  tournait bien, mais il juge **le texte de l'annonce** — et une école qui recrute
+  pour ses entreprises partenaires publie une annonce d'alternance qui ressemble à
+  celle d'un employeur : il concluait « aucun signal d'école » (score 0 pour ISCOD
+  et EEMI ; 35 pour IRIS, sous le seuil de quarantaine de 40). Corrigé sur deux
+  plans : une **liste citée d'employeurs-écoles** (`ISCOD`, `EEMI`, `IRIS`, dans
+  `packages/job-classification/src/school.ts`) qui tranche sur le nom, et des
+  **formulations décisives** — « entreprises partenaires », frais de formation,
+  promesse de placement — qui suffisent désormais seules à écarter une offre.
+  **Mesure sur les 24 offres de la base** : 5 écartées, exactement les 5 écoles,
+  et **aucun des 13 autres employeurs touché** (CANAL+, Safran, Sopra Steria,
+  Capgemini, Veolia, Ippon, Galadrim, OXIANE, SOCOTEC, Enerlis, Free-Work…).
+  Les 5 offres ont été repassées en `REJECTED` avec leur décision
+  (`SchoolDetectionDecision`) et une ligne de journal — rien n'a été supprimé :
+  **publiées 24 → 19**.
+- **Ce qui est réellement parcouru (vérifié en base, 2026-10-07)** : **LinkedIn
+  jamais** (0 `CompanySource`, 0 offre — refusé par la porte de conformité, faute
+  de connecteur) ; **HelloWork, Welcome to the Jungle et Indeed** par leurs
+  **connecteurs** Apify (derniers runs : 40/8, 7/2, 10/3 découvertes/acceptées) ;
+  **France Travail** par son API officielle ; les boards d'entreprises
+  (Greenhouse, Lever, Workday) sont collectés mais n'ont jamais rien accepté.
+  Aucun de ces sites n'est crawlé en direct.
+- **Couverture de tests mesurée pour la première fois (2026-10-07).** Le dépôt
+  n'avait aucun outil de couverture : `@vitest/coverage-v8` est ajouté en
+  dépendance de développement. Commande, paquet par paquet :
+  `pnpm --filter <paquet> exec vitest run --coverage --coverage.reporter=text`.
+  Instructions / lignes, avant puis après comblement :
+
+  | Paquet             | Avant         | Après             |
+  | ------------------ | ------------- | ----------------- |
+  | job-classification | 100 / 100     | —                 |
+  | job-normalization  | 99,35 / 99,32 | —                 |
+  | job-pipeline       | 97,82 / 97,74 | —                 |
+  | web                | 97,22 / 97,14 | —                 |
+  | agent              | 95,56 / 95,23 | —                 |
+  | extract            | 95,13 / 94,97 | —                 |
+  | config             | 93,47 / 92,50 | —                 |
+  | job-connectors     | 93,31 / 93,47 | —                 |
+  | job-deduplication  | 92,85 / 92,77 | —                 |
+  | worker             | 92,61 / 92,46 | —                 |
+  | ai                 | 91,86 / 92,94 | —                 |
+  | orchestrator       | 91,77 / 91,49 | —                 |
+  | matching           | 88 / 91,04    | —                 |
+  | persist            | 87,82 / 88,59 | —                 |
+  | crawler            | 86,94 / 87,04 | —                 |
+  | **api**            | 78,99 / 78,87 | **86,30 / 86,38** |
+  | **notifications**  | 68,27 / 71,11 | **92,41 / 94,07** |
+  | shared             | aucun test    | inchangé          |
+
+  **Trous comblés** : `notify.ts` était à 10 % — toute la règle d'idempotence, la
+  simulation qui ne consomme pas la notification, l'échec qui ne persiste rien —
+  il est couvert ; `jobs.service.ts` (`stats`, `filters`) et le pipe de validation
+  Zod le sont aussi. Tests : +7 notifications, +6 API.
+  **Reste faible** : les contrôleurs de l'API (20-50 %, enveloppes fines exercées
+  en e2e plutôt qu'en unitaire) et `shared`, sans aucun test.
+
 - **Tests** — `pnpm test --force` (run frais) le 2026-10-06 : **38/38 tâches
   Turborepo, 580 tests verts** (job-connectors 190, job-normalization 51,
   job-pipeline 43, crawler 37, agent 36, api 32, job-classification 26, worker 26,
