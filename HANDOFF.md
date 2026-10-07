@@ -4,25 +4,39 @@ Document destiné à un agent qui reprend. Il dit ce qu'est le projet, comment o
 travaille, ce qui est réellement fait, ce qui reste, et les pièges déjà payés.
 
 À jour au 2026-10-07. **Pivot** : Findit (agrégateur à scrapers figés + espace
-candidat privé) devient le **Web Intelligence Agent** (agent IA de collecte web).
-Le dépôt et les paquets gardent le nom `findit` / `@findit/*`. Le cahier des
-charges et la roadmap font foi : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) et
-[roadmap.md](roadmap.md).
+candidat privé) devient le **Web Intelligence Agent**. Le dépôt et les paquets
+gardent le nom `findit` / `@findit/*`. Trois documents complètent cette passation,
+sans la répéter : [README.md](README.md) (fonctionnalités et déploiement),
+[CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) (le périmètre qui fait foi) et
+[roadmap.md](roadmap.md) (reste à faire et mesures détaillées).
 
-## 1. Décisions tranchées (2026-10-06)
+## 1. Décisions tranchées
 
 - **Espace privé candidat supprimé sauf matching/scoring de CV** : profil, lettres,
   suivi de candidatures, rendu PDF, `/espace`, `WorkspaceGuard` supprimés ; le
-  matching et le scoring de CV (score CV ↔ offre) sont **conservés**, pilotés par
-  DeepSeek (cahier des charges, section 4.11).
+  matching CV ↔ offre est conservé, piloté par DeepSeek (CDC §4.11).
 - **LLM = DeepSeek API uniquement** (plus d'Ollama local). `@findit/ai` est le
-  client DeepSeek réel (`createDeepSeekModel`), importé par le worker, l'API
-  matching et `@findit/matching` ; il n'est plus orphelin.
+  client (`createDeepSeekModel`), importé par le worker, l'API matching et
+  `@findit/matching`.
 - **MVP V1 d'abord** : Scheduler + Search + Crawl + Extract + LLM classification +
   Deduplication + PostgreSQL + Dashboard, sur 10 à 20 sources.
 - **Offres d'écoles exclues** : `looksLikeSchool` (`@findit/extract`) et
-  `detectSchoolRisk` (`@findit/job-classification`) écartent écoles et organismes
-  de formation.
+  `detectSchoolRisk` (`@findit/job-classification`), plus une liste citée
+  d'employeurs-écoles et des formulations décisives (« entreprises partenaires »,
+  frais de formation, promesse de placement).
+- **LinkedIn désactivé, posts LinkedIn refusés** : mesuré, 0 offre francilienne
+  pour ~0,028 $. Statut `DISABLED` dans `packages/job-connectors/src/registry.ts`
+  (il survit à `pnpm registry:sync`) ; les posts sont refusés (0 offre sur 6,
+  `docs/legal-compliance.md`).
+- **Journal de dépense conservateur** : le coût consigné est la borne haute, jamais
+  effacée (une source inconnue reste au tarif maximal) ; il protège la garde de
+  budget et sur-évalue volontairement la dépense réelle.
+- **Un seul mot de passe plutôt qu'une authentification** : `PROFILE_PASSWORD`
+  échangé contre un cookie signé HMAC-SHA-256 (`SESSION_SECRET`, 30 jours,
+  `httpOnly`) ; `apps/web/src/proxy.ts` protège `/moi` **et** `/dashboard`. Pas de
+  comptes, pas de multi-utilisateurs (Q-2 ouverte).
+- **`force-dynamic` conservé** sur l'accueil et la fiche d'offre, faute de gain
+  mesuré à le retirer.
 
 ## 2. État réel
 
@@ -30,128 +44,89 @@ charges et la roadmap font foi : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md) 
 
 - **Pipeline de l'agent** (`packages/orchestrator/src/run-agent.ts`) : plan des
   recherches (`planner.ts`, modèle DeepSeek avec repli déterministe borné à
-  `maxQueries`), recherche Brave, scoring des sources, mémoire `crawlKey` (ignore
-  casse, `www.`, fragment, slash final et paramètres de suivi, **conserve la
-  requête**), porte de conformité du registre (`board-access.ts`), résolution de
-  l'URL finale avant crawl (`resolveUrl` → `packages/crawler/src/resolve.ts`),
-  choix des sources (`selector.ts`, modèle ou ordre du score), crawl borné
-  (`@findit/crawler` : HTTP + repli Playwright, robots.txt), cascade de reprise
-  (`recovery.ts`), porte déterministe avant le modèle (`extract/contract.ts` +
-  racine de board ATS), extraction structurée (`@findit/extract`), validation
+  `maxQueries`), recherche Brave, scoring, mémoire `crawlKey` (ignore casse,
+  `www.`, fragment, slash final et paramètres de suivi, **conserve la requête**),
+  porte de conformité du registre (`board-access.ts`), résolution de l'URL finale
+  avant crawl (`resolveUrl` → `packages/crawler/src/resolve.ts`), choix des
+  sources (`selector.ts`), crawl borné (HTTP + repli Playwright, robots.txt),
+  cascade de reprise (`recovery.ts` : relecture bornée, `JobPosting` JSON-LD avant
+  le LLM, relance des seuls échecs, abandon journalisé `retried`), porte
+  déterministe (`extract/contract.ts` + racine de board ATS), extraction, validité
   (`isValidOffer`), déduplication par titre normalisé, découverte vers le registre
-  (`discoverSource` → `apps/worker/src/collection/register-discovery.ts`),
-  persistance (`@findit/persist`). Erreurs consignées dans `AgentError`, statuts
-  RUNNING / SUCCEEDED / FAILED / STOPPED.
-- **Mode découverte seule** (décision du 2026-10-07) : l'agent planifie, cherche,
-  choisit et enregistre au registre, sans crawler ni extraire. Réglage
-  `AGENT_DISCOVERY_ONLY` (`packages/config/src/env.ts` l.137, défaut `false` ;
-  activé dans `.env` et `.env.example`). Le sélecteur n'est plus appelé dans ce
-  mode (`run-agent.ts` l.488), verrouillé par test
-  (`packages/orchestrator/src/run-agent.test.ts` l.1624-1664).
-- **Registre alimenté par l'agent** : `registerDiscoveredSource` rend
-  `{registered, created}` (`packages/job-connectors/src/discovered-sources.ts`
-  l.46-101) ; les agrégateurs déguisés en entreprises sont écartés par
-  `isAggregatorTenant` (`aggregator-tenants.ts` l.18-24), branché dans
-  `register-discovery.ts` l.55-58 (liste courte et citée : `lever/jobgether`).
-- **Contrat et écoles dans l'extraction** : `SYSTEM_PROMPT` de
-  `packages/extract/src/extract.ts` (l.78-90) exclut les écoles et ne retient que
-  l'alternance et le stage, tout en gardant une offre dont le contrat n'est pas
-  nommé (la validation tranche, l.85). Seuls Greenhouse, Lever et Workday
-  s'enregistrent par jeton ; Workable se collecte par requête et n'a rien à faire
-  au registre.
-- **Observabilité et fiabilité** : `AgentService.analytics()` agrège coût des runs
-  et tokens des actions `EXTRACT` (`parseUsageFromDetail`), affichés par les pages
-  Analytics et Agent ; `@findit/ai` cumule `usage.input_tokens` /
-  `usage.output_tokens` et les facture dans `AgentAction.costMicroUsd` puis
-  `AgentRun.costMicroUsd` (coût seulement si les tarifs `DEEPSEEK_*_USD_PER_MTOK`
-  sont fournis, tokens tracés dans tous les cas). `resolveLocation` lit le code
-  postal français (« 92000 Nanterre, France » → 92) ; `parsePublishedAt` exige une
-  forme ISO et rend la date illisible plutôt que de l'interpréter à
-  l'américaine. Bornes de la cascade : `maxRecoveries` (5), `maxAttemptsPerStep`
-  et `maxTotalAttempts` (`packages/orchestrator/src/config.ts`).
-- **Migration `20261006120000_agent_and_remove_private` écrite** : DROP des tables
-  privées (CandidateProfile, Resume, SourceResume, JobMatch, CoverLetter,
-  Application, ApplicationEvent, ResumeAnalysis, SourceCoverLetter,
-  SourceResumeMatch + 4 enums) et CREATE de Source, AgentRun, AgentAction,
-  AgentError, AgentMemory, SearchQuery, CrawlJob, CrawlPage, Extraction, Contact.
-  Plus aucun modèle `User` au schéma.
-- **Web** (`apps/web`, Next.js 16, port 3100) : `/`, `/offres/[slug]`,
-  `/dashboard` et ses sections `{agent, analytics, config, crawls, jobs, logs,
-matching, sources}`. Pas de `/espace`, pas de `/candidatures`.
+  (`discoverSource`), persistance (`@findit/persist`). Erreurs dans `AgentError`,
+  statuts RUNNING / SUCCEEDED / FAILED / STOPPED. Bornes : `maxRecoveries` (5),
+  `maxAttemptsPerStep`, `maxTotalAttempts` (`packages/orchestrator/src/config.ts`).
+- **Mode découverte seule** (`AGENT_DISCOVERY_ONLY`, défaut schéma `false`, activé
+  dans `.env` et `.env.example`) : le premier cycle planifie, cherche et enregistre
+  au registre sans crawler ni extraire. Le sélecteur n'est plus appelé dans ce mode
+  (`run-agent.ts`), verrouillé par test (`run-agent.test.ts`).
+- **Registre** : `registerDiscoveredSource` rend `{registered, created}`
+  (`discovered-sources.ts`) ; `isAggregatorTenant` (`aggregator-tenants.ts`) écarte
+  les locataires d'ATS qui publient les offres d'autrui (`lever/jobgether`) ;
+  `canonicalAtsHost` (`ats-hosts.ts`) ramène les deux hôtes Greenhouse à un seul.
+  Workable n'est pas enregistrable (collecte par requête, pas par jeton).
+- **Extraction** : `SYSTEM_PROMPT` (`packages/extract/src/extract.ts`) exclut les
+  écoles et ne retient que l'alternance et le stage, tout en gardant une offre dont
+  le contrat n'est pas nommé (la validation tranche).
+- **Observabilité et fiabilité** : `AgentService.analytics()` agrège coût et tokens
+  (`parseUsageFromDetail`) ; `@findit/ai` cumule l'usage et le facture dans
+  `AgentAction.costMicroUsd` puis `AgentRun.costMicroUsd` (coût si les tarifs
+  `DEEPSEEK_*_USD_PER_MTOK` sont fournis, tokens toujours tracés) ; le matching
+  écrit une ligne `ModelCall` et conserve son historique (`MatchingRun`, rétention
+  `MATCHING_RETENTION_HOURS`, défaut 72 h) ; `resolveLocation` lit le code postal
+  français, `parsePublishedAt` exige une forme ISO.
+- **Web** (`apps/web`, Next.js 16, port 3100) : site public (`/`, `/offres/[slug]`),
+  espace personnel `/moi` (profil, compétences, CV, matchings passés),
+  `/connexion`, dashboard `/dashboard` et ses 8 sections. Thème clair/sombre
+  (sélecteur + script anti-flash, `motion.css`), 11 `loading.tsx`, cache public
+  60 s / 300 s et `no-store` pour toute donnée de session (`lib/api.ts`).
 - **API** (`apps/api`, NestJS sur Fastify, port 4000) : `GET /health`,
   `GET /api/jobs{,/stats,/filters,/:slug}`, `GET /api/agent/{runs,stats,analytics,
-sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
-- **Worker** (`apps/worker`, NestJS + BullMQ) : concurrence 1, trois
-  planifications — ATS natifs (`JOB_COLLECTION_CRON`, `0 */4 * * *`), job boards
-  Apify (`SCRAPED_COLLECTION_CRON`, `0 6 * * *`, **allumé par défaut** depuis le
-  2026-10-07, jeton Apify requis), agent (`AGENT_COLLECTION_CRON`, `0 8 * * *`, si
-  `AGENT_RUN_ENABLED`). Notifications Telegram. Run unique hors BullMQ :
-  `apps/worker/run-agent-once.ts`.
-- **CSS mort retiré le 2026-10-07** : 24 règles `.workspace*` (177 lignes,
-  vérifié : 0 référence restante, `pnpm --filter @findit/web build` compile). Les
-  44 autres classes de l'ancien espace privé (`resume-*`, `letter-*`,
-  `application-*`, `match-*`, `triage-*`, `cv-search*`) avaient déjà disparu. Un
-  premier retrait annoncé le 2026-10-06 n'était pas dans l'arbre — vérification
-  incomplète, corrigée depuis.
-- **Docs** : cahier des charges et roadmap réécrits (pivot + MVP V1).
+sources,runs/:id}`, `POST /api/matching/score`, `GET /api/matching/history{,/:id}`,
+  `GET|PUT /api/profile` (gardé par `x-internal-key`, `timingSafeEqual`). Pas
+  d'authentification d'utilisateur.
+- **Worker** (`apps/worker`, NestJS + BullMQ) : concurrence 1, trois planifications
+  — ATS natifs (`JOB_COLLECTION_CRON`, `0 */4 * * *`), job boards Apify
+  (`SCRAPED_COLLECTION_CRON`, `0 6 * * *`, allumé par défaut, jeton Apify requis),
+  agent (`AGENT_COLLECTION_CRON`, `0 8 * * *`, si `AGENT_RUN_ENABLED`). Telegram.
+  Run unique hors BullMQ : `apps/worker/run-agent-once.ts`.
+- **Base** : migrations `20261006120000_agent_and_remove_private` (DROP des tables
+  privées, CREATE Source/AgentRun/AgentAction/AgentError/AgentMemory/SearchQuery/
+  CrawlJob/CrawlPage/Extraction/Contact), puis `20261007020000_model_calls`,
+  `20261007030000_matching_runs`, `20261007043000_profile`. Plus aucun modèle
+  `User` au schéma.
+- **En ligne** : web https://finditfr.vercel.app (Vercel, projet `finditfr`,
+  racine `apps/web`) et API https://finditfr-api.vercel.app (projet
+  `finditfr-api`) ; worker sur Railway (projet `findit-worker`, service `worker` +
+  Redis), construit par Railpack depuis la racine. Détail et commandes :
+  [README.md](README.md) et [docs/deployment.md](docs/deployment.md).
+- **Qualité** (rejouée le 2026-10-07) : `pnpm format:check` vert ; `pnpm typecheck`
+  38/38 ; `pnpm lint` 38/38 ; `pnpm test --force` 38/38 tâches, **779 tests** ;
+  `pnpm build` 21/21 (servi par le cache Turbo).
 
 ### Reste à faire
 
-- **Authentification absente** (Q-2 ouverte).
-- **Connecteurs spécialisés en repli** (section 4.7, étape 3) non câblés : la
-  relecture bornée, l'extraction `JobPosting` JSON-LD et l'abandon journalisé sont
-  livrés (`recovery.ts`), mais l'agent n'invoque pas les connecteurs ATS/job boards
-  comme stratégie de secours. Les étapes 1 et 2 (HTTP, navigateur) vivent dans le
-  crawler.
-- **Boucle d'outils partielle (section 5)** : le modèle choisit les recherches
-  (`createLlmQueryPlanner`, `planner.ts`) et les sources à crawler
-  (`createLlmSourceSelector`, `selector.ts`), **voit ce que le tour a produit**
-  (requêtes exécutées, sources notées, offres retenues, pages visitées) et décide
-  via `refine` s'il en faut un autre — `null` arrête. Chaque plan est consigné
-  (`AgentAction` DISCOVER, coût compris) avec son numéro de tour. Bornes :
-  `maxPlanRounds` (3), part du budget de pages par tour
-  (`maxPages / maxPlanRounds`), bornes de temps. Restent fixes : l'extraction
-  (cascade déterministe spécialisée → LLM) et l'arrêt.
-- **Application de la migration à la base en ligne** : le rôle applicatif n'est pas
-  propriétaire du schéma ; appliquer la migration structurelle via la connexion
-  propriétaire, puis `migrate resolve`. L'état en ligne n'est pas vérifiable depuis
-  ce dépôt et n'est pas affirmé ici.
-- **Résolu — Greenhouse a deux hôtes** : le registre est unique par
-  `(entreprise, domaine)`, or `boards.greenhouse.io` et `job-boards.greenhouse.io`
-  sont deux domaines. Mesuré le 2026-10-07 : `doctolib` portait deux
-  `CompanySource`, donc une collecte en double. Corrigé en deux temps :
-  `canonicalAtsHost` (`packages/job-connectors/src/ats-hosts.ts`) ramène les deux
-  hôtes Greenhouse à un seul — le connecteur, lui, construit sa requête depuis le
-  jeton, l'hôte n'identifie que la ligne du registre — et la ligne redondante a été
-  retirée (94 → 93 sources ; `doctolib` n'en a plus qu'une).
-- **Résolu — le coût du matching CV est suivi** : `apps/api/src/matching/matching.service.ts`
-  lit `model.usage()` autour de toute la requête (structuration du CV **et** les
-  15 scores) et écrit une ligne `ModelCall` (`purpose = "cv-matching"`) avec les
-  jetons et le coût. La table a été ajoutée par la migration
-  `20261007020000_model_calls`, **appliquée avec la connexion propriétaire**
-  (`neondb_owner`, droits de création vérifiés) puis le client régénéré. Le coût
-  remonte par `GET /api/agent/analytics` (`matchingCost`) et s'affiche dans le
-  dashboard ; un échec d'écriture est journalisé sans faire échouer la requête.
-  **Mesure réelle** : un matching complet (CV structuré + 15 offres scorées) a
-  écrit **16 516 + 6 668 tokens pour 12 956 µ$ (0,013 $)** — invisible jusqu'ici.
-- **Résolu — le matching CV a un historique** : le `cvText` était reçu puis oublié.
-  Il est désormais conservé dans `MatchingRun` (migration `20261007030000_matching_runs`,
-  appliquée avec la connexion propriétaire) **avec une rétention courte** :
-  `MATCHING_RETENTION_HOURS` (défaut 72 h), purgée à chaque écriture plutôt que par
-  une tâche planifiée — une écriture est le seul moment où l'on sait qu'un matching
-  vient d'avoir lieu. `GET /api/matching/history` liste les matchings **sans le CV**
-  (minimisation), `GET /api/matching/history/:id` rend le CV et ses items, et la
-  page Matching affiche « Matchings passés ». Mesuré sur le réel : liste sans
-  `cvText`, détail identique au CV soumis.
-  Note de conformité : un CV est une donnée personnelle
-  (docs/legal-compliance.md, règles de minimisation) ; la durée est réglable et
-  rien d'autre n'en est dérivé que le matching demandé.
-- **Dette — hôtes inconnus non enregistrés** : `collectDiscoveries` calcule
-  `unknownHosts` (`packages/job-connectors/src/discovery.ts` l.136-141), qu'aucun
-  appelant ne consomme ; une visite éventuelle reste gouvernée par `robots.txt` via
-  le crawler et `board-access.ts`.
-- **Questions ouvertes** : Q-1 (hébergement), Q-2 (auth), Q-3 (sources MVP), en
-  section 15 du cahier des charges.
+- **Authentification** absente (Q-2) : le mot de passe unique ne distingue pas les
+  utilisateurs.
+- **Connecteurs spécialisés en repli** (CDC §4.7, étape 3) non câblés : les étapes
+  1-2 (HTTP, navigateur) vivent dans le crawler, l'extraction spécialisée JSON-LD
+  est livrée, mais l'agent n'invoque pas les connecteurs ATS/job boards en secours.
+- **Boucle d'outils partielle** (CDC §5) : le modèle choisit les recherches
+  (`createLlmQueryPlanner`) et les sources à crawler (`createLlmSourceSelector`),
+  voit le résultat du tour et décide via `refine` ; l'extraction et l'arrêt restent
+  fixes.
+- **Dettes ouvertes** (détail : [roadmap.md](roadmap.md)) : `.claude/` (~100 Mo)
+  suivi par git — retrait de l'index en cours au 2026-10-07 (`/.claude/` ajouté au
+  `.gitignore`) ; clés mortes dans `.env` (`SCRAPEGRAPH_API_KEY`,
+  `DATABASE_URL_OWNER` absentes du schéma et de tout code — au moins ces deux) ;
+  couverture des contrôleurs de l'API faible (20-50 %) ; `packages/shared` n'est
+  plus sans test (`job-scope.test.ts`, 10 tests) ; règle de date
+  recopiée dans `packages/job-connectors/src/linkedin.ts` (le paquet ne dépend pas
+  de `@findit/shared`) ; `canonicalAtsHost` ne couvre que Greenhouse ; les hôtes
+  inconnus de `collectDiscoveries` (`unknownHosts`) ne sont pas enregistrés et
+  restent gouvernés par `robots.txt`.
+- **Questions ouvertes** : Q-1 (hébergement) est **tranchée** (Vercel + Railway) ;
+  restent Q-2 (auth) et Q-3 (sources de départ du MVP).
 
 ## 3. Règles de travail (non négociables)
 
@@ -167,18 +142,18 @@ sources,runs/:id}`, `POST /api/matching/score`. Pas d'authentification.
 
 Monorepo **pnpm workspaces + Turborepo**. Node `>=24.18 <25`, pnpm `11.13.1`.
 
-- `apps/web` - Next.js 16, port 3100 (site public + dashboard).
-- `apps/api` - NestJS sur Fastify, port 4000 (offres, agent, matching).
+- `apps/web` - Next.js 16, port 3100 (site public, `/moi`, dashboard).
+- `apps/api` - NestJS sur Fastify, port 4000 (offres, agent, matching, profil).
 - `apps/worker` - NestJS + BullMQ (scheduler, collecte, agent).
 
 Les 17 paquets de `packages/` :
 
-- `agent` - requêtes de recherche, scoring des sources, stores run/mémoire.
-- `ai` - client DeepSeek (`createDeepSeekModel`) et erreurs associées.
+- `agent` - requêtes de recherche, scoring, stores run/mémoire.
+- `ai` - client DeepSeek (`createDeepSeekModel`) et suivi d'usage.
 - `config` - schémas d'environnement, `loadRootEnv()`.
-- `crawler` - crawl borné HTTP + rendu Playwright, robots.txt, résolution d'URL.
+- `crawler` - crawl borné HTTP + Playwright, robots.txt, résolution d'URL.
 - `database` - client Prisma + migrations + seed.
-- `extract` - extraction structurée des offres par page, exclusion des écoles.
+- `extract` - extraction structurée par page, exclusion des écoles.
 - `job-classification` - classification (contrat, rôle) et détection d'écoles.
 - `job-connectors` - connecteurs ATS/job boards, Brave, registre, garde de budget.
 - `job-deduplication` - similarité et décision de doublon.
@@ -189,7 +164,7 @@ Les 17 paquets de `packages/` :
 - `orchestrator` - boucle `runAgent` (plan → search → select → crawl/extract →
   register/persist).
 - `persist` - persistance des offres retenues par le run.
-- `shared` - périmètre des offres partagé.
+- `shared` - périmètre des offres (fenêtres de fraîcheur, contrats, lieux).
 - `ui` - composants partagés (`PageShell`).
 
 ## 5. Environnement
@@ -201,22 +176,23 @@ pnpm db:migrate
 pnpm dev                # turbo, toutes les apps
 ```
 
-`.env` vit à la racine ; `loadRootEnv()` de `@findit/config` le retrouve. Le LLM
-DeepSeek se configure via la clé de plateforme (voir §6).
+`.env` vit à la racine ; `loadRootEnv()` de `@findit/config` le retrouve. Variables
+attendues par le worker sur Railway : `railway.env.example`. Le LLM DeepSeek se
+configure via la clé de plateforme (voir §6).
 
 ## 6. Outillage DeepSeek
 
 Claude Code est branché sur un compte DeepSeek
 (`@deepseek-ai/dsh-subagent-claude-code`, profil `desktop` par défaut). Deux
-scripts du dépôt, vérifiés présents :
+scripts du dépôt :
 
-- [scripts/update-claude-subagent.cjs](scripts/update-claude-subagent.cjs) :
-  aligne le bundle sous-agent sur la version de DeepSeek Harness après une mise à
-  jour (`node scripts/update-claude-subagent.cjs`, ou `--check` pour constater).
+- [scripts/update-claude-subagent.cjs](scripts/update-claude-subagent.cjs) : aligne
+  le bundle sous-agent sur la version de DeepSeek Harness après une mise à jour
+  (`node scripts/update-claude-subagent.cjs`, ou `--check`).
 - [scripts/compare-deepseek-models.cjs](scripts/compare-deepseek-models.cjs) :
   compare `deepseek-flash` et `deepseek-v4-pro` sur quatre questions de
-  raisonnement, à contexte identique
-  (`node scripts/compare-deepseek-models.cjs <clé> [filtre] [--dry]`).
+  raisonnement, à contexte identique (`node scripts/compare-deepseek-models.cjs
+<clé> [filtre] [--dry]`).
 
 Non vérifiable depuis le dépôt, donc à reconfirmer côté plateforme : l'alias des
 noms de modèles Claude (`claude-opus-*` → `deepseek-v4-pro`,
@@ -226,285 +202,71 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 ## 7. Pièges déjà payés
 
 - **`.env` non lu** : appeler `loadRootEnv()` avant toute lecture de `process.env`.
+  Sur Vercel, il n'y a pas de `.env` : `parseApiEnv(process.env)` suffit
+  (`apps/api/api/[...chemin].ts`).
 - **`next build` cassé par `NODE_ENV`** : `apps/web/run-next.mjs` retire `NODE_ENV` du `.env`.
+- **Dev sur `0.0.0.0` + accès par `127.0.0.1`** : Next 16 bloque `/_next/webpack-hmr`,
+  le client ne s'hydrate plus. Corrigé par `allowedDevOrigins` (`next.config.ts`).
+- **`middleware.ts` ne s'hydrate pas sous Next 16** : la convention est `proxy.ts`
+  (`apps/web/src/proxy.ts`).
 - **Injection NestJS silencieusement cassée** : écrire `@Inject(MonService)` explicite.
 - **Champs JSON Prisma** : stocker des objets validés par Zod, jamais de sortie IA brute.
-- **Port 4000 occupé** : `Get-NetTCPConnection -LocalPort 4000`.
-- **Le rôle applicatif n'est pas propriétaire du schéma** (base en ligne) : une
-  migration structurelle échoue ; l'appliquer avec la connexion propriétaire, puis
-  `migrate resolve`. Cela vaut pour la migration `20261006120000`.
+- **Le rôle applicatif n'est pas propriétaire du schéma** (Neon) : appliquer une
+  migration structurelle avec la connexion propriétaire, puis `migrate resolve`.
+- **Routage Vercel à un seul segment** : `/api/jobs/stats` renvoyait un 404 sans
+  corps ; cinq relais d'une ligne rétablissent la profondeur sous `apps/api/api/`.
+- **`railway.json` n'est plus lu** (déprécié) : la construction se règle par
+  variables Railpack (`RAILPACK_BUILD_CMD`, `RAILPACK_NODE_PLAYWRIGHT_INSTALL`) et
+  le script `start` de la racine (`node apps/worker/dist/main.js`).
+- **`.railwayignore` : un motif sans barre oblique n'est pas ancré** : `agent`
+  excluait aussi `packages/agent`. Écrire `/agent`, `/.claude`.
+- **`RAILPACK_START_CMD` mal interprétée par bash** : d'où le script `start` à la racine.
+- **`prove-board` consomme `dist`** : reconstruire avant de mesurer, sinon on mesure
+  l'ancien code.
 - **Hook de pré-push local** : `.githooks/pre-push` rejoue `format:check`,
   `typecheck`, `lint` et `test`.
-- **Un « vert » peut venir du cache Turborepo** : forcer (`--force`) et une tâche par
-  invocation pour une preuve.
+- **Un « vert » peut venir du cache Turborepo** : forcer (`--force`) pour une preuve.
 - **Node de la machine v24.10.0** alors que le dépôt exige `>= 24.18 < 25`.
-- **Un test peut flotter sous charge** : relancer en run frais avant de conclure.
+- **Image du worker volumineuse** : `Dockerfile.worker` part de Playwright (Chromium
+  requis par l'agent), mesurée à 4,71 Go — à connaître avant de choisir un hébergeur.
 
 ## 8. Mesures récentes (datées)
 
-Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
-lecture du document.
+Détail complet dans [roadmap.md](roadmap.md) §5 ; ci-dessous ce qui éclaire une
+décision. Toutes datées, aucune n'est rejouée à la lecture.
 
-- **Le dashboard d'exploitation était public en ligne (2026-10-07).** Seul `/moi`
-  était gardé : mesuré, `/dashboard`, `/dashboard/logs`, `/dashboard/config` et
-  `/dashboard/crawls` répondaient **200 sans mot de passe** — journaux,
-  configuration et état interne lisibles par quiconque connaît l'URL. `proxy.ts`
-  couvre désormais les deux (`/moi` et `/dashboard`, sous-chemins compris), un
-  seul mot de passe pour une seule garde, et `proxy.test.ts` épingle les chemins
-  couverts, la redirection sans session et le laissez-passer avec session valide.
-  Restent publics : la liste des offres, la fiche d'une offre et les routes d'API
-  qu'elles utilisent.
-- **Image du worker, construite et vérifiée (2026-10-07).** Le worker est la
-  dernière brique sans hébergement, et la seule qui exige un processus permanent
-  **et un Redis hébergé** (seul le worker parle à Redis). `Dockerfile.worker` part
-  de l'image officielle Playwright — l'agent crawle avec Chromium. **Vérifié en
-  local** : le conteneur démarre, enregistre les 3 planificateurs et consomme
-  (deux consommateurs comptés dans BullMQ pendant le test). **Taille 4,71 Go**, à
-  savoir avant de choisir un hébergeur. Aucun port exposé, donc pas de `/health` :
-  la santé se lit dans les journaux, les `ConnectorRun` et les planificateurs.
-  Détails et coûts des plateformes dans `docs/deployment.md`.
-- **LinkedIn : verdict après mesure (2026-10-07).** Deux runs réels bornés (20
-  résultats) : **0,02810 $** dépensés, **0 offre francilienne d'alternance**
-  acceptée. L'acteur `curious_coder/linkedin-jobs-scraper` **ignore la zone
-  demandée** — son `inputUrl` portait bien `location=Île-de-France, France` et les
-  **14/14** offres rendues sont en Bretagne (Brest, Guipavas, Plouzané). Les trois
-  offres fraîches ont toutes été rejetées en aval. La ligne `Connector` est
-  **`DISABLED`** : à 0,04 $/jour pour zéro offre, la source ne se paie pas.
-  **Le verrou vit dans le code** : `registry.ts` déclare LinkedIn `DISABLED`, donc
-  un `pnpm registry:sync` ne la rallume pas — c'est la seule façon de résister à une
-  resynchronisation, le report réécrivant le statut depuis ce fichier. Vérifié en
-  base : LinkedIn `DISABLED`, les huit autres connecteurs `ACTIVE`.
-  - Le barème est désormais **établi, pas estimé** : `apify-default-dataset-item`
-    0,002 $ et `apify-actor-start` 0,00005 $, vérifiés contre la facture réelle du
-    run 1 (14 × 0,002 + 0,00005 = **0,02805 $**). Le registre ne connaissait que le
-    prix par résultat, d'où une notice `CostUnknown` et une **borne haute** à
-    0,04000 $.
-  - **Le journal de dépense sur-évalue ces deux runs** : 0,04000 $ consignés
-    contre 0,02805 $ puis 0,00005 $ réels, soit **0,05190 $** de trop. C'est
-    volontairement conservateur (le coût n'est jamais effacé, il protège la garde
-    de budget), mais le cumul du mois affiche **0,47175 $** là où la dépense
-    LinkedIn réelle est de 0,02810 $.
-- **Un correctif de date qui dépasse LinkedIn (2026-10-07).** L'acteur rend
-  `postedAt` en **date seule** (`AAAA-MM-JJ`). Interprétée à minuit UTC, une offre
-  du surlendemain tombait sous le seuil strict de 72 h. Nouvel export
-  `endOfDayIfDateOnly` (`packages/shared/src/job-scope.ts`), utilisé par
-  `ingest.ts` **pour le seuil et pour `expiresAt`** et par le connecteur LinkedIn.
-  **La date stockée reste celle de la source** (sinon l'affichage glisserait au
-  lendemain à Paris). Sources concernées : **HelloWork, Welcome to the Jungle,
-  France Travail** quand elles datent sans heure ; **Indeed non** (époque en ms).
-  Effet : une offre datée D n'est plus écartée dès le début de J+3 mais jusqu'à la
-  fin de J+3 — fenêtre élargie de moins de 24 h, aucun affichage changé. Deux
-  tests échouent sans le correctif, dans `ingest.test.ts` et `linkedin.test.ts`.
-- **Ce qui a été refusé, mesure à l'appui.** Un **pré-filtre Île-de-France** dans
-  le connecteur LinkedIn : inutile, puisque 14/14 offres sont bretonnes — il ferait
-  passer les découvertes de 3 à 0 sans qu'aucune offre soit acceptée. Et le canal
-  des **posts LinkedIn**, mesuré puis refusé (voir `docs/legal-compliance.md`) :
-  0 offre sur 6 posts pour 0,03005 $, et l'identité de l'auteur toujours rendue.
-- **Une erreur de procédure, assumée.** Le second run LinkedIn a été lancé contre
-  le `dist` **non reconstruit** : les correctifs (prix, date, `applyUrl`) n'ont donc
-  pas été exercés par ce run, qui a de plus rendu un dataset vide. La remesure du
-  rendement a été refaite **hors ligne sur le dataset réel déjà payé** (lecture
-  Apify gratuite), sans troisième run. Leçon : `prove-board` consomme `dist` —
-  reconstruire avant de mesurer.
-- **Le cycle de 6 h a tourné pour de vrai (2026-10-07, 06 h 00 Paris).** Premier
-  cycle planifié depuis que la file a un consommateur : trois connecteurs,
-  **34 découvertes / 9 acceptées**, **0,0312 $** de dépense (plafond 0,15 $ par
-  cycle), et **0 nouvelle offre** — les mêmes annonces reviennent, la
-  déduplication les reconnaît. Le worker et Redis étaient vivants au moment du
-  déclenchement ; c'est la preuve que la planification, le consommateur et la
-  garde de budget fonctionnent ensemble.
-- **En ligne et fonctionnel (2026-10-07).** **Web** : https://finditfr.vercel.app
-  (projet Vercel `finditfr`, racine `apps/web`). **API** :
-  https://finditfr-api.vercel.app (projet `finditfr-api`, racine `apps/api`,
-  entrée serverless `apps/api/api/[...chemin].ts`). Vérifié en production :
-  12 offres à l'accueil, page de détail d'une offre en 200, `/moi` sans cookie
-  renvoie vers `/connexion`, la connexion au mot de passe aboutit sur `/moi`,
-  `/api/profile` répond 401 sans clé et 200 avec.
-  - **Le piège de routage Vercel, et sa mesure.** Le routage du dossier `api/` ne
-    laisse passer **qu'un seul segment** après `/api` : `/api/jobs` répondait 200
-    alors que `/api/jobs/stats` renvoyait un 404 **sans corps** — donc émis par la
-    plateforme et non par Nest, qui répond toujours du JSON. Les deux formes de
-    catch-all (`[[...chemin]]` puis `[...chemin]`) ont été essayées, sans effet.
-    Cinq relais d'une ligne rétablissent la profondeur manquante, chacun
-    réexportant le gestionnaire unique. C'est un contournement à supprimer le jour
-    où la plateforme route les catch-all correctement.
-  - Une image Docker (`Dockerfile.api`) et un blueprint Render avaient été
-    préparés et **vérifiés** (conteneur lancé, cinq routes testées dont celles que
-    Vercel refusait alors). Ils ont été **retirés du dépôt** dès que Vercel a
-    suffi ; ils restent dans l'historique Git, et c'est l'hébergement du **worker**
-    qui les justifierait un jour, pas l'API.
-  - Le **worker n'est hébergé nulle part** : BullMQ exige un processus permanent
-    que Vercel n'offre pas. La collecte planifiée ne tourne que sur une machine
-    locale.
-- **Espace personnel `/moi` (2026-10-07).** Findit sert d'abord **son utilisateur** :
-  le dashboard, jusque-là baptisé « Administration », est repris. La page `/moi`
-  montre le profil (nom, titre, ville, contact), les **compétences**, les langues,
-  les expériences, les liens, le **CV** et les **matchings passés** — le tout
-  éditable par un formulaire (action serveur) et enregistré dans une table
-  `Profile` **singleton** (`id = "default"`, migration `20261007043000_profile`,
-  appliquée avec la connexion propriétaire).
-  - **API** : `GET`/`PUT /api/profile`, protégés par `ProfileKeyGuard`
-    (`x-internal-key` comparé en `timingSafeEqual` ; 401 avant 400). Le profil
-    vierge rend des scalaires `null`, jamais de 404.
-  - **Accès** : mot de passe unique (`PROFILE_PASSWORD`) échangé contre un cookie
-    signé HMAC-SHA-256 (`SESSION_SECRET`, 30 jours, `httpOnly`). La signature
-    engage **les deux** secrets : changer le mot de passe révoque les sessions
-    ouvertes. Sans `PROFILE_PASSWORD`, le site public tourne et `/moi` annonce
-    « espace personnel non configuré » (pas de boucle de redirection).
-  - **Mesuré réellement** : `/moi` sans cookie → 307 vers `/connexion` ; mauvais
-    mot de passe → 401 + message ; bon mot de passe → 204 + cookie, `/moi` en 200
-    affichant le profil enregistré. Parcours navigateur vérifié au capture d'écran.
-  - **Navigation réorganisée** : l'accueil propose « Mon espace » puis
-    « Exploitation » ; la barre latérale d'exploitation s'intitule désormais
-    « Exploitation » (Offres, Sources, Crawls, Agent, Matching, Analytics, Logs,
-    Configuration).
-  - **Migration de convention** : `apps/web/src/middleware.ts` → `src/proxy.ts`
-    (Next 16 a renommé l'interception ; le fichier `middleware` émet un
-    avertissement de dépréciation).
-- **Piège de développement payé (2026-10-07)** : le serveur de dev écoute sur
-  `0.0.0.0` (`run-next.mjs`). En y accédant par `127.0.0.1`, Next 16 considère
-  l'origine comme étrangère et **bloque les ressources de développement**
-  (`/_next/webpack-hmr`) : le client ne s'hydrate plus — champs sans clé React,
-  boutons inertes — alors que la **production** fonctionnait. Diagnostiqué en
-  comparant dev et build de production, puis corrigé par
-  `allowedDevOrigins: ["127.0.0.1", "localhost"]`. Ce n'était pas un défaut du
-  site : passer par `localhost` fonctionnait déjà.
-- **Trou des écoles fermé (2026-10-07).** Cinq offres d'écoles étaient **publiées**
-  (ISCOD ×3, IRIS, EEMI Paris) alors que la règle est de les ignorer. Le détecteur
-  tournait bien, mais il juge **le texte de l'annonce** — et une école qui recrute
-  pour ses entreprises partenaires publie une annonce d'alternance qui ressemble à
-  celle d'un employeur : il concluait « aucun signal d'école » (score 0 pour ISCOD
-  et EEMI ; 35 pour IRIS, sous le seuil de quarantaine de 40). Corrigé sur deux
-  plans : une **liste citée d'employeurs-écoles** (`ISCOD`, `EEMI`, `IRIS`, dans
-  `packages/job-classification/src/school.ts`) qui tranche sur le nom, et des
-  **formulations décisives** — « entreprises partenaires », frais de formation,
-  promesse de placement — qui suffisent désormais seules à écarter une offre.
-  **Mesure sur les 24 offres de la base** : 5 écartées, exactement les 5 écoles,
-  et **aucun des 13 autres employeurs touché** (CANAL+, Safran, Sopra Steria,
-  Capgemini, Veolia, Ippon, Galadrim, OXIANE, SOCOTEC, Enerlis, Free-Work…).
-  Les 5 offres ont été repassées en `REJECTED` avec leur décision
-  (`SchoolDetectionDecision`) et une ligne de journal — rien n'a été supprimé :
-  **publiées 24 → 19**.
-- **Une école écartée laisse désormais son nom.** Les offres rejetées ne sont pas
-  stockées : le 2026-10-07, retrouver les écoles a demandé de fouiller les 861
-  entreprises, et une école dont toutes les offres sont refusées ne laissait
-  aucune trace. Les **deux** chemins d'école — `ingest.ts` (pipeline) et
-  `persist.ts` (agent) — mettent maintenant le nom de l'employeur dans le motif
-  (`Employeur écarté : « ISCOD ».`), donc dans le journal du pipeline et dans le
-  motif de rejet rendu à l'appelant. Vérifié par test des deux côtés.
-- **Ce qui est réellement parcouru (vérifié en base, 2026-10-07)** : **LinkedIn
-  jamais** (0 `CompanySource`, 0 offre — refusé par la porte de conformité, faute
-  de connecteur) ; **HelloWork, Welcome to the Jungle et Indeed** par leurs
-  **connecteurs** Apify (derniers runs : 40/8, 7/2, 10/3 découvertes/acceptées) ;
-  **France Travail** par son API officielle ; les boards d'entreprises
-  (Greenhouse, Lever, Workday) sont collectés mais n'ont jamais rien accepté.
-  Aucun de ces sites n'est crawlé en direct.
-- **Couverture de tests mesurée pour la première fois (2026-10-07).** Le dépôt
-  n'avait aucun outil de couverture : `@vitest/coverage-v8` est ajouté en
-  dépendance de développement. Commande, paquet par paquet :
-  `pnpm --filter <paquet> exec vitest run --coverage --coverage.reporter=text`.
-  Instructions / lignes, avant puis après comblement :
-
-  | Paquet             | Avant         | Après             |
-  | ------------------ | ------------- | ----------------- |
-  | job-classification | 100 / 100     | —                 |
-  | job-normalization  | 99,35 / 99,32 | —                 |
-  | job-pipeline       | 97,82 / 97,74 | —                 |
-  | web                | 97,22 / 97,14 | —                 |
-  | agent              | 95,56 / 95,23 | —                 |
-  | extract            | 95,13 / 94,97 | —                 |
-  | config             | 93,47 / 92,50 | —                 |
-  | job-connectors     | 93,31 / 93,47 | —                 |
-  | job-deduplication  | 92,85 / 92,77 | —                 |
-  | worker             | 92,61 / 92,46 | —                 |
-  | ai                 | 91,86 / 92,94 | —                 |
-  | orchestrator       | 91,77 / 91,49 | —                 |
-  | matching           | 88 / 91,04    | —                 |
-  | persist            | 87,82 / 88,59 | —                 |
-  | crawler            | 86,94 / 87,04 | —                 |
-  | **api**            | 78,99 / 78,87 | **86,30 / 86,38** |
-  | **notifications**  | 68,27 / 71,11 | **92,41 / 94,07** |
-  | shared             | aucun test    | inchangé          |
-
-  **Trous comblés** : `notify.ts` était à 10 % — toute la règle d'idempotence, la
-  simulation qui ne consomme pas la notification, l'échec qui ne persiste rien —
-  il est couvert ; `jobs.service.ts` (`stats`, `filters`) et le pipe de validation
-  Zod le sont aussi. Tests : +7 notifications, +6 API.
-  **Reste faible** : les contrôleurs de l'API (20-50 %, enveloppes fines exercées
-  en e2e plutôt qu'en unitaire) et `shared`, sans aucun test.
-
-- **Tests** — `pnpm test --force` (run frais) le 2026-10-06 : **38/38 tâches
-  Turborepo, 580 tests verts** (job-connectors 190, job-normalization 51,
-  job-pipeline 43, crawler 37, agent 36, api 32, job-classification 26, worker 26,
-  config 24, notifications 22, extract 18, web 16, ai 15, job-deduplication 13,
-  shared 10, persist 10, matching 7, orchestrator 2, database 1, ui 1). **À
-  re-mesurer** : 21 fichiers de test ont changé depuis.
-- **Git** — 2026-10-07 : branche `main`, 189 commits, HEAD `9771b78` (2026-10-07
-  01:04).
-- **Consigne de contrat dans l'extraction** (2026-10-06) : offres extraites
-  226 → 5, tokens de sortie ~13 k → 2,4 k, coût 12 866 → 5 419 µ$, rejets 178 → 5.
-- **Mode découverte seule** (2026-10-07) : run allégé — 3 tours, 15 recherches,
-  0 crawl, 0 extraction, 1 222 µ$, `lever/jobgether` ignoré ; aucune source
-  nouvelle (94 → 94). POURQUOI : 0 offre acceptée sur 4 251 pages d'entreprises
-  pour ~1 600 µ$, contre 10 entreprises au registre pour 812 µ$.
-- **Recouvrement des job boards** (2026-10-07) : deux cycles identiques dos à dos
-  → 57 offres découvertes, 13 acceptées, 0 nouvelle, 0,052 $ puis 0,064 $
-  (WTTJ 7/2, HelloWork 40/8, Indeed 10/3). Un cycle aux plafonds d'alors
-  (30/40/100) avait rendu 57 découvertes, 13 acceptées, 0,06 $ et +1 offre
-  nouvelle (23 → 24) ; vingt minutes plus tôt, 8 offres par board apportaient 5
-  offres nouvelles pour 0,014 $. D'où les plafonds **15 / 15 / 20** (WTTJ /
-  HelloWork / Indeed, `env.ts` l.111-115) et le levier sur la **cadence** (un
-  cycle par jour) : ~1,80 $/mois à 0,06 $ le cycle, sous le plafond de 4,5 $.
-- **Classe de source** (2026-10-06) : boards d'entreprises (Lever, Greenhouse)
-  4 251 découvertes / **0** acceptée / 0 $ ; France Travail (8 métiers, filtre
-  alternance) 13 / 2 déjà connues / 0 $ ; job boards scrape (Indeed, WTTJ,
-  HelloWork) 23 / **12** / 14 200 µ$. Un cycle de boards a fait passer la base de
-  18 à 23 offres (HelloWork 7/8, Indeed 3/8, WTTJ 2/7). Élargir France Travail de
-  1 à 8 métiers n'a rendu aucune offre nouvelle.
-- **Sources fraîchement découvertes** (2026-10-06) : 10 collectes sur 10, 4 251
-  offres, 0 acceptée. Motifs : 3 899 sans contrat du périmètre (91 %), 154
-  freelance, 99 executive, 29 CDI, 8 contractor, 6 CDD, 4 employee, 2 intern,
-  3 refus de localisation. Le « 0 inséré » est la structure du marché atteint.
-- **Agrégateur `jobgether`** (2026-10-07) : 3 501 des 4 251 offres d'une collecte
-  de 10 sources. Filtre posé, ligne retirée du registre (95 → 94 sources), plus
-  aucune source `jobgether`.
-- **Agent → registre** (2026-10-06) : 84 → 94 `CompanySource` (+10) en un run de
-  812 µ$, là où 25 runs précédents n'en avaient créé aucune. `created` distingue
-  le neuf du revu : sans lui, 36 annonces pour 10 sources créées.
-- **Sélection par le modèle** (2026-10-06) : liste numérotée au lieu d'URL →
-  862 → 575 µ$ (−33 %), rendement identique ; sur un run isolé, le coût total ne
-  baisse que de 100 µ$ (1 687 → 1 587) car plan et extraction varient au token
-  près. Candidates limitées aux 12 meilleures : sans plafond, la seule première
-  sélection coûtait 1 012 µ$ sur 29 sources.
-- **Planificateur de recherches** (2026-10-06) : un plan qui commence par des
-  requêtes génériques envoie le crawl sur des agrégateurs (403) — le prompt impose
-  donc les `site:` d'abord (80 offres extraites en 6 pages, 3 928 µ$). Sans part
-  de budget par tour, le premier tour prenait les 8 pages et `refine` n'était
-  jamais appelé ; avec elle, le même run a fait 3 tours, le modèle affinant vers
-  les `site:` ATS (12 866 µ$).
-- **Runs de contrôle** (2026-10-06) : 1 687 µ$ (3 tours, 5 pages, 0 doublon,
-  2 offres extraites, 0 insérée, contre 2 493 µ$ puis 5 419 µ$) ; 1 028 µ$ (3
-  tours, 8 pages, 0 extraite, aucun refus de conformité) ; 2 025 µ$ (3 sélections,
-  6 pages, 2 extraites, 0 insérée). Découverte ciblée : 782 µ$ pour 8 pages, 1
-  offre extraite, 0 insérée.
-- **Mémoire et anti-doublon** (2026-10-06) : une même page crawlée trois fois
-  avant la clé normalisée ; `jobs.lever.co/theodo` et `...?` comptées deux fois ;
-  `wideCrawl` lisait 15 pages pour 6 comptées. Alias Ivalua : cinq adresses
-  (`/company/careers/`, `/company/careers`, `/carrieres/`, `/carrieres`,
-  `ivalua.com/company/careers/`) mènent à la même URL finale.
-- **Contrat entre guillemets** (2026-10-06) : contre Brave sur `jobs.lever.co`,
-  `développeur alternance` rendait 1 titre du périmètre sur 10, `développeur
-"alternance"` 6 ; `-CDI` n'apportait rien, `stage OR alternance` restait à 3/10.
-  Vérifié sur le modèle réel : 10 requêtes, toutes citant le contrat.
-- **Portes et filtres** (2026-10-06) : porte déterministe — 127 offres extraites
-  d'un board hors périmètre, 101 rejetées faute de contrat, 0 insérée ; « 0
-  insérée » — sur 178 rejets, 156 CDI, 12 métiers hors périmètre, 6 dates
-  absentes, 2 freelances, 1 date trop ancienne, 1 titre ; pages `?error=true`
-  écartées — 1 résultat sur 8 contre Brave, 0 sur les trois autres requêtes ;
-  conformité — LinkedIn et Glassdoor fermés, Indeed et HelloWork ouverts.
-- **Coût du modèle** (2026-10-06) : un appel `deepseek-flash` a rendu 11 tokens
-  d'entrée, 1 de sortie, 1 appel ; le coût n'est calculé que si
-  `DEEPSEEK_INPUT_USD_PER_MTOK` / `DEEPSEEK_OUTPUT_USD_PER_MTOK` sont fournis.
+- **Qualité (2026-10-07)** : `format:check` vert, `typecheck` 38/38, `lint` 38/38,
+  `test --force` 38/38 (779 tests), `build` 21/21 (cache). Git : `main`, HEAD
+  `79d7d30` (2026-10-07 08:18).
+- **Cycle boards (2026-10-07, 06 h Paris)** : 34 découvertes, 9 acceptées,
+  0,0312 $, **0 nouvelle offre** — le premier cycle réellement exécuté.
+- **Recouvrement (2026-10-06/07)** : deux cycles identiques dos à dos → 57
+  découvertes, 13 acceptées, 0 nouvelle, 0,052 $ puis 0,064 $. Plafonds resserrés
+  à 15/15/20 (WTTJ/HelloWork/Indeed, `env.ts`) ; le levier est la cadence.
+- **Valeur des familles de sources** : job boards scrapés 23 / 12 / 0,0142 $ ;
+  France Travail 13 / 2 ; boards d'entreprises 4 251 / **0** (3 899 sans contrat du
+  périmètre, 154 freelance, 99 executive, 29 CDI, 3 refus de localisation).
+- **Agent → registre (2026-10-07)** : 84 → 94 `CompanySource` (+10) pour 812 µ$,
+  contre 0 sur les 25 runs précédents ; registre nettoyé ensuite (95 → 94 par
+  `isAggregatorTenant`, 94 → 93 par `canonicalAtsHost`).
+- **Découverte seule (2026-10-07)** : 3 tours, 15 recherches, 0 crawl,
+  0 extraction, 1 222 µ$.
+- **LinkedIn (2026-10-07)** : deux runs bornés, 0,02810 $ réels, 0 offre
+  francilienne (14/14 en Bretagne) ; barème établi (0,002 $/résultat + 0,00005 $ de
+  démarrage) ; posts refusés (0/6, 0,03005 $) ; journal de dépense conservateur
+  (0,04000 $ consignés contre 0,02805 $ réels).
+- **Matching CV (2026-10-07)** : un matching complet = 16 516 + 6 668 tokens pour
+  12 956 µ$ (0,013 $), invisible avant `ModelCall`.
+- **Écoles (2026-10-07)** : 5 offres (ISCOD, IRIS, EEMI) rejetées sur 24 lues,
+  publiées 24 → 19, aucun des 13 autres employeurs touché.
+- **Coût de l'agent (2026-10-06)** : sélection compactée 862 → 575 µ$ ; runs de
+  contrôle à 1 687 µ$, 1 028 µ$ et 2 025 µ$ ; découverte ciblée à 782 µ$ (contre
+  5 419 µ$ avant ciblage) ; porte de contrat : 127 offres lues, 101 rejetées sans
+  appel au modèle.
+- **Web (2026-10-07)** : accueil en production 2 242 → 501 ms ; DCL médian local
+  336,95 → 92,1 ms. `force-dynamic` conservé faute de gain mesuré.
+- **Couverture (2026-10-07)** : notifications 68 → 92 %, API 79 → 86 % ; les
+  contrôleurs de l'API restent faibles (20-50 %).
 
 ## 9. Vérifier son travail
 
