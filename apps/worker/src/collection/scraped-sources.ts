@@ -3,6 +3,7 @@ import type { SearchTarget } from "@findit/job-connectors";
 import {
   createHelloworkConnector,
   createIndeedConnector,
+  createLinkedinConnector,
   createWttjConnector,
   SOURCE_PRIORITY_JOB_BOARD,
 } from "@findit/job-connectors";
@@ -13,11 +14,23 @@ import type { CollectionJob } from "./run-collection.js";
  * Ce que le cycle quotidien lit sur chaque job board. Le périmètre produit est
  * l'Île-de-France ; la nature du contrat et le métier sont des filtres de
  * l'acteur quand il les sait faire, sinon des mots-clés relus par la
- * classification Findit (Indeed n'a pas de filtre de contrat).
+ * classification Findit (Indeed et LinkedIn n'ont pas de filtre de contrat).
  */
 const WTTJ_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France, France" };
 const HELLOWORK_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France" };
 const INDEED_SEARCH: SearchTarget = { query: "alternance développeur", location: "Île-de-France" };
+const LINKEDIN_SEARCH: SearchTarget = {
+  query: "alternance développeur",
+  location: "Île-de-France, France",
+};
+
+/*
+ * Plafond LinkedIn en attendant un réglage d'environnement : c'est la ligne
+ * « plan gratuit » du registre (20 résultats par run, 0,040 $ au pire) tant que
+ * le crédit Apify est de 5 $. Un `SCRAPING_LINKEDIN_MAX_ITEMS` exigerait de
+ * toucher `packages/config`, hors de ce chantier.
+ */
+const LINKEDIN_MAX_ITEMS = 20;
 
 type ScrapedSourcesEnv = Pick<
   WorkerEnv,
@@ -68,6 +81,15 @@ export const scrapedSourceJobs = (env: ScrapedSourcesEnv): CollectionJob<unknown
         maxItems: env.SCRAPING_INDEED_MAX_ITEMS,
       }),
       target: INDEED_SEARCH,
+      companyName: "",
+      sourcePriority: SOURCE_PRIORITY_JOB_BOARD,
+    },
+    {
+      connector: createLinkedinConnector({
+        token: env.APIFY_API_TOKEN,
+        maxItems: LINKEDIN_MAX_ITEMS,
+      }),
+      target: LINKEDIN_SEARCH,
       companyName: "",
       sourcePriority: SOURCE_PRIORITY_JOB_BOARD,
     },

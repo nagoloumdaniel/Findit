@@ -6,6 +6,7 @@ import { GREENHOUSE_CONNECTOR_NAME } from "./greenhouse.js";
 import { HELLOWORK_CONNECTOR_NAME } from "./hellowork.js";
 import { INDEED_CONNECTOR_NAME } from "./indeed.js";
 import { LEVER_CONNECTOR_NAME } from "./lever.js";
+import { LINKEDIN_CONNECTOR_NAME } from "./linkedin.js";
 import { WORKABLE_CONNECTOR_NAME } from "./workable.js";
 import { WORKDAY_CONNECTOR_NAME } from "./workday.js";
 import { WTTJ_CONNECTOR_NAME } from "./wttj.js";
@@ -103,6 +104,15 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     termsCheckedAt: VERIFIED_2026_10_06,
     notes:
       "Acces TOLERE, non autorise : les conditions d'Indeed interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify curious_coder/indeed-scraper, sans compte ni cookie, pages publiques du sous-domaine fr, mots-cles alternance developpeur - aucun filtre de contrat cote acteur, la classification Findit tranche, 100 resultats par run par defaut (plan gratuit), budget plafonne. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (eteint par defaut).",
+  },
+  {
+    name: LINKEDIN_CONNECTOR_NAME,
+    atsKind: AtsKind.JOB_BOARD,
+    accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+    status: ConnectorStatus.ACTIVE,
+    termsCheckedAt: VERIFIED_2026_10_06,
+    notes:
+      "Acces TOLERE, non autorise : les conditions de LinkedIn interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify curious_coder/linkedin-jobs-scraper, page publique sans compte ni cookie (l'acteur avec compte est exclu), mots-cles alternance developpeur, splitByLocation desactive comme le registre l'impose, aucune donnee de recruteur stockee (jobPoster* ignores). LinkedIn ne filtre que 24 h / 7 jours / 30 jours : l'acteur est lance sur pastWeek, la fenetre de 3 jours est retablie par le connecteur a partir de postedAt. 20 resultats par run aujourd'hui (ligne plan gratuit du registre, 0,040 $ au pire), plafond absolu 100, budget plafonne. Aucun run reel n'a encore eu lieu : le cout est celui du registre, pas une mesure. Monte dans le cycle quotidien des sources scrapees, derriere l'interrupteur SCRAPED_SOURCES_ENABLED (allume par defaut depuis le 2026-10-07).",
   },
 ];
 

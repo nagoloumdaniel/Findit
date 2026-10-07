@@ -7,6 +7,7 @@ import { greenhouseConnector } from "./greenhouse.js";
 import { createHelloworkConnector } from "./hellowork.js";
 import { createIndeedConnector } from "./indeed.js";
 import { leverConnector } from "./lever.js";
+import { createLinkedinConnector } from "./linkedin.js";
 import { workableConnector } from "./workable.js";
 import { workdayConnector } from "./workday.js";
 import { createWttjConnector } from "./wttj.js";
@@ -66,6 +67,10 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
         createIndeedConnector({ token: "test", maxItems: 1 }),
         SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
       ],
+      [
+        createLinkedinConnector({ token: "test", maxItems: 1 }),
+        SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
+      ],
     ] as const;
 
     for (const [connector, accessStatus] of regimes) {
@@ -81,10 +86,10 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
   it("holds no line for the sources the register found closed", () => {
     // Ces sources n'ont aucune ligne : aucune exécution possible. Les job boards
     // s'ouvrent un par un, à leur brique (phase 22) ; Welcome to the Jungle et
-    // HelloWork sont ouverts (TASK-306, TASK-402), Indeed (TASK-403) aussi.
+    // HelloWork sont ouverts (TASK-306, TASK-402), Indeed (TASK-403) et LinkedIn
+    // (décision du 2026-10-05, autorisation de construire le 2026-10-07) aussi.
     for (const name of [
       "ashby",
-      "linkedin",
       "glassdoor",
       "smartrecruiters",
       "smartrecruiters-www",

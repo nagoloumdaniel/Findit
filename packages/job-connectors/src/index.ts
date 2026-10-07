@@ -172,4 +172,16 @@ export {
 } from "./indeed.js";
 export type { IndeedConnectorOptions } from "./indeed.js";
 
+export {
+  LINKEDIN_ACTOR_ID,
+  LINKEDIN_CONNECTOR_NAME,
+  LINKEDIN_FRESHNESS_HOURS,
+  LINKEDIN_MAX_ITEMS_CEILING,
+  LinkedinInputError,
+  createLinkedinConnector,
+  isWithinLinkedinWindow,
+  mapLinkedinItem,
+} from "./linkedin.js";
+export type { LinkedinConnectorOptions } from "./linkedin.js";
+
 export { SOURCE_PRIORITY_JOB_BOARD, SOURCE_PRIORITY_OFFICIAL } from "./source-priority.js";
