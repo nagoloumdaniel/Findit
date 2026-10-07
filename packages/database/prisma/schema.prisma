@@ -1008,3 +1008,35 @@ model MatchingRun {
   @@index([createdAt])
 }
 
+/// Profil personnel du propriétaire, affiché par le tableau de bord.
+///
+/// Le POURQUOI : aucun système d'utilisateurs n'existe, et il n'y a qu'un
+/// propriétaire. Le profil est donc un **singleton** : une seule ligne, dont
+/// l'identifiant est toujours `"default"` (voir `ProfileService`). C'est la clé
+/// primaire qui garantit l'unicité, sans colonne de garde supplémentaire.
+///
+/// `links`, `languages` et `experiences` sont du JSON libre côté base : leur
+/// forme est validée par Zod à l'écriture (`apps/api/src/profile`), pas par une
+/// contrainte SQL, qui interdirait de faire évoluer le contrat sans migration.
+model Profile {
+  /// Toujours `"default"` : c'est ce qui fait du profil un singleton.
+  id String @id
+
+  fullName    String  @default("")
+  headline    String?
+  email       String?
+  phone       String?
+  city        String?
+  /// Liens du profil : `[{ label, url }]`.
+  links       Json    @default("[]")
+  skills      String[] @default([])
+  /// Langues : `[{ name, level }]`.
+  languages   Json    @default("[]")
+  /// Expériences : `[{ title, company, period, description }]`.
+  experiences Json    @default("[]")
+  cvText      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

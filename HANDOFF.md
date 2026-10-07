@@ -245,6 +245,39 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **Espace personnel `/moi` (2026-10-07).** Findit sert d'abord **son utilisateur** :
+  le dashboard, jusque-là baptisé « Administration », est repris. La page `/moi`
+  montre le profil (nom, titre, ville, contact), les **compétences**, les langues,
+  les expériences, les liens, le **CV** et les **matchings passés** — le tout
+  éditable par un formulaire (action serveur) et enregistré dans une table
+  `Profile` **singleton** (`id = "default"`, migration `20261007043000_profile`,
+  appliquée avec la connexion propriétaire).
+  - **API** : `GET`/`PUT /api/profile`, protégés par `ProfileKeyGuard`
+    (`x-internal-key` comparé en `timingSafeEqual` ; 401 avant 400). Le profil
+    vierge rend des scalaires `null`, jamais de 404.
+  - **Accès** : mot de passe unique (`PROFILE_PASSWORD`) échangé contre un cookie
+    signé HMAC-SHA-256 (`SESSION_SECRET`, 30 jours, `httpOnly`). La signature
+    engage **les deux** secrets : changer le mot de passe révoque les sessions
+    ouvertes. Sans `PROFILE_PASSWORD`, le site public tourne et `/moi` annonce
+    « espace personnel non configuré » (pas de boucle de redirection).
+  - **Mesuré réellement** : `/moi` sans cookie → 307 vers `/connexion` ; mauvais
+    mot de passe → 401 + message ; bon mot de passe → 204 + cookie, `/moi` en 200
+    affichant le profil enregistré. Parcours navigateur vérifié au capture d'écran.
+  - **Navigation réorganisée** : l'accueil propose « Mon espace » puis
+    « Exploitation » ; la barre latérale d'exploitation s'intitule désormais
+    « Exploitation » (Offres, Sources, Crawls, Agent, Matching, Analytics, Logs,
+    Configuration).
+  - **Migration de convention** : `apps/web/src/middleware.ts` → `src/proxy.ts`
+    (Next 16 a renommé l'interception ; le fichier `middleware` émet un
+    avertissement de dépréciation).
+- **Piège de développement payé (2026-10-07)** : le serveur de dev écoute sur
+  `0.0.0.0` (`run-next.mjs`). En y accédant par `127.0.0.1`, Next 16 considère
+  l'origine comme étrangère et **bloque les ressources de développement**
+  (`/_next/webpack-hmr`) : le client ne s'hydrate plus — champs sans clé React,
+  boutons inertes — alors que la **production** fonctionnait. Diagnostiqué en
+  comparant dev et build de production, puis corrigé par
+  `allowedDevOrigins: ["127.0.0.1", "localhost"]`. Ce n'était pas un défaut du
+  site : passer par `localhost` fonctionnait déjà.
 - **Trou des écoles fermé (2026-10-07).** Cinq offres d'écoles étaient **publiées**
   (ISCOD ×3, IRIS, EEMI Paris) alors que la règle est de les ignorer. Le détecteur
   tournait bien, mais il juge **le texte de l'annonce** — et une école qui recrute

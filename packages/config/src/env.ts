@@ -186,6 +186,16 @@ export const workerEnvSchema = z.object({
 
 export const webEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: url,
+  /*
+   * Espace personnel (CV, infos, compétences). Les trois variables sont
+   * facultatives : le site public doit continuer à servir les offres sans
+   * authentification configurée. Absentes, la connexion répond 503 et la page
+   * /moi affiche « espace personnel non configuré », plutôt que d'empêcher le
+   * démarrage. Les valeurs restent côté serveur - jamais dans le navigateur.
+   */
+  INTERNAL_API_KEY: z.string().min(32).optional(),
+  PROFILE_PASSWORD: z.string().min(1).optional(),
+  SESSION_SECRET: z.string().min(32).optional(),
 });
 
 /*

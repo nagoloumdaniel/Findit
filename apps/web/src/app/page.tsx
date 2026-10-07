@@ -53,10 +53,12 @@ export default async function HomePage({ searchParams }: PageProps) {
     <PageShell>
       <header className="hero">
         <Logo />
-        {/* Lien discret vers le dashboard : présent sans concurrencer la liste
-            publique des offres, qui reste l'objet principal de la page. */}
-        <nav className="top-nav" aria-label="Administration">
-          <Link href="/dashboard">Administration</Link>
+        {/* Entrée personnelle d'abord, exploitation ensuite : la page publique
+            reste l'objet principal, mais « Mon espace » est le chemin naturel
+            pour la personne qui utilise Findit pour elle-même. */}
+        <nav className="top-nav" aria-label="Navigation principale">
+          <Link href="/moi">Mon espace</Link>
+          <Link href="/dashboard">Exploitation</Link>
         </nav>
         <h1>Alternances développeur en Île-de-France</h1>
         <p className="intro">

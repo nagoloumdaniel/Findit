@@ -30,10 +30,14 @@ Obligatoires :
 - `REDIS_URL` - file BullMQ du worker.
 - `DEEPSEEK_API_KEY` - clé de plateforme DeepSeek. Elle est obligatoire pour l'API (`parseApiEnv`,
   qui alimente le matching) ; côté worker elle n'est requise que si l'agent tourne.
-- `INTERNAL_API_KEY` - **variable héritée**. `parseApiEnv` l'exige encore (minimum 32 caractères) et
-  l'API refuse de démarrer sans elle, mais plus aucun code ne la lit : il n'y a plus de proxy Next
-  `/api/ws/*` ni de garde `WorkspaceGuard`. La retirer pour de bon suppose de modifier le schéma
-  dans `packages/config/src/env.ts`.
+- `INTERNAL_API_KEY` - clé **serveur à serveur** de l'espace personnel. L'API l'exige (minimum 32
+  caractères) et `ProfileKeyGuard` la compare en temps constant : le web l'envoie en en-tête
+  `x-internal-key` sur `/api/profile`, le navigateur ne la voit jamais. Elle ne doit pas être
+  préfixée `NEXT_PUBLIC_`, sinon Next l'inlinerait dans les bundles clients.
+- `PROFILE_PASSWORD` - mot de passe unique de `/moi`. Optionnel : sans lui, le site public tourne et
+  la page annonce « espace personnel non configuré ».
+- `SESSION_SECRET` - secret de signature du cookie de session (32 caractères minimum). La signature
+  engage **aussi** le mot de passe : changer l'un ou l'autre révoque les cookies déjà émis.
 - `NEXT_PUBLIC_API_URL`, `CORS_ORIGIN`, `WEB_PORT` (3100), `API_PORT` (4000).
 
 IA (DeepSeek) :

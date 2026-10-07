@@ -335,13 +335,14 @@ invalide.
 
 | Runtime | Variables principales                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`                                                                                                                                                                                                                                                                                                                                                                                         |
+| Web     | `WEB_PORT` (lue par `apps/web/run-next.mjs`, défaut 3100), `NEXT_PUBLIC_API_URL`, `INTERNAL_API_KEY` (serveur uniquement), `PROFILE_PASSWORD`, `SESSION_SECRET`                                                                                                                                                                                                                                                                                                          |
 | API     | `API_PORT`, `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`                                                                                                                                                                                                                                                                                                                                                         |
 | Worker  | `DATABASE_URL`, `REDIS_URL`, `JOB_COLLECTION_CRON`, `JOB_COLLECTION_TIMEZONE`, `BRAVE_SEARCH_API_KEY`, `WEB_SEARCH_MAX_QUERIES_PER_RUN`, `APIFY_API_TOKEN`, `SCRAPED_SOURCES_ENABLED`, `SCRAPED_COLLECTION_CRON`, `SCRAPING_*`, `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_INPUT_USD_PER_MTOK`, `DEEPSEEK_OUTPUT_USD_PER_MTOK`, `AGENT_RUN_ENABLED`, `AGENT_DISCOVERY_ONLY`, `AGENT_COLLECTION_CRON`, `AGENT_OBJECTIVE`, `FRANCETRAVAIL_*`, `TELEGRAM_*`, `APP_URL` |
 
-`INTERNAL_API_KEY` est **héritée** : `parseApiEnv` l'exige encore (minimum 32 caractères) et l'API
-refuse de démarrer sans elle, mais plus aucun code ne la lit. Il n'y a ni proxy Next, ni
-`WorkspaceGuard`, ni en-tête `x-workspace-key` : la variable ne protège plus rien.
+`INTERNAL_API_KEY` sert à l'**espace personnel** (2026-10-07). Le web l'envoie en en-tête
+`x-internal-key` vers `/api/profile` : c'est un secret **serveur à serveur**, jamais exposé au
+navigateur. Côté API, `ProfileKeyGuard` la compare en temps constant (`timingSafeEqual`) et refuse en
+401 sans elle — y compris avant de valider le corps, pour qu'un appelant non autorisé n'apprenne rien.
 
 Findit utilise `3100` pour le web et `4000` pour l'API en local. Le port `3000` ne doit pas être
 utilisé pour ce projet.
