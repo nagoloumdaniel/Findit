@@ -14,8 +14,10 @@ packages/database/src/generated/
 *.log
 .DS_Store
 Thumbs.db
-# Ãƒâ€°tat local du CLI Vercel : identifiants de projet, pas du code.
+# État local du CLI Vercel : identifiants de projet, pas du code.
 .vercel/
-# Skills installes pour l agent : outillage local, pas du code source.
+# Skills installés pour l'agent : outillage local, pas du code source.
 /.agents/
+/.claude/
+skills-lock.json
 /agent/
