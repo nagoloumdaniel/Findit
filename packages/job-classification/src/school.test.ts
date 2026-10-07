@@ -130,4 +130,20 @@ describe("detectSchoolRisk", () => {
 
     expect(decision).toMatchObject({ kind: "EMPLOYER", excluded: false });
   });
+
+  it("ne rejette pas un institut de recherche qui recrute", () => {
+    // Recherche faite en base le 2026-10-07 : sur 861 entreprises, « Institut
+    // Pasteur » est le seul nom évocateur avec une école — et ce n'en est pas
+    // une. « institut » vaut 60 (quarantaine), jamais l'exclusion.
+    const decision = detectSchoolRisk(
+      input({
+        companyName: "Institut Pasteur",
+        title: "Stage - Développeur bioinformatique",
+        description: "Vous rejoindrez l'unité de bioinformatique.",
+      }),
+    );
+
+    expect(decision.excluded).toBe(false);
+    expect(decision.riskScore).toBeGreaterThanOrEqual(60);
+  });
 });
