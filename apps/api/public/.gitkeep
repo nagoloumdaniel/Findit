@@ -1,0 +1,7 @@
+# Racine statique de l'API
+#
+# Le POURQUOI de ce fichier vide : ce projet Vercel ne sert que des fonctions
+# serverless (l'API Nest), mais la plateforme exige un dossier de sortie après le
+# build. Mesuré le 2026-10-07 : sans lui, le déploiement échoue avec « No Output
+# Directory named "public" found after the Build completed ». Ce dossier reste
+# vide : il ne sert aucune page, tout passe par les fonctions.
