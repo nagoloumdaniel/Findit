@@ -245,6 +245,15 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **Le dashboard d'exploitation était public en ligne (2026-10-07).** Seul `/moi`
+  était gardé : mesuré, `/dashboard`, `/dashboard/logs`, `/dashboard/config` et
+  `/dashboard/crawls` répondaient **200 sans mot de passe** — journaux,
+  configuration et état interne lisibles par quiconque connaît l'URL. `proxy.ts`
+  couvre désormais les deux (`/moi` et `/dashboard`, sous-chemins compris), un
+  seul mot de passe pour une seule garde, et `proxy.test.ts` épingle les chemins
+  couverts, la redirection sans session et le laissez-passer avec session valide.
+  Restent publics : la liste des offres, la fiche d'une offre et les routes d'API
+  qu'elles utilisent.
 - **Image du worker, construite et vérifiée (2026-10-07).** Le worker est la
   dernière brique sans hébergement, et la seule qui exige un processus permanent
   **et un Redis hébergé** (seul le worker parle à Redis). `Dockerfile.worker` part

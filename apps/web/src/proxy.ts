@@ -4,12 +4,20 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, isValidSessionToken } from "./lib/session";
 
 /*
- * Protège l'espace personnel (`/moi` et ses sous-chemins).
+ * Protège ce qui n'est pas public : l'espace personnel (`/moi`) **et** le
+ * dashboard d'exploitation (`/dashboard`).
+ *
+ * Le POURQUOI d'avoir étendu la garde au 2026-10-07 : seul `/moi` était protégé,
+ * et le site étant en ligne, `/dashboard`, `/dashboard/logs`, `/dashboard/config`
+ * et `/dashboard/crawls` répondaient **200 sans mot de passe** — journaux,
+ * configuration et état interne lisibles par quiconque connaît l'URL. Ce qui n'est
+ * pas destiné au public passe par la même porte que l'espace personnel ; il n'y a
+ * qu'un mot de passe, donc il n'y a qu'une garde.
  *
  * Le POURQUOI du garde-fou de configuration : sans `PROFILE_PASSWORD`, il n'y a
- * rien à protéger, et rediriger ferait une boucle - `/moi` vers `/connexion`,
- * puis le formulaire qui répond 503. On laisse donc passer, et c'est la page
- * `/moi` qui annonce « espace personnel non configuré ».
+ * rien à protéger, et rediriger ferait une boucle - la page protégée vers
+ * `/connexion`, puis le formulaire qui répond 503. On laisse donc passer, et
+ * c'est `/moi` qui annonce « espace personnel non configuré ».
  *
  * Le POURQUOI de `proxy` et non `middleware` : Next 16 a renommé la convention,
  * et sous cette version le fichier `middleware.ts` laissait le serveur de
@@ -31,5 +39,5 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
 }
 
 export const config = {
-  matcher: ["/moi", "/moi/:path*"],
+  matcher: ["/moi", "/moi/:path*", "/dashboard", "/dashboard/:path*"],
 };
