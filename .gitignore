@@ -14,3 +14,5 @@ packages/database/src/generated/
 *.log
 .DS_Store
 Thumbs.db
+# État local du CLI Vercel : identifiants de projet, pas du code.
+.vercel/

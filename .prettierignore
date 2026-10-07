@@ -7,3 +7,5 @@ packages/database/data
 pnpm-lock.yaml
 docs/superpowers/plans
 .claude
+# État local du CLI Vercel (projet lié) : ni formaté, ni commité.
+.vercel
