@@ -86,4 +86,48 @@ describe("detectSchoolRisk", () => {
   it("always gives a reason", () => {
     expect(detectSchoolRisk(input()).reasons.length).toBeGreaterThan(0);
   });
+
+  /*
+   * Mesuré le 2026-10-07 : cinq offres d'écoles (ISCOD, IRIS, EEMI) étaient
+   * publiées parce que leur annonce ressemble à celle d'un employeur — le
+   * détecteur de texte concluait « aucun signal d'école ». Le nom tranche.
+   */
+  it("écarte un employeur reconnu comme école, même avec une annonce d'employeur", () => {
+    const decision = detectSchoolRisk(
+      input({
+        companyName: "ISCOD",
+        title: "Alternance Développeur Front-End - Herblay",
+        description: "Rejoignez notre équipe et développez des interfaces en React.",
+      }),
+    );
+
+    expect(decision).toMatchObject({ kind: "SCHOOL", excluded: true, riskScore: 100 });
+    expect(decision.reasons[0]).toContain("liste citée");
+  });
+
+  it("écarte sur une seule formulation qu'un employeur n'écrit jamais", () => {
+    // « entreprises partenaires » pesait 35 points, sous le seuil de quarantaine
+    // de 40 : l'offre passait en employeur.
+    const decision = detectSchoolRisk(
+      input({
+        companyName: "Acme",
+        description: "Nous vous accompagnons vers nos entreprises partenaires.",
+      }),
+    );
+
+    expect(decision).toMatchObject({ kind: "TRAINING_ORGANISATION", excluded: true });
+    expect(decision.reasons[0]).toContain("entreprises partenaires");
+  });
+
+  it("laisse un employeur ordinaire qui ne promet ni frais ni placement", () => {
+    const decision = detectSchoolRisk(
+      input({
+        companyName: "Safran",
+        title: "Stage - Développeur logiciel embarqué",
+        description: "Vous rejoindrez l'équipe logicielle du site de Massy.",
+      }),
+    );
+
+    expect(decision).toMatchObject({ kind: "EMPLOYER", excluded: false });
+  });
 });

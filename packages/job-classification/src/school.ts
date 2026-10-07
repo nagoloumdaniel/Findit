@@ -44,27 +44,53 @@ const SCHOOL_NAME_TOKENS = [
 ];
 
 /**
+ * Employeurs reconnus comme écoles, **cités** parce qu'ils ont été observés dans
+ * nos propres offres : ISCOD, EEMI, IRIS. Le POURQUOI : une école qui recrute
+ * pour ses entreprises partenaires publie une annonce d'alternance qui ressemble
+ * à celle d'un employeur — mesuré le 2026-10-07, cinq offres d'écoles étaient
+ * publiées, et le détecteur de texte concluait « aucun signal d'école ». Le nom
+ * de l'employeur, lui, ne trompe pas.
+ *
+ * La liste est volontairement courte et citée : elle constate, elle ne devine
+ * pas. Un nom ambigu (« iris » est aussi un prénom et une marque) est assumé —
+ * sur le périmètre alternance/stage, le risque d'écarter un employeur légitime
+ * homonyme est plus faible que celui de publier une école.
+ */
+const KNOWN_SCHOOL_EMPLOYERS = ["iscod", "eemi", "iris"];
+
+/**
  * Formulations d'une **arnaque d'école** : l'annonce vend une formation ou
  * promet de placer le candidat, au lieu de décrire un poste. Ces signaux sont
  * forts parce qu'aucune offre d'employeur réel ne les emploie.
  */
 const STRONG_TEXT_SIGNALS: ReadonlyArray<readonly [string, string]> = [
-  ["frais de formation", "des frais de formation sont mentionnés"],
-  ["frais de scolarite", "des frais de scolarité sont mentionnés"],
   ["cout de la formation", "le coût de la formation est mentionné"],
-  ["reste a charge", "un reste à charge est demandé"],
+  ["notre cursus", "l'annonce décrit un cursus"],
+  ["notre programme de formation", "l'annonce décrit un programme de formation"],
+  ["preparez un titre", "l'annonce vend la préparation d'un titre"],
+  ["obtenez un diplome", "l'annonce vend l'obtention d'un diplôme"],
+];
+
+/**
+ * Formulations qui suffisent à elles seules, parce qu'un employeur ne les écrit
+ * jamais : il ne demande pas de frais, ne vend pas de cursus et ne promet pas de
+ * placer le candidat. Mesuré le 2026-10-07 : « entreprises partenaires » (IRIS)
+ * pesait 35 points, sous le seuil de quarantaine de 40 — l'école passait donc en
+ * employeur. Ces phrases valent désormais le seuil d'exclusion à elles seules.
+ */
+const DECISIVE_TEXT_SIGNALS: ReadonlyArray<readonly [string, string]> = [
+  ["entreprise partenaire", "l'annonce parle d'entreprises partenaires, pas d'un poste"],
   ["entreprises partenaires", "l'annonce parle d'entreprises partenaires, pas d'un poste"],
   ["nous vous placons", "l'annonce promet de placer le candidat"],
   ["nous placons nos", "l'annonce promet de placer ses candidats"],
   ["trouvez votre entreprise", "l'annonce propose de trouver une entreprise"],
   ["trouver votre alternance", "l'annonce propose de trouver une alternance"],
-  ["integrez notre formation", "l'annonce invite à intégrer une formation"],
+  ["frais de formation", "des frais de formation sont mentionnés"],
+  ["frais de scolarite", "des frais de scolarité sont mentionnés"],
+  ["reste a charge", "un reste à charge est demandé"],
+  ["integre notre formation", "l'annonce invite à intégrer une formation"],
   ["rejoignez notre formation", "l'annonce invite à rejoindre une formation"],
-  ["notre cursus", "l'annonce décrit un cursus"],
-  ["notre programme de formation", "l'annonce décrit un programme de formation"],
-  ["candidatez a la formation", "l'annonce invite à candidater à une formation"],
-  ["preparez un titre", "l'annonce vend la préparation d'un titre"],
-  ["obtenez un diplome", "l'annonce vend l'obtention d'un diplôme"],
+  ["candidate a la formation", "l'annonce invite à candidater à une formation"],
 ];
 
 /**
@@ -119,6 +145,32 @@ export const detectSchoolRisk = (input: SchoolDetectionInput): SchoolDetection =
   let score = 0;
 
   const schoolNameToken = SCHOOL_NAME_TOKENS.find((token) => containsToken(name, token));
+
+  /*
+   * Un employeur reconnu comme école tranche avant tout le reste : le texte de
+   * son annonce, lui, peut ressembler à s'y méprendre à celui d'un employeur.
+   */
+  const knownSchool = KNOWN_SCHOOL_EMPLOYERS.find((token) => containsToken(name, token));
+  if (knownSchool !== undefined) {
+    return {
+      kind: "SCHOOL",
+      riskScore: 100,
+      excluded: true,
+      reasons: [`Employeur reconnu comme école (liste citée) : « ${knownSchool} ».`, ...reasons],
+    };
+  }
+
+  // Une formulation qu'un employeur n'écrit jamais suffit à écarter l'offre.
+  const decisive = DECISIVE_TEXT_SIGNALS.find(([phrase]) => containsPhrase(text, phrase));
+  if (decisive !== undefined) {
+    return {
+      kind: schoolNameToken === undefined ? "TRAINING_ORGANISATION" : "SCHOOL",
+      riskScore: 100,
+      excluded: true,
+      reasons: [decisive[1]],
+    };
+  }
+
   if (schoolNameToken !== undefined) {
     score += 60;
     reasons.push(`Le nom de l'organisation contient « ${schoolNameToken} ».`);

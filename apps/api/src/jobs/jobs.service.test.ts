@@ -55,6 +55,7 @@ const createPrisma = (
     count: vi.fn().mockResolvedValue(0),
     findMany: vi.fn().mockResolvedValue([]),
     findFirst: vi.fn().mockResolvedValue(row),
+    groupBy: vi.fn().mockResolvedValue([]),
   },
 });
 
@@ -144,5 +145,72 @@ describe("JobsService.list", () => {
     expect(list.items).toHaveLength(1);
     expect(list.items[0]?.origin).toBe("JOB_BOARD");
     expect(list.items[0]?.canonicalSource?.name).toBe("welcome-to-the-jungle");
+  });
+});
+
+describe("JobsService.stats", () => {
+  it("compte les publications récentes et rend la dernière date", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.count.mockResolvedValueOnce(3).mockResolvedValueOnce(9);
+    const lastPublishedAt = new Date("2026-10-06T09:00:00.000Z");
+    prisma.job.findFirst.mockResolvedValue({ publishedAt: lastPublishedAt });
+    const service = new JobsService(prisma as never);
+
+    const stats = await service.stats(now);
+
+    expect(stats).toEqual({ publishedLast24h: 3, publishedLast72h: 9, lastPublishedAt });
+
+    // Les deux comptes portent la même fenêtre publique, à l'ancienneté près.
+    const first = prisma.job.count.mock.calls[0]?.[0] as {
+      where: { status: string; expiresAt: { gt: Date }; publishedAt: { gte: Date } };
+    };
+    const second = prisma.job.count.mock.calls[1]?.[0] as {
+      where: { publishedAt: { gte: Date } };
+    };
+    expect(first.where.status).toBe("PUBLISHED");
+    expect(first.where.expiresAt.gt).toEqual(now);
+    const firstWindowHours = (now.getTime() - first.where.publishedAt.gte.getTime()) / 3_600_000;
+    const secondWindowHours = (now.getTime() - second.where.publishedAt.gte.getTime()) / 3_600_000;
+    expect(firstWindowHours).toBe(24);
+    expect(secondWindowHours).toBe(72);
+  });
+
+  it("rend null quand aucune offre n'est publiée dans la fenêtre", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.findFirst.mockResolvedValue(null);
+    const service = new JobsService(prisma as never);
+
+    await expect(service.stats(now)).resolves.toEqual({
+      publishedLast24h: 0,
+      publishedLast72h: 0,
+      lastPublishedAt: null,
+    });
+  });
+});
+
+describe("JobsService.filters", () => {
+  it("range les valeurs par facette et trie les départements", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.groupBy = vi
+      .fn()
+      .mockResolvedValueOnce([{ roleCategory: "FULLSTACK", _count: { _all: 4 } }])
+      .mockResolvedValueOnce([{ contractType: "ALTERNANCE", _count: { _all: 2 } }])
+      .mockResolvedValueOnce([
+        { departmentCode: "92", _count: { _all: 1 } },
+        { departmentCode: "75", _count: { _all: 3 } },
+      ])
+      .mockResolvedValueOnce([{ workMode: "REMOTE", _count: { _all: 1 } }]);
+    const service = new JobsService(prisma as never);
+
+    const filters = await service.filters("LAST_72H", now);
+
+    expect(filters.roles).toEqual([{ value: "FULLSTACK", count: 4 }]);
+    expect(filters.contracts).toEqual([{ value: "ALTERNANCE", count: 2 }]);
+    // Les départements sont triés par code, pas par volume.
+    expect(filters.departments).toEqual([
+      { value: "75", count: 3 },
+      { value: "92", count: 1 },
+    ]);
+    expect(filters.workModes).toEqual([{ value: "REMOTE", count: 1 }]);
   });
 });
