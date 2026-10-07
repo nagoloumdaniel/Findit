@@ -1,0 +1,44 @@
+# Image du worker Findit (BullMQ + planificateurs + agent).
+#
+# Le POURQUOI : la collecte planifiée exige un processus permanent. Vercel n'en
+# exécute pas, donc le worker reste la seule brique qui a besoin d'un hébergeur
+# classique — c'est ce cas-là, et lui seul, qui justifie une image Docker.
+#
+# Le POURQUOI de l'image de base Playwright : le worker exécute l'agent, qui
+# crawle avec Chromium (via @findit/crawler). L'image officielle épingle la
+# version du navigateur et embarque ses dépendances système ; une image Node
+# nue obligerait à réinstaller Chromium à chaque démarrage.
+#
+# Le contexte de construction est la RACINE du dépôt :
+#   docker build -f Dockerfile.worker -t findit-worker .
+# Il faut tout le monorepo, les paquets du workspace se consommant via leur `dist`.
+
+# syntax=docker/dockerfile:1
+
+# Même version majeure que `playwright` épinglé dans le dépôt (1.63.0).
+FROM mcr.microsoft.com/playwright:v1.63.0-noble AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+
+FROM base AS build
+WORKDIR /app
+
+# URL factice : générer le client Prisma ne se connecte à rien. La vraie URL
+# arrive à l'exécution, par l'environnement de la plateforme.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps ./apps
+COPY packages ./packages
+RUN pnpm install --frozen-lockfile
+RUN pnpm turbo run build --filter=@findit/worker
+
+FROM base AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app ./
+# BullMQ n'expose aucun port : le worker consomme et planifie, il n'écoute rien.
+# Sa santé se lit dans ses journaux, dans les ConnectorRun écrits en base et dans
+# les planificateurs enregistrés dans Redis.
+CMD ["node", "apps/worker/dist/main.js"]

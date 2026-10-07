@@ -245,6 +245,15 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **Image du worker, construite et vérifiée (2026-10-07).** Le worker est la
+  dernière brique sans hébergement, et la seule qui exige un processus permanent
+  **et un Redis hébergé** (seul le worker parle à Redis). `Dockerfile.worker` part
+  de l'image officielle Playwright — l'agent crawle avec Chromium. **Vérifié en
+  local** : le conteneur démarre, enregistre les 3 planificateurs et consomme
+  (deux consommateurs comptés dans BullMQ pendant le test). **Taille 4,71 Go**, à
+  savoir avant de choisir un hébergeur. Aucun port exposé, donc pas de `/health` :
+  la santé se lit dans les journaux, les `ConnectorRun` et les planificateurs.
+  Détails et coûts des plateformes dans `docs/deployment.md`.
 - **LinkedIn : verdict après mesure (2026-10-07).** Deux runs réels bornés (20
   résultats) : **0,02810 $** dépensés, **0 offre francilienne d'alternance**
   acceptée. L'acteur `curious_coder/linkedin-jobs-scraper` **ignore la zone
