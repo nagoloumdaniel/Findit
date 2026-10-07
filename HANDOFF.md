@@ -252,8 +252,10 @@ lecture du document.
   **14/14** offres rendues sont en Bretagne (Brest, Guipavas, Plouzané). Les trois
   offres fraîches ont toutes été rejetées en aval. La ligne `Connector` est
   **`DISABLED`** : à 0,04 $/jour pour zéro offre, la source ne se paie pas.
-  **Attention** : `registry.ts` la déclare `ACTIVE`, donc un `pnpm registry:sync`
-  la réactiverait, et `SCRAPED_SOURCES_ENABLED` est allumé par défaut.
+  **Le verrou vit dans le code** : `registry.ts` déclare LinkedIn `DISABLED`, donc
+  un `pnpm registry:sync` ne la rallume pas — c'est la seule façon de résister à une
+  resynchronisation, le report réécrivant le statut depuis ce fichier. Vérifié en
+  base : LinkedIn `DISABLED`, les huit autres connecteurs `ACTIVE`.
   - Le barème est désormais **établi, pas estimé** : `apify-default-dataset-item`
     0,002 $ et `apify-actor-start` 0,00005 $, vérifiés contre la facture réelle du
     run 1 (14 × 0,002 + 0,00005 = **0,02805 $**). Le registre ne connaissait que le
