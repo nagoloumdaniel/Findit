@@ -16,8 +16,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @findit/database prisma:generate",
-    "infra:up": "docker compose up -d postgres redis",
-    "infra:down": "docker compose down",
     "db:seed": "pnpm --filter @findit/database db:seed",
     "board:proof": "pnpm --filter @findit/worker board:proof",
     "careers:scan": "pnpm --filter @findit/job-connectors careers:scan",

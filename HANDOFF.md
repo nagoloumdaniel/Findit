@@ -171,14 +171,20 @@ Les 17 paquets de `packages/` :
 
 ```bash
 pnpm install
-pnpm infra:up           # postgres + redis via docker compose
-pnpm db:migrate
+pnpm db:migrate         # vise la base Neon (DATABASE_URL)
 pnpm dev                # turbo, toutes les apps
 ```
 
 `.env` vit à la racine ; `loadRootEnv()` de `@findit/config` le retrouve. Variables
 attendues par le worker sur Railway : `railway.env.example`. Le LLM DeepSeek se
 configure via la clé de plateforme (voir §6).
+
+Il n'y a **plus de PostgreSQL ni de Redis local** : Docker Compose a été retiré du
+dépôt (le conteneur de base était vide, rien n'a été perdu). La base est Neon et
+exige TLS ; Redis est un service Railway. L'outillage local qui parle à Redis
+(`pnpm board:proof`, agent lancé à la main) exige un **proxy TCP** activé sur le
+service Redis de Railway, avec l'URL publique reportée dans `REDIS_URL` :
+`REDIS_URL=redis://localhost:6379` ne résout plus rien.
 
 ## 6. Outillage DeepSeek
 

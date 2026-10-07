@@ -12,7 +12,6 @@
 ![Redis](https://img.shields.io/badge/Redis%2FBullMQ-queues-DC382D?logo=redis&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-web%20%2B%20API-000000?logo=vercel&logoColor=white)
 ![Railway](https://img.shields.io/badge/Railway-worker-0B0D0E?logo=railway&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-non%20specifiee-lightgrey)
 
 > Agent autonome de collecte web : il découvre, crawle, extrait et publie des offres d'alternance et de stage en développement en Île-de-France.
@@ -35,7 +34,7 @@ Le service est **en ligne depuis le 2026-10-07**.
 
 Le routage de Vercel dans le dossier `api/` ne laisse passer qu'**un seul segment** après `/api` : mesuré le 2026-10-07, `/api/jobs` répondait alors que `/api/jobs/stats` renvoyait un 404 sans corps (donc émis par la plateforme). Cinq relais d'une ligne rétablissent la profondeur, chacun réexportant le gestionnaire unique : `api/jobs/[...chemin].ts`, `api/agent/[...chemin].ts`, `api/agent/runs/[...chemin].ts`, `api/matching/[...chemin].ts`, `api/matching/history/[...chemin].ts`. C'est un contournement, à supprimer le jour où la plateforme route les catch-all sur plusieurs segments.
 
-Railway construit le worker avec Railpack depuis la racine (`RAILPACK_BUILD_CMD=pnpm turbo run build --filter=@findit/worker`, `RAILPACK_NODE_PLAYWRIGHT_INSTALL=1`) et le démarre par le script `start` de la racine (`node apps/worker/dist/main.js`). `Dockerfile.worker` produit la même image en local. Les variables attendues sont listées dans `railway.env.example`. Détails : [docs/deployment.md](docs/deployment.md).
+Railway construit le worker avec Railpack depuis la racine (`RAILPACK_BUILD_CMD=pnpm turbo run build --filter=@findit/worker`, `RAILPACK_NODE_PLAYWRIGHT_INSTALL=1`) et le démarre par le script `start` de la racine (`node apps/worker/dist/main.js`). `Dockerfile.worker` décrit la même image (Playwright + Chromium). Les variables attendues sont listées dans `railway.env.example`. Détails : [docs/deployment.md](docs/deployment.md).
 
 ## Fonctionnalités
 
@@ -109,26 +108,24 @@ Le flux public affiche par défaut les **alternances des métiers du développem
 - **Web** : Next.js 16 (App Router), React 19 ; Vercel en production
 - **API** : NestJS 11 sur Fastify 5, Helmet, CORS ; Vercel en production, entrée serverless
 - **Worker** : NestJS + BullMQ 5, concurrence 1 (les cycles ne se chevauchent pas) ; Railway en production
-- **Base de données** : PostgreSQL en ligne (Neon) via Prisma 7 et l'adaptateur `pg` ; image `pgvector/pgvector:pg18` en local
-- **File d'attente** : Redis 8 (`redis:8.8.0-alpine` en local, service Redis sur Railway)
+- **Base de données** : PostgreSQL en ligne (Neon) via Prisma 7 et l'adaptateur `pg` ; aucune base locale depuis le retrait de Docker Compose
+- **File d'attente** : Redis 8, service Redis hébergé sur Railway
 - **IA** : DeepSeek API via `@findit/ai` (`DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, défaut `deepseek-flash`)
 - **Recherche web** : Brave (`BraveSearchProvider`, `@findit/job-connectors`)
 - **Crawl** : `@findit/crawler`, HTTP puis Playwright 1.63 en repli
 - **Scraping job boards** : connecteurs Apify, plafonds de dépense `SCRAPING_BUDGET_MONTHLY_USD` / `SCRAPING_BUDGET_CYCLE_USD`
 - **Qualité** : ESLint 10, Prettier 3.9, Vitest 4, TypeScript 6
-- **Infra locale** : Docker Compose
 
 ## Installation locale
 
-Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack), Docker Desktop (Redis, et PostgreSQL local si vous n'utilisez pas la base en ligne).
+Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack). Aucun Docker n'est requis : la base est en ligne (Neon) et Redis est hébergé sur Railway. L'outillage local qui parle à Redis (`pnpm board:proof`, agent lancé à la main) a besoin d'une URL joignable : activer un **proxy TCP** sur le service Redis de Railway et reporter l'URL publique dans `REDIS_URL`. Avec `REDIS_URL=redis://localhost:6379`, ces commandes ne peuvent pas fonctionner.
 
 ```powershell
 corepack enable
 corepack prepare pnpm@11.13.1 --activate
-Copy-Item .env.example .env   # puis renseigner DATABASE_URL, REDIS_URL, INTERNAL_API_KEY, DEEPSEEK_API_KEY
+Copy-Item .env.example .env   # puis renseigner DATABASE_URL (Neon) et REDIS_URL (proxy Railway)
 pnpm install
 pnpm setup:hooks
-pnpm infra:up        # Redis, et PostgreSQL local si vous n'utilisez pas la base en ligne
 pnpm db:migrate
 pnpm registry:sync   # synchronise le registre de conformité des connecteurs
 ```

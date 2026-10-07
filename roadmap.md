@@ -14,7 +14,7 @@
 
 ## 2. Ce que le pivot change
 
-**Conservé et réutilisé comme outils de l'agent** : le monorepo (Next.js + NestJS + TypeScript + PostgreSQL/Prisma + Redis/BullMQ + Docker), le scheduler du worker, la recherche web (Brave), la découverte, la lecture de `robots.txt`, le registre de conformité et la garde de budget, la classification (dont la détection d'écoles), la déduplication, le pipeline d'ingestion, les notifications Telegram, le dashboard web.
+**Conservé et réutilisé comme outils de l'agent** : le monorepo (Next.js + NestJS + TypeScript + PostgreSQL/Prisma + Redis/BullMQ), le scheduler du worker, la recherche web (Brave), la découverte, la lecture de `robots.txt`, le registre de conformité et la garde de budget, la classification (dont la détection d'écoles), la déduplication, le pipeline d'ingestion, les notifications Telegram, le dashboard web.
 
 **Supprimé** : l'espace privé candidat (voir décision), et les connecteurs fixes ATS/job boards doivent devenir des « outils d'extraction spécialisée » que l'agent pourra invoquer, plutôt que des scrapers montés en dur (non câblés à ce jour, section 4).
 
