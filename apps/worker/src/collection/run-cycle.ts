@@ -64,6 +64,14 @@ export interface CycleSummary {
   readonly queriesRun: number;
   readonly companiesDiscovered: number;
   readonly sourcesRegistered: number;
+  /**
+   * Hôtes vus par la recherche mais non reconnus comme ATS à jeton. Ils ne sont
+   * pas enregistrés : ils relèvent du registre dynamique, qui exige de lire leur
+   * `robots.txt`. Sans ce champ, `collectDiscoveries` calculait `unknownHosts`
+   * pour personne — cette liste est la seule trace de ce que la découverte
+   * laisse de côté, et c'est ce que le journal de cycle consigne.
+   */
+  readonly unknownHosts: readonly string[];
   readonly collection: CollectionSummary;
 }
 
@@ -164,6 +172,9 @@ export const runCycle = async (deps: CycleDeps): Promise<CycleSummary> => {
     queriesRun: queries.length,
     companiesDiscovered: discoveries.known.length,
     sourcesRegistered,
+    // Seuls les noms d'hôtes partent au journal : les URLs qui les ont fait
+    // découvrir restent dans la valeur rendue par `collectDiscoveries`.
+    unknownHosts: discoveries.unknownHosts.map((entry) => entry.host),
     collection,
   };
 };

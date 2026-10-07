@@ -162,6 +162,15 @@ describe("mapLinkedinItem", () => {
     );
   });
 
+  it("ne touche pas un horodatage, même à minuit UTC", () => {
+    // Seule une date seule est élargie : un horodatage porte déjà son heure, et
+    // l'étendre décalerait une offre réellement publiée à minuit. C'est la
+    // frontière entre le format que l'acteur rend et la règle commune.
+    expect(mapLinkedinItem({ ...item, postedAt: "2026-10-04T00:00:00.000Z" }).publishedAt).toEqual(
+      new Date("2026-10-04T00:00:00.000Z"),
+    );
+  });
+
   it("traite un lien de candidature vide comme absent", () => {
     expect(mapLinkedinItem({ ...item, applyUrl: "" }).applyUrl).toBeNull();
     expect(mapLinkedinItem({ ...item, applyUrl: "   " }).applyUrl).toBeNull();

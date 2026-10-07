@@ -130,6 +130,26 @@ describe("runCycle", () => {
     });
   });
 
+  it("rend les hôtes non reconnus, seule trace de ce que la découverte laisse", async () => {
+    const summary = await runCycle(
+      baseDeps({
+        maxQueries: 1,
+        search: () =>
+          Promise.resolve([
+            result("https://boards.greenhouse.io/ivalua/jobs/1"),
+            result("https://careers.acme.example/jobs/1"),
+            result("https://careers.acme.example/jobs/2"),
+          ]),
+      }),
+    );
+
+    // L'hôte inconnu n'est ni enregistré ni collecté : son nom part au journal
+    // du cycle, sans les URLs qui l'ont fait découvrir.
+    expect(summary.unknownHosts).toEqual(["careers.acme.example"]);
+    expect(summary.companiesDiscovered).toBe(1);
+    expect(summary.sourcesRegistered).toBe(1);
+  });
+
   it("skips a source whose connector is not available, without failing", async () => {
     const collected: CollectionJob<unknown>[] = [];
 

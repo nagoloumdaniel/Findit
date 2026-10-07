@@ -141,6 +141,10 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
         queriesRun: summary.queriesRun,
         companiesDiscovered: summary.companiesDiscovered,
         sourcesRegistered: summary.sourcesRegistered,
+        // Les hôtes reconnus comme ATS sont enregistrés ; ceux-ci ne le sont pas
+        // (registre dynamique, `robots.txt` requis). Les consigner est la seule
+        // façon de savoir ce que la découverte laisse de côté.
+        unknownHosts: summary.unknownHosts,
         accepted: summary.collection.totalAccepted,
         quarantined: summary.collection.totalQuarantined,
         rejected: summary.collection.totalRejected,

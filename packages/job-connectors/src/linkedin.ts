@@ -1,3 +1,4 @@
+import { endOfDayIfDateOnly } from "@findit/shared";
 import { z } from "zod";
 
 import { ApifyItemError, createApifyConnector } from "./apify.js";
@@ -84,9 +85,6 @@ const itemSchema = z.object({
 /** Une date seule, sans heure : le format réellement rendu par l'acteur. */
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
-/** Fin d'une journée UTC : minuit plus un jour, moins une milliseconde. */
-const DATE_ONLY_END_OFFSET_MS = 24 * 60 * 60 * 1000 - 1;
-
 const parseDate = (value: string | number | null | undefined): Date | null => {
   if (value === null || value === undefined) {
     return null;
@@ -103,12 +101,15 @@ const parseDate = (value: string | number | null | undefined): Date | null => {
   /*
    * LinkedIn ne rend qu'un jour (« 2026-10-04 »), que `new Date` place à minuit
    * UTC. Une date seule couvre sa journée entière : sans cela, l'offre du
-   * surlendemain tombe dès le début du 4e jour. Même règle que
-   * `endOfDayIfDateOnly` dans `packages/shared/src/job-scope.ts`, que le pipeline
-   * applique aux dates à minuit UTC (ce paquet ne dépend pas de `@findit/shared`).
+   * surlendemain tombe dès le début du 4e jour. La règle vit dans `@findit/shared`
+   * (`endOfDayIfDateOnly`), que l'ingestion applique de son côté : une seule
+   * définition de la fin de journée, donc un seul endroit à corriger si elle
+   * change. Le test de format reste ici, car il n'appartient qu'à ce connecteur :
+   * lui seul sait que l'acteur rend « AAAA-MM-JJ », et un horodatage déjà précis
+   * n'a pas de journée à élargir.
    */
   return typeof value === "string" && DATE_ONLY.test(value.trim())
-    ? new Date(parsed.getTime() + DATE_ONLY_END_OFFSET_MS)
+    ? endOfDayIfDateOnly(parsed)
     : parsed;
 };
 
