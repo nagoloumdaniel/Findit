@@ -71,11 +71,36 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; reason: "UNAVAIL
 
 const baseUrl = (): string => parseWebEnv(process.env).NEXT_PUBLIC_API_URL;
 
-const request = async <T>(path: string): Promise<ApiResult<T>> => {
+/*
+ * Politique de cache, par NATURE de donnée — jamais globale.
+ *
+ * POURQUOI cette frontière est le point sensible : les offres publiées, les
+ * statistiques et les options de filtre sont publiques et changent lentement ;
+ * les revalider évite de refaire l'aller-retour API à chaque rendu. Tout le
+ * reste est propre à la session (profil, matchings, agent, runs, sources) : le
+ * mettre en cache servirait un jour les données d'une personne à une autre. Une
+ * optimisation qui écrase cette distinction est une fuite, pas un gain.
+ *
+ * Fenêtres retenues :
+ * - 60 s pour les offres et leur décompte : la collecte met la base à jour au
+ *   mieux toutes les 4 heures (ATS) et une fois par jour (job boards), donc le
+ *   retard maximal ajouté par le cache (une minute) est invisible devant le
+ *   cycle réel de collecte ;
+ * - 300 s pour les options de filtre et le détail d'une offre : agrégats et
+ *   pages qui bougent encore moins vite, et qu'on ne veut pas recalculer à
+ *   chaque visite.
+ */
+const PUBLIC_REVALIDATE_SECONDS = 60;
+const AGGREGATE_REVALIDATE_SECONDS = 300;
+
+const request = async <T>(path: string, revalidate: number | null): Promise<ApiResult<T>> => {
   try {
     const response = await fetch(new URL(path, baseUrl()), {
-      // Les offres changent d'heure en heure : aucune réponse n'est mise en cache.
-      cache: "no-store",
+      /*
+       * `null` = donnée de session : jamais de cache. Un nombre = donnée
+       * publique revalidée par le cache de données de Next.
+       */
+      ...(revalidate === null ? { cache: "no-store" as const } : { next: { revalidate } }),
       headers: { accept: "application/json" },
       signal: AbortSignal.timeout(5000),
     });
@@ -91,12 +116,13 @@ const request = async <T>(path: string): Promise<ApiResult<T>> => {
 };
 
 export const fetchJobs = (search: URLSearchParams): Promise<ApiResult<JobList>> =>
-  request<JobList>(`/api/jobs?${search.toString()}`);
+  request<JobList>(`/api/jobs?${search.toString()}`, PUBLIC_REVALIDATE_SECONDS);
 
 export const fetchFilterOptions = (search: URLSearchParams): Promise<ApiResult<JobFilterOptions>> =>
-  request<JobFilterOptions>(`/api/jobs/filters?${search.toString()}`);
+  request<JobFilterOptions>(`/api/jobs/filters?${search.toString()}`, AGGREGATE_REVALIDATE_SECONDS);
 
-export const fetchStats = (): Promise<ApiResult<JobStats>> => request<JobStats>("/api/jobs/stats");
+export const fetchStats = (): Promise<ApiResult<JobStats>> =>
+  request<JobStats>("/api/jobs/stats", PUBLIC_REVALIDATE_SECONDS);
 
 /// Distingue « introuvable » d'« API injoignable » : les deux s'affichent
 /// différemment.
@@ -106,7 +132,7 @@ export const fetchJobDetail = async (
 ): Promise<ApiResult<JobDetail | null>> => {
   try {
     const response = await fetch(new URL(`/api/jobs/${slug}?${search.toString()}`, baseUrl()), {
-      cache: "no-store",
+      next: { revalidate: AGGREGATE_REVALIDATE_SECONDS },
       headers: { accept: "application/json" },
       signal: AbortSignal.timeout(5000),
     });
@@ -197,17 +223,22 @@ export type SourceItem = {
   lastCrawlAt: string | null;
 };
 
+/*
+ * Données propres à la session (agent, runs, sources, matchings, profil) : lues
+ * en `no-store`, sans exception. Les revalider ferait servir l'état d'un
+ * utilisateur à un autre — c'est la ligne rouge de cette politique.
+ */
 export const fetchAgentStats = (): Promise<ApiResult<AgentStats>> =>
-  request<AgentStats>("/api/agent/stats");
+  request<AgentStats>("/api/agent/stats", null);
 
 export const fetchAgentAnalytics = (): Promise<ApiResult<AgentAnalytics>> =>
-  request<AgentAnalytics>("/api/agent/analytics");
+  request<AgentAnalytics>("/api/agent/analytics", null);
 
 export const fetchAgentRuns = (): Promise<ApiResult<AgentRunSummary[]>> =>
-  request<AgentRunSummary[]>("/api/agent/runs");
+  request<AgentRunSummary[]>("/api/agent/runs", null);
 
 export const fetchAgentSources = (): Promise<ApiResult<SourceItem[]>> =>
-  request<SourceItem[]>("/api/agent/sources");
+  request<SourceItem[]>("/api/agent/sources", null);
 
 /// Un matching de CV passé, sans le CV : la liste n'en a pas besoin, et ne pas le
 /// charger est la même minimisation que la rétention côté API.
@@ -219,4 +250,4 @@ export type MatchingRunSummary = {
 };
 
 export const fetchMatchingHistory = (): Promise<ApiResult<MatchingRunSummary[]>> =>
-  request<MatchingRunSummary[]>("/api/matching/history");
+  request<MatchingRunSummary[]>("/api/matching/history", null);

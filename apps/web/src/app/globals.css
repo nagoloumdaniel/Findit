@@ -22,6 +22,21 @@
   --color-neutral-900: #18181b;
   --color-black: #0a0a0b;
 
+  /*
+   * Pas manquants de la même rampe zinc : deux intermédiaires pour le texte
+   * atténué (clair et sombre) et les pas sombres qui portent les surfaces
+   * nocturnes. Ils étendent --color-neutral-* : ce n'est pas un second système,
+   * c'est la même famille continuée sous neutral-900.
+   */
+  --color-neutral-450: #8f8f99;
+  --color-neutral-475: #94949c;
+  --color-ink-950: #0b0b0c;
+  --color-ink-925: #111114;
+  --color-ink-850: #18181e;
+  --color-ink-800: #212129;
+  --color-ink-700: #2b2b33;
+  --color-ink-500: #6b6b75;
+
   /* Or */
   --color-gold-200: #f5e7b8;
   --color-gold-300: #ebd68a;
@@ -67,7 +82,7 @@
   --tracking-caps: 0.12em;
 
   /* Longueur de ligne */
-  --measure-prose: 68ch;
+  --measure-prose: 65ch;
   --measure-lead: 34ch;
 
   /* Rythme */
@@ -78,8 +93,17 @@
 
   /* Mouvement */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Déplacement à l'écran : la courbe de `ease-out` ne va que dans un sens. */
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --duration-quick: 100ms;
   --duration-fast: 120ms;
   --duration-base: 180ms;
+  --duration-slow: 240ms;
+  /* Enfoncement à l'appui : l'interface accuse réception du geste. */
+  --press-scale: 0.97;
+
+  /* Plans : le sélecteur de thème flotte au-dessus du contenu. */
+  --z-dock: 30;
 }
 
 /* Thème clair */
@@ -92,6 +116,12 @@
   --surface-raised: var(--color-neutral-50);
   --border: var(--color-neutral-200);
   --border-strong: var(--color-neutral-300);
+  /*
+   * Bordure des champs et du sélecteur : 3,01:1 sur blanc, le minimum WCAG pour
+   * la limite d'un composant non textuel. Les bordures purement décoratives
+   * restent plus discrètes (--border, --border-strong).
+   */
+  --border-control: var(--color-neutral-475);
 
   --fg: var(--color-black);
   --fg-muted: var(--color-neutral-600);
@@ -103,25 +133,32 @@
   --accent-border: var(--color-gold-300);
 }
 
-/* Thème sombre - suit le système, sauf choix explicite */
+/*
+ * Thème sombre - suit le système, sauf choix explicite.
+ *
+ * Le sélecteur ne s'applique que si le script du `<head>` n'a rien posé : dès
+ * qu'un thème est choisi, l'attribut `data-theme` porte la décision et cette
+ * requête ne doit plus s'en mêler.
+ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     color-scheme: dark;
 
-    --bg: var(--color-black);
-    --bg-subtle: var(--color-neutral-900);
-    --surface: var(--color-neutral-900);
-    --surface-raised: var(--color-neutral-800);
-    --border: var(--color-neutral-800);
+    --bg: var(--color-ink-950);
+    --bg-subtle: var(--color-ink-925);
+    --surface: var(--color-ink-850);
+    --surface-raised: var(--color-ink-800);
+    --border: var(--color-ink-700);
     --border-strong: var(--color-neutral-700);
+    --border-control: var(--color-ink-500);
 
-    --fg: var(--color-neutral-50);
+    --fg: var(--color-neutral-100);
     --fg-muted: var(--color-neutral-400);
-    --fg-subtle: var(--color-neutral-500);
+    --fg-subtle: var(--color-neutral-450);
 
     --accent: var(--color-gold-500);
-    --accent-ui: var(--color-gold-500);
-    --accent-wash: #16130a;
+    --accent-ui: var(--color-gold-400);
+    --accent-wash: #17130a;
     --accent-border: var(--color-gold-800);
   }
 }
@@ -130,20 +167,21 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: var(--color-black);
-  --bg-subtle: var(--color-neutral-900);
-  --surface: var(--color-neutral-900);
-  --surface-raised: var(--color-neutral-800);
-  --border: var(--color-neutral-800);
+  --bg: var(--color-ink-950);
+  --bg-subtle: var(--color-ink-925);
+  --surface: var(--color-ink-850);
+  --surface-raised: var(--color-ink-800);
+  --border: var(--color-ink-700);
   --border-strong: var(--color-neutral-700);
+  --border-control: var(--color-ink-500);
 
-  --fg: var(--color-neutral-50);
+  --fg: var(--color-neutral-100);
   --fg-muted: var(--color-neutral-400);
-  --fg-subtle: var(--color-neutral-500);
+  --fg-subtle: var(--color-neutral-450);
 
   --accent: var(--color-gold-500);
-  --accent-ui: var(--color-gold-500);
-  --accent-wash: #16130a;
+  --accent-ui: var(--color-gold-400);
+  --accent-wash: #17130a;
   --accent-border: var(--color-gold-800);
 }
 
@@ -272,6 +310,18 @@ p {
   overflow-wrap: break-word;
 }
 
+/* Un titre ne laisse pas un mot seul sur sa dernière ligne. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* Un paragraphe évite de finir sur un mot orphelin, sans rééquilibrer les lignes. */
+p {
+  text-wrap: pretty;
+}
+
 /*
  * Le titre de la page n'est plus l'élément d'affichage : la marque l'est. Il
  * annonce ce que la page contient, sur une ligne, et laisse la place au reste.
@@ -294,7 +344,7 @@ h1 {
   font-weight: var(--weight-regular);
   letter-spacing: var(--tracking-lead);
   line-height: var(--leading-snug);
-  text-wrap: wrap;
+  text-wrap: pretty;
 }
 
 .hero-note {
@@ -680,12 +730,20 @@ h1 {
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   text-decoration: none;
-  transition: transform var(--duration-fast) var(--ease-out);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .source-primary:hover {
+    background: var(--fg-muted);
+  }
 }
 
 /* Retour immédiat à l'appui : l'interface accuse réception du geste. */
 .source-primary:active {
-  transform: scale(0.97);
+  transform: scale(var(--press-scale));
 }
 
 .source-list {
@@ -752,7 +810,7 @@ h1 {
   flex: 1;
   min-width: 0;
   padding: 0.65rem 0.85rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--fg);
@@ -780,12 +838,21 @@ h1 {
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  transition: transform var(--duration-fast) var(--ease-out);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .job-search-submit:hover {
+    background: var(--fg-muted);
+    border-color: var(--fg-muted);
+  }
 }
 
 /* Retour immédiat à l'appui : le bouton accuse réception du geste. */
 .job-search-submit:active {
-  transform: scale(0.97);
+  transform: scale(var(--press-scale));
 }
 
 /* ------------------------------------------------------------------ */
@@ -810,6 +877,21 @@ h1 {
   color: var(--fg);
   font-size: var(--text-sm);
   text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pagination-link:not(.is-disabled):hover {
+    border-color: var(--border-control);
+    background: var(--bg-subtle);
+  }
+}
+
+.pagination-link:not(.is-disabled):active {
+  transform: scale(var(--press-scale));
 }
 
 /*
@@ -888,8 +970,10 @@ h1 {
   transform: rotate(45deg);
 }
 
-.filters-toggle-button:hover {
-  border-color: var(--accent-ui);
+@media (hover: hover) and (pointer: fine) {
+  .filters-toggle-button:hover {
+    border-color: var(--accent-ui);
+  }
 }
 
 .filters-toggle > .filters {
@@ -942,12 +1026,16 @@ h1 {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   padding: 0.35rem 1rem;
-  transition: border-color var(--duration-fast) var(--ease-out);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
-.top-nav a:hover {
-  border-color: var(--accent-ui);
-  color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+  .top-nav a:hover {
+    border-color: var(--accent-ui);
+    color: var(--fg);
+  }
 }
 
 /* Nav a droite du hero ; boutons Filtres et Recherche CV homogenes. */
@@ -1032,9 +1120,11 @@ button.filters-toggle-button {
     color var(--duration-fast) var(--ease-out);
 }
 
-.dashboard-nav a:hover {
-  background: var(--surface-raised);
-  color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-nav a:hover {
+    background: var(--surface-raised);
+    color: var(--fg);
+  }
 }
 
 .dashboard-back {
@@ -1044,8 +1134,10 @@ button.filters-toggle-button {
   text-decoration: none;
 }
 
-.dashboard-back:hover {
-  color: var(--accent);
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-back:hover {
+    color: var(--accent);
+  }
 }
 
 .dashboard-main {
@@ -1145,7 +1237,7 @@ button.filters-toggle-button {
 .matching-textarea {
   width: 100%;
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--fg);
@@ -1157,13 +1249,28 @@ button.filters-toggle-button {
 .matching-button {
   justify-self: start;
   padding: 0.6rem 1.25rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--fg);
   font: inherit;
   font-weight: var(--weight-semibold);
   cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .matching-button:not(:disabled):hover {
+    border-color: var(--fg);
+    background: var(--bg-subtle);
+  }
+}
+
+.matching-button:not(:disabled):active {
+  transform: scale(var(--press-scale));
 }
 
 .matching-button:disabled {
@@ -1226,7 +1333,7 @@ button.filters-toggle-button {
 .profile-form textarea {
   width: 100%;
   padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--fg);
@@ -1239,13 +1346,28 @@ button.filters-toggle-button {
 .profile-form button {
   justify-self: start;
   padding: 0.6rem 1.25rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-control);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--fg);
   font: inherit;
   font-weight: var(--weight-semibold);
   cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-quick) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .profile-form button:hover {
+    border-color: var(--fg);
+    background: var(--bg-subtle);
+  }
+}
+
+.profile-form button:active {
+  transform: scale(var(--press-scale));
 }
 
 @media (max-width: 48rem) {
@@ -1258,5 +1380,107 @@ button.filters-toggle-button {
     height: auto;
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Sélecteur de thème : un contrôle segmenté, sobre et accessible      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Texte réservé aux lecteurs d'écran : la légende du groupe doit exister pour
+ * l'accessibilité, pas s'afficher. Le rognage garde l'élément lisible par les
+ * technologies d'assistance.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * Le sélecteur flotte en bas à droite : présent sur toutes les pages sans
+ * appartenir à aucune, et hors du flux pour ne pas décaler le contenu.
+ */
+.theme-dock {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: var(--z-dock);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 2px;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+
+.theme-toggle-option {
+  position: relative;
+  display: inline-flex;
+}
+
+/*
+ * L'entrée radio reste focusable mais invisible : c'est le libellé qui porte le
+ * style, anneau de focus compris. `display: none` la retirerait de l'ordre de
+ * tabulation et casserait la navigation au clavier, fournie par le navigateur.
+ */
+.theme-toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-toggle-label {
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+
+/* L'état actif reprend l'inversion noir/blanc de l'identité, pas une couleur. */
+.theme-toggle-input:checked + .theme-toggle-label {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.theme-toggle-input:focus-visible + .theme-toggle-label {
+  outline: 2px solid var(--accent-ui);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .theme-toggle-input:not(:checked) + .theme-toggle-label:hover {
+    color: var(--fg);
+  }
+}
+
+/*
+ * Mouvement réduit : la bascule de segment devient instantanée. L'état reste
+ * parfaitement lisible (fond inversé, libellé), et rien n'aide à comprendre
+ * dans un fondu de couleur : c'est le seul effet à retirer ici.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-label {
+    transition: none;
   }
 }

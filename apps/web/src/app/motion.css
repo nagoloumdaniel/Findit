@@ -1,0 +1,165 @@
+/*
+ * Mouvement de l'application.
+ *
+ * Le POURQUOI de ce fichier séparé : `globals.css` porte l'identité (couleurs,
+ * échelle, surfaces), ce fichier porte le mouvement. Les deux se lisent mieux
+ * séparés, et les jetons de courbe et de durée viennent de `globals.css`
+ * (`--ease-out`, `--duration-fast`, `--duration-base`) : on les étend, on ne crée
+ * pas un second système.
+ *
+ * La règle de décision, appliquée à chaque animation ici : le mouvement doit
+ * répondre à une question — « d'où vient ce contenu ? » — et non décorer. Un
+ * contenu qui remplace un squelette apparaîtrait sinon d'un coup, ce qui est plus
+ * brutal que pas d'animation du tout. Rien ici n'est déclenché au clavier, rien
+ * ne bouge en boucle, et tout cède la place sous `prefers-reduced-motion`.
+ */
+
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    /* 4 px : assez pour suggérer une provenance, trop peu pour être remarqué. */
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * Un bloc qui remplace un squelette. `both` garde l'état final après l'animation,
+ * sinon l'élément reviendrait à son opacité d'origine et clignoterait.
+ */
+.motion-reveal {
+  animation: motion-rise var(--duration-base) var(--ease-out) both;
+}
+
+/*
+ * Une liste qui arrive en cascade. Le décalage est court (30 ms) et **plafonné à
+ * six éléments** : au-delà, le contenu le plus bas attendrait plus longtemps qu'il
+ * ne faut pour un simple effet d'entrée. Le septième et les suivants partent
+ * ensemble, à 150 ms — la cascade se termine en moins de 350 ms.
+ */
+.motion-cascade > * {
+  animation: motion-rise var(--duration-base) var(--ease-out) both;
+}
+
+.motion-cascade > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.motion-cascade > *:nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.motion-cascade > *:nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.motion-cascade > *:nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.motion-cascade > *:nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.motion-cascade > *:nth-child(6) {
+  animation-delay: 150ms;
+}
+
+.motion-cascade > *:nth-child(n + 7) {
+  animation-delay: 150ms;
+}
+
+/*
+ * Les points d'application réels. Le POURQUOI de les nommer ici plutôt que
+ * d'ajouter une classe dans chaque page : la page reste la description du
+ * contenu, le mouvement reste dans un seul fichier, et une page future hérite du
+ * même mouvement sans que personne y pense. Le prix est un couplage assumé aux
+ * noms de classes — il est écrit ici noir sur blanc.
+ */
+.job-grid > li,
+.stat-grid > *,
+.dashboard-list > li {
+  animation: motion-rise var(--duration-base) var(--ease-out) both;
+}
+
+.job-grid > li:nth-child(2),
+.stat-grid > *:nth-child(2),
+.dashboard-list > li:nth-child(2) {
+  animation-delay: 30ms;
+}
+
+.job-grid > li:nth-child(3),
+.stat-grid > *:nth-child(3),
+.dashboard-list > li:nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.job-grid > li:nth-child(4),
+.stat-grid > *:nth-child(4),
+.dashboard-list > li:nth-child(4) {
+  animation-delay: 90ms;
+}
+
+.job-grid > li:nth-child(5),
+.stat-grid > *:nth-child(5),
+.dashboard-list > li:nth-child(5) {
+  animation-delay: 120ms;
+}
+
+.job-grid > li:nth-child(n + 6),
+.stat-grid > *:nth-child(n + 6),
+.dashboard-list > li:nth-child(n + 6) {
+  animation-delay: 150ms;
+}
+
+/* Le contenu d'une page arrive ensemble : c'est un seul bloc, pas une cascade. */
+.dashboard-main,
+.results {
+  animation: motion-fade var(--duration-fast) var(--ease-out) both;
+}
+
+/*
+ * Le changement de thème : sans transition, basculer du clair au sombre est un
+ * flash. On ne l'applique qu'aux propriétés de couleur, et seulement pendant la
+ * bascule — la classe est posée par `theme-toggle.tsx` puis retirée, pour ne pas
+ * transformer en transition chaque survol de l'application.
+ */
+html.motion-theme-switch,
+html.motion-theme-switch body {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+
+/*
+ * Mouvement réduit : on garde ce qui aide à comprendre (le fondu, qui dit qu'un
+ * contenu est arrivé) et on retire ce qui déplace. Le contenu reste visible :
+ * aucune animation ne doit pouvoir le laisser à opacité nulle.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .motion-reveal,
+  .motion-cascade > *,
+  .job-grid > li,
+  .stat-grid > *,
+  .dashboard-list > li {
+    animation: motion-fade var(--duration-fast) ease both;
+    animation-delay: 0ms;
+  }
+
+  html.motion-theme-switch,
+  html.motion-theme-switch body {
+    transition: none;
+  }
+}

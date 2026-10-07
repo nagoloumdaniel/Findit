@@ -2,7 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { ThemeToggle } from "../components/theme-toggle";
+import { THEME_INIT_SCRIPT } from "../lib/theme";
+
 import "./globals.css";
+import "./motion.css";
 
 /*
  * Les polices sont téléchargées à la compilation puis servies par
@@ -40,14 +44,30 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
   ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="fr" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+    /*
+     * `suppressHydrationWarning` est nécessaire ici : le script du `<head>`
+     * pose `data-theme` sur `<html>` avant l'hydratation, React ne peut donc
+     * pas comparer les attributs qu'il n'a pas rendus lui-même.
+     */
+    <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        {/*
+         * Script bloquant : il lit le choix stocké, sinon la préférence système,
+         * et pose le thème avant le premier rendu. Sans lui, la page s'affiche en
+         * clair puis bascule — un flash, plus laid que pas de thème du tout.
+         */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body>
+        <ThemeToggle />
+        {children}
+      </body>
     </html>
   );
 }

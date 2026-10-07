@@ -1,0 +1,94 @@
+/*
+ * Squelettes de chargement. Le POURQUOI : pendant qu'une route attend l'API,
+ * montrer la forme du contenu attendu (mêmes grilles, mêmes hauteurs) plutôt
+ * qu'une page vide. Quand les données arrivent, la mise en page ne saute pas :
+ * les blocs occupent déjà la place des cartes et des lignes.
+ *
+ * Le balayage est une animation CSS, donc exécutée hors du fil principal :
+ * `linear`, comme un mouvement constant, qui n'a ni accélération ni freinage.
+ * Les blocs ne bougent que par `transform` — jamais par `width` ou `height`.
+ */
+.skeleton-block {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+}
+
+.skeleton-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  animation: skeleton-sweep 1.8s linear infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Le balayage est purement décoratif : sous `prefers-reduced-motion`, il
+ * disparaît et le bloc reste, ce qui suffit à montrer la forme.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block::after {
+    animation: none;
+  }
+}
+
+.skeleton-shell {
+  min-height: 60vh;
+}
+
+.skeleton-line {
+  height: 0.875rem;
+  width: 100%;
+}
+
+.skeleton-line-short {
+  width: 58%;
+}
+
+.skeleton-line-tiny {
+  width: 32%;
+}
+
+.skeleton-heading {
+  height: 1.9rem;
+  width: 42%;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-badge {
+  height: 1.4rem;
+  width: 5.5rem;
+  border-radius: var(--radius-pill);
+}
+
+.skeleton-search {
+  height: 3rem;
+  width: min(100%, 34rem);
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-textarea {
+  height: 12rem;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton-button {
+  height: 2.75rem;
+  width: 9rem;
+  border-radius: var(--radius-pill);
+}
