@@ -261,6 +261,13 @@ lecture du document.
   Les 5 offres ont été repassées en `REJECTED` avec leur décision
   (`SchoolDetectionDecision`) et une ligne de journal — rien n'a été supprimé :
   **publiées 24 → 19**.
+- **Une école écartée laisse désormais son nom.** Les offres rejetées ne sont pas
+  stockées : le 2026-10-07, retrouver les écoles a demandé de fouiller les 861
+  entreprises, et une école dont toutes les offres sont refusées ne laissait
+  aucune trace. Les **deux** chemins d'école — `ingest.ts` (pipeline) et
+  `persist.ts` (agent) — mettent maintenant le nom de l'employeur dans le motif
+  (`Employeur écarté : « ISCOD ».`), donc dans le journal du pipeline et dans le
+  motif de rejet rendu à l'appelant. Vérifié par test des deux côtés.
 - **Ce qui est réellement parcouru (vérifié en base, 2026-10-07)** : **LinkedIn
   jamais** (0 `CompanySource`, 0 offre — refusé par la porte de conformité, faute
   de connecteur) ; **HelloWork, Welcome to the Jungle et Indeed** par leurs
