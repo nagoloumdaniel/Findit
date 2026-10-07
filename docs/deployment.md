@@ -134,11 +134,36 @@ Contrôles de vie : `GET /health` sur l'API ; la home répond sur 3100.
 
 ## 6. Exposition publique
 
+Déploiement en ligne au 2026-10-07 :
+
+- **Web** sur Vercel, projet `finditfr`, à l'adresse **https://finditfr.vercel.app**. La racine du
+  projet est `apps/web` ; l'installation et le build partent de la racine du monorepo (le web importe
+  `@findit/config` via son `dist`, donc l'installer seul ne suffit pas). `apps/web/vercel.json` porte
+  ces commandes, les réglages du projet vivent côté Vercel.
+- **API** sur Render, via `render.yaml` et l'image `Dockerfile.api` (contexte = racine du dépôt).
+  Render demande `DATABASE_URL`, `DEEPSEEK_API_KEY` et `INTERNAL_API_KEY` à la création : ce sont des
+  secrets, ils ne sont jamais écrits dans le fichier versionné.
+- **Worker** : nulle part pour l'instant. BullMQ a besoin d'un processus permanent ; il ne peut pas
+  aller sur Vercel et Render n'a pas été configuré pour lui. La collecte planifiée ne tourne donc que
+  sur une machine locale.
+
+Pourquoi l'API n'est pas sur Vercel : la plateforme n'exécute pas de processus permanent, et son
+routage de fonctions dans le dossier `api/` ne laissait passer **qu'un seul segment** après `/api`
+(mesuré le 2026-10-07 : `/api/jobs` répondait 200, `/api/jobs/stats` renvoyait un 404 **sans corps**,
+donc émis par Vercel et non par Nest ; les deux formes de catch-all ont été essayées). L'image Docker
+a été vérifiée en local avant d'aller sur Render : `/health`, `/api/jobs/stats`, `/api/jobs/filters`,
+`/api/matching/history` répondent 200, `/api/profile` répond 401 sans clé.
+
+Notes d'exploitation :
+
 - HTTPS par reverse proxy (Caddy/nginx) devant 3100 uniquement.
-- L'API 4000 ne s'expose JAMAIS directement : le web l'atteint en local.
-- Aucune authentification n'existe : le dashboard `/dashboard` et toutes les routes de l'API sont
-  ouverts. Une instance publique doit soit protéger le site entier par l'authentification du
-  reverse proxy, soit ne pas exposer le dashboard.
+- L'API 4000 ne s'expose JAMAIS directement : en local, le web l'atteint en interne.
+- L'authentification existe depuis le 2026-10-07, mais elle ne couvre que `/moi` (mot de passe
+  unique). Le dashboard `/dashboard` et les routes publiques de l'API restent ouverts : une instance
+  publique doit protéger le reste par l'authentification du reverse proxy ou en n'exposant pas le
+  dashboard.
+- L'offre gratuite de Render endort le service : le premier appel après une veille paie le
+  démarrage de Nest et la connexion à la base.
 
 ## 7. Sauvegardes et retour arrière
 

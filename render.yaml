@@ -1,0 +1,36 @@
+# Déploiement de l'API Findit sur Render.
+#
+# Le POURQUOI de Render : l'API NestJS a besoin d'un processus permanent, et
+# Vercel n'en exécute pas — son routage de fonctions ne laissait passer qu'un
+# segment après /api (mesuré le 2026-10-07 : /api/jobs répondait, /api/jobs/stats
+# non). L'image Docker, elle, a été vérifiée en local : les cinq routes testées
+# répondent, y compris celles que Vercel refusait.
+#
+# Le POURQUOI de `sync: false` sur trois variables : ce sont des secrets. Render
+# les demande à la création du service et ne les stocke jamais dans ce fichier,
+# qui est versionné.
+
+services:
+  - type: web
+    name: findit-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Le web déployé sur Vercel : seule origine autorisée à appeler l'API.
+      - key: CORS_ORIGIN
+        value: https://finditfr.vercel.app
+      # Les trois secrets viennent de l'environnement local (.env) ; ils sont
+      # saisis à la création du service, jamais écrits ici.
+      - key: DATABASE_URL
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: INTERNAL_API_KEY
+        sync: false

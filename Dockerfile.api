@@ -1,0 +1,42 @@
+# Image de l'API Findit, portable entre Railway, Render, Fly et un VPS.
+#
+# Le POURQUOI : l'API NestJS a besoin d'un processus permanent. Vercel n'en
+# exécute pas, et son routage de fonctions ne laisse passer qu'un segment après
+# /api (mesuré le 2026-10-07 : /api/jobs répondait, /api/jobs/stats non). Une
+# image Docker règle le problème par construction et ne lie à aucune plateforme.
+#
+# Le contexte de construction est la RACINE du dépôt, pas apps/api :
+#   docker build -f Dockerfile.api -t findit-api .
+# Il faut tout le monorepo, parce que l'API importe les paquets du workspace
+# (@findit/config, @findit/database…) qui se consomment via leur `dist`.
+
+# syntax=docker/dockerfile:1
+
+FROM node:24-alpine AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+# pnpm est épinglé par le champ `packageManager` du package.json.
+RUN corepack enable
+
+FROM base AS build
+WORKDIR /app
+
+# Une URL factice pour la génération du client Prisma : `prisma.config.ts` lit
+# `DATABASE_URL`, mais générer un client ne se connecte à rien. La vraie URL
+# arrive à l'exécution, par l'environnement de la plateforme.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
+COPY apps ./apps
+COPY packages ./packages
+RUN pnpm install --frozen-lockfile
+RUN pnpm turbo run build --filter=@findit/api
+
+FROM base AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+# L'API ne parle pas à Redis : seul le worker le fait, et il ne tourne pas ici.
+COPY --from=build /app ./
+# La plateforme impose son port via PORT ; 4000 sert de valeur locale.
+EXPOSE 4000
+CMD ["node", "apps/api/dist/main.js"]

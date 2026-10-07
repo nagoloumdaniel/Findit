@@ -19,7 +19,14 @@ const bootstrap = async (): Promise<void> => {
   app.enableCors({ origin: env.CORS_ORIGIN });
   app.enableShutdownHooks();
 
-  await app.listen(env.API_PORT, "0.0.0.0");
+  /*
+   * Le port vient de la plateforme quand elle en impose un (Railway, Render,
+   * Fly la publient dans `PORT`) : sinon l'API écouterait sur 4000 et resterait
+   * injoignable derrière le proxy. `API_PORT` reste la valeur par défaut, pour
+   * le développement local.
+   */
+  const port = Number(process.env.PORT ?? env.API_PORT);
+  await app.listen(port, "0.0.0.0");
 };
 
 void bootstrap();
