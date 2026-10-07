@@ -7,8 +7,8 @@ packages/database/data
 pnpm-lock.yaml
 docs/superpowers/plans
 .claude
-# Ã‰tat local du CLI Vercel (projet liÃ©) : ni formatÃ©, ni commitÃ©.
+# Ãƒâ€°tat local du CLI Vercel (projet liÃƒÂ©) : ni formatÃƒÂ©, ni commitÃƒÂ©.
 .vercel
 # Copies de skills creees par l installateur (outillage local, pas du code).
-.agents
-agent
+/.agents
+/agent
