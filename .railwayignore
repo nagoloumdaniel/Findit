@@ -1,0 +1,25 @@
+# Ce que l'envoi vers Railway n'a pas besoin d'emporter.
+#
+# Le POURQUOI : `railway up` téléverse le dossier courant, et la construction se
+# fait ensuite dans l'image (où `.dockerignore` s'applique). Sans ce fichier, les
+# paquets de skills installés (`.claude`, 100 Mo) et les dépendances locales
+# partiraient dans le téléversement pour rien.
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.turbo
+# Outillage de l'agent : présent en local, inutile à la construction.
+.claude
+.agents
+agent
+# Historique et pièces locales.
+.git
+.worktrees
+docs/superpowers
+**/*.log
+.env
+.env.*
+!.env.example
+.vercel
