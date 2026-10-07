@@ -140,19 +140,27 @@ Déploiement en ligne au 2026-10-07 :
   projet est `apps/web` ; l'installation et le build partent de la racine du monorepo (le web importe
   `@findit/config` via son `dist`, donc l'installer seul ne suffit pas). `apps/web/vercel.json` porte
   ces commandes, les réglages du projet vivent côté Vercel.
-- **API** sur Render, via `render.yaml` et l'image `Dockerfile.api` (contexte = racine du dépôt).
-  Render demande `DATABASE_URL`, `DEEPSEEK_API_KEY` et `INTERNAL_API_KEY` à la création : ce sont des
-  secrets, ils ne sont jamais écrits dans le fichier versionné.
-- **Worker** : nulle part pour l'instant. BullMQ a besoin d'un processus permanent ; il ne peut pas
-  aller sur Vercel et Render n'a pas été configuré pour lui. La collecte planifiée ne tourne donc que
-  sur une machine locale.
+- **API** sur Vercel, projet `finditfr-api`, à l'adresse **https://finditfr-api.vercel.app**. Racine
+  `apps/api` ; l'entrée serverless est `apps/api/api/[...chemin].ts` (voir plus bas). Variables posées
+  sur le projet : `DATABASE_URL`, `DEEPSEEK_API_KEY`, `INTERNAL_API_KEY`, `CORS_ORIGIN`,
+  `API_PORT`, `NODE_ENV`. Aucune ne va dans le dépôt.
+- **Worker** : nulle part pour l'instant. BullMQ a besoin d'un processus permanent, que Vercel
+  n'offre pas. La collecte planifiée ne tourne donc que sur une machine locale.
 
-Pourquoi l'API n'est pas sur Vercel : la plateforme n'exécute pas de processus permanent, et son
-routage de fonctions dans le dossier `api/` ne laissait passer **qu'un seul segment** après `/api`
-(mesuré le 2026-10-07 : `/api/jobs` répondait 200, `/api/jobs/stats` renvoyait un 404 **sans corps**,
-donc émis par Vercel et non par Nest ; les deux formes de catch-all ont été essayées). L'image Docker
-a été vérifiée en local avant d'aller sur Render : `/health`, `/api/jobs/stats`, `/api/jobs/filters`,
-`/api/matching/history` répondent 200, `/api/profile` répond 401 sans clé.
+**Le piège de routage, et comment il est contourné.** Le routage de Vercel dans le dossier `api/` ne
+laisse passer **qu'un seul segment** après `/api` : mesuré le 2026-10-07, avec les deux formes de
+catch-all, `/api/jobs` répondait 200 tandis que `/api/jobs/stats` renvoyait un 404 **sans corps** —
+donc émis par la plateforme, pas par Nest (qui répond toujours du JSON). Cinq relais d'une ligne
+rétablissent la profondeur manquante : `api/jobs/[...chemin].ts`, `api/agent/[...chemin].ts`,
+`api/agent/runs/[...chemin].ts`, `api/matching/[...chemin].ts`,
+`api/matching/history/[...chemin].ts`, chacun réexportant le gestionnaire unique. **À supprimer** le
+jour où la plateforme route les catch-all sur plusieurs segments : c'est un contournement, pas une
+architecture.
+
+**Le worker, plus tard.** Une image Docker a été construite et vérifiée pour héberger l'API sur une
+plateforme à processus permanent (les cinq routes testées répondaient, y compris celles que Vercel
+refusait alors). Elle a été retirée du dépôt quand Vercel a suffi ; elle reste dans l'historique Git
+si le worker doit être hébergé un jour — c'est ce cas-là qui la justifiera, pas l'API.
 
 Notes d'exploitation :
 

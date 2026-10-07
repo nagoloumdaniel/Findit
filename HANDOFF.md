@@ -245,6 +245,29 @@ vision, et le fait que la clé de compte n'est pas une clé API.
 Toutes les mesures ci-dessous sont datées ; elles ne sont pas rejouées à chaque
 lecture du document.
 
+- **En ligne et fonctionnel (2026-10-07).** **Web** : https://finditfr.vercel.app
+  (projet Vercel `finditfr`, racine `apps/web`). **API** :
+  https://finditfr-api.vercel.app (projet `finditfr-api`, racine `apps/api`,
+  entrée serverless `apps/api/api/[...chemin].ts`). Vérifié en production :
+  12 offres à l'accueil, page de détail d'une offre en 200, `/moi` sans cookie
+  renvoie vers `/connexion`, la connexion au mot de passe aboutit sur `/moi`,
+  `/api/profile` répond 401 sans clé et 200 avec.
+  - **Le piège de routage Vercel, et sa mesure.** Le routage du dossier `api/` ne
+    laisse passer **qu'un seul segment** après `/api` : `/api/jobs` répondait 200
+    alors que `/api/jobs/stats` renvoyait un 404 **sans corps** — donc émis par la
+    plateforme et non par Nest, qui répond toujours du JSON. Les deux formes de
+    catch-all (`[[...chemin]]` puis `[...chemin]`) ont été essayées, sans effet.
+    Cinq relais d'une ligne rétablissent la profondeur manquante, chacun
+    réexportant le gestionnaire unique. C'est un contournement à supprimer le jour
+    où la plateforme route les catch-all correctement.
+  - Une image Docker (`Dockerfile.api`) et un blueprint Render avaient été
+    préparés et **vérifiés** (conteneur lancé, cinq routes testées dont celles que
+    Vercel refusait alors). Ils ont été **retirés du dépôt** dès que Vercel a
+    suffi ; ils restent dans l'historique Git, et c'est l'hébergement du **worker**
+    qui les justifierait un jour, pas l'API.
+  - Le **worker n'est hébergé nulle part** : BullMQ exige un processus permanent
+    que Vercel n'offre pas. La collecte planifiée ne tourne que sur une machine
+    locale.
 - **Espace personnel `/moi` (2026-10-07).** Findit sert d'abord **son utilisateur** :
   le dashboard, jusque-là baptisé « Administration », est repris. La page `/moi`
   montre le profil (nom, titre, ville, contact), les **compétences**, les langues,
