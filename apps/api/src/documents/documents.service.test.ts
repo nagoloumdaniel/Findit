@@ -121,6 +121,37 @@ describe("DocumentsService - génération de CV", () => {
     expect(data.skills.map((skill) => skill.name)).toEqual(["typescript", "css", "react"]);
   });
 
+  it("réordonne les expériences pour mettre en tête celles qui touchent l'offre", async () => {
+    const { profileService, service } = createDeps();
+    profileService.get.mockResolvedValue({
+      ...profile(),
+      skills: ["typescript"],
+      experiences: [
+        {
+          title: "Développeuse CSS",
+          company: "X",
+          period: "2022",
+          description: "Mise en page CSS.",
+        },
+        {
+          title: "Développeuse TypeScript",
+          company: "Y",
+          period: "2024",
+          description: "Applications TypeScript.",
+        },
+      ],
+    });
+    renderMock.renderCvPdf.mockResolvedValue(Buffer.from("%PDF"));
+
+    await service.generateCv({ jobSlug: "dev-acme" });
+
+    const data = renderMock.renderCvPdf.mock.calls[0]?.[0] as { experiences: { title: string }[] };
+    expect(data.experiences.map((experience) => experience.title)).toEqual([
+      "Développeuse TypeScript",
+      "Développeuse CSS",
+    ]);
+  });
+
   it("rend un DOCX quand le format le demande", async () => {
     const { service } = createDeps();
     renderMock.renderCvDocx.mockResolvedValue(Buffer.from("PK"));

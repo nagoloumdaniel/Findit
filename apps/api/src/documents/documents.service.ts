@@ -132,7 +132,12 @@ export class DocumentsService {
     const job = await this.#findJob(request.jobSlug);
 
     const summary = await this.#buildSummary(profile, job, env);
-    const data = this.#toCvData(profile, summary, this.#orderSkills(profile.skills, job));
+    const data = this.#toCvData(
+      profile,
+      summary,
+      this.#orderSkills(profile.skills, job),
+      this.#orderExperiences(profile.experiences, job),
+    );
 
     const options: CvRenderOptions = {
       ...(request.template !== undefined ? { template: request.template } : {}),
@@ -167,8 +172,8 @@ export class DocumentsService {
     const profile = await this.profile.get();
     const job = await this.#findJob(jobSlug);
     // Le résumé n'entre pas dans le score : seuls les faits structurés comptent.
-    // L'ordre des compétences n'influe pas sur le score non plus.
-    const data = this.#toCvData(profile, undefined, profile.skills);
+    // L'ordre des compétences et des expériences n'influe pas sur le score non plus.
+    const data = this.#toCvData(profile, undefined, profile.skills, profile.experiences);
     return scoreCvDocument(data, this.#toScoredJob(job));
   }
 
@@ -433,6 +438,34 @@ export class DocumentsService {
   }
 
   /**
+   * Réordonne les expériences pour mettre en tête celles dont l'intitulé ou la
+   * description nomme une compétence de l'offre. Même principe que les
+   * compétences : déterministe, sans rien ajouter, ordre d'origine conservé
+   * pour le reste.
+   */
+  #orderExperiences(
+    experiences: ProfileView["experiences"],
+    job: JobView,
+  ): ProfileView["experiences"] {
+    if (experiences.length <= 1) {
+      return experiences;
+    }
+    const offerIds = new Set(
+      detectSkillsInText(
+        [job.title, ...job.requirements, ...job.responsibilities, job.description].join("\n"),
+      ).map((entry) => entry.id),
+    );
+    const relevant = (experience: ProfileView["experiences"][number]): boolean =>
+      detectSkillsInText([experience.title, experience.description].join("\n")).some((entry) =>
+        offerIds.has(entry.id),
+      );
+    return [
+      ...experiences.filter(relevant),
+      ...experiences.filter((experience) => !relevant(experience)),
+    ];
+  }
+
+  /**
    * Construit les données du CV depuis les faits réels du profil. Les périodes
    * libres des expériences sont recopiées telles quelles, jamais découpées en
    * dates qui n'ont pas été saisies.
@@ -441,6 +474,7 @@ export class DocumentsService {
     profile: ProfileView,
     summary: string | undefined,
     orderedSkills: string[],
+    orderedExperiences: ProfileView["experiences"],
   ): CvDocumentData {
     return {
       identity: {
@@ -451,7 +485,7 @@ export class DocumentsService {
         title: profile.headline ?? undefined,
       },
       summary,
-      experiences: profile.experiences.map((experience) => ({
+      experiences: orderedExperiences.map((experience) => ({
         title: experience.title,
         company: experience.company,
         startDate: experience.period === "" ? undefined : experience.period,
