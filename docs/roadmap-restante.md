@@ -70,7 +70,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Dépend** : 2.1.
 - **Acceptation** : le score affiché correspond à la version réellement téléchargée ; aucune compétence inventée pour gonfler le score.
 
-### 2.3 Adaptation IA fine du contenu de CV
+### 2.3 ✅ Adaptation IA fine du contenu de CV
 
 - **Objectif** : réordonner les expériences/compétences réellement pertinentes, reformuler les réalisations, adapter le résumé aux termes de l'annonce, sans rien inventer (§14.4).
 - **État** : le CV est généré déterministiquement depuis les faits du profil ; résumé IA optionnel.

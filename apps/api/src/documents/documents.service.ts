@@ -314,7 +314,9 @@ export class DocumentsService {
           system:
             "Rédige un résumé de CV de deux ou trois phrases, en français. " +
             "N'affirme que des faits présents dans le profil fourni : aucune compétence, " +
-            "entreprise, école ou date ne doit être ajoutée.",
+            "entreprise, école ou date ne doit être ajoutée. " +
+            "Reprends les termes de l'offre uniquement quand ils correspondent à des " +
+            "compétences réellement présentes dans le profil.",
           prompt: this.#summaryPrompt(profile, job),
           temperature: 0.3,
         });
@@ -340,11 +342,17 @@ export class DocumentsService {
       formation: profile.education.map((e) => ({ ecole: e.school, diplome: e.degree })),
     };
     return [
-      "Résume ce profil pour cette offre.",
+      "Résume ce profil pour cette offre, en reprenant les termes de l'offre quand ils correspondent au profil.",
       "Profil (seule source de faits sur le candidat) :",
       JSON.stringify(facts),
       "Offre visée :",
-      JSON.stringify({ titre: job.title, entreprise: job.companyName, ville: job.city }),
+      JSON.stringify({
+        titre: job.title,
+        entreprise: job.companyName,
+        ville: job.city,
+        exigences: job.requirements,
+        missions: job.responsibilities,
+      }),
     ].join("\n");
   }
 
