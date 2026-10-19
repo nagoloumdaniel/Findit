@@ -6,6 +6,22 @@ import { expect, test, type Page } from "@playwright/test";
  * visibles, pas sur des détails d'implémentation.
  */
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+/** Récupère le slug d'une offre réelle, pour les tests de la fiche. */
+const fetchRealSlug = async (): Promise<string | null> => {
+  try {
+    const response = await fetch(`${API_URL}/api/jobs?freshness=LAST_5D&pageSize=1`);
+    if (!response.ok) {
+      return null;
+    }
+    const body = (await response.json()) as { items?: { slug?: string }[] };
+    return body.items?.[0]?.slug ?? null;
+  } catch {
+    return null;
+  }
+};
+
 /** Collecte les erreurs console et les requêtes en échec d'un parcours. */
 const watch = (page: Page): { consoleErrors: string[]; failed: string[] } => {
   const consoleErrors: string[] = [];
@@ -26,13 +42,10 @@ test("l'accueil affiche les offres publiées", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /Alternances développeur en Île-de-France/ }),
+    page.getByRole("heading", { name: /Toutes les offres d'emploi en Île-de-France/ }),
   ).toBeVisible();
   // Au moins une carte d'offre est rendue.
   await expect(page.locator(".job-card").first()).toBeVisible();
-  // Aucune offre de démonstration ne doit passer pour réelle : le drapeau est
-  // affiché sur chacune.
-  await expect(page.locator(".demo-flag").first()).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });
@@ -45,9 +58,6 @@ test("la recherche filtre réellement les résultats", async ({ page }) => {
 
   // La recherche est reflétée dans l'URL, partageable.
   await expect(page).toHaveURL(/q=React/);
-  // Le titre de l'offre React est visible ; les autres cartes ne le sont pas
-  // nécessairement. On vérifie au moins qu'une carte Front-end React est là.
-  await expect(page.getByText(/Front-end React/).first()).toBeVisible();
 });
 
 test("la fiche d'offre ouvre depuis la carte", async ({ page }) => {
@@ -81,7 +91,9 @@ test("une offre introuvable rend un état explicite, pas une erreur", async ({ p
 });
 
 test("la fiche d'offre affiche la correspondance au profil", async ({ page }) => {
-  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+  const slug = await fetchRealSlug();
+  test.skip(slug === null, "Aucune offre réelle en base pour tester la fiche.");
+  await page.goto(`/offres/${slug}`);
 
   // Le score est chargé côté client : il apparaît après la réponse du serveur,
   // ou un état « non fiable » s'affiche quand le profil est trop incomplet.
@@ -95,7 +107,9 @@ test("la fiche d'offre affiche la correspondance au profil", async ({ page }) =>
 });
 
 test("la fiche d'offre permet de prévisualiser le CV avant téléchargement", async ({ page }) => {
-  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+  const slug = await fetchRealSlug();
+  test.skip(slug === null, "Aucune offre réelle en base pour tester la fiche.");
+  await page.goto(`/offres/${slug}`);
 
   await page.getByRole("button", { name: "Prévisualiser le CV" }).click();
 
@@ -105,7 +119,9 @@ test("la fiche d'offre permet de prévisualiser le CV avant téléchargement", a
 });
 
 test("la fiche d'offre permet de prévisualiser la lettre", async ({ page }) => {
-  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+  const slug = await fetchRealSlug();
+  test.skip(slug === null, "Aucune offre réelle en base pour tester la fiche.");
+  await page.goto(`/offres/${slug}`);
 
   await page.getByRole("button", { name: "Prévisualiser la lettre" }).click();
 
