@@ -18,7 +18,12 @@ import type { FreshnessQuery } from "../jobs/job-query.js";
 import { ProfileKeyGuard } from "../profile/profile.controller.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { MatchingService } from "./matching.service.js";
-import type { MatchItem, MatchingRunDetail, MatchingRunSummary, RankedItem } from "./matching.service.js";
+import type {
+  MatchItem,
+  MatchingRunDetail,
+  MatchingRunSummary,
+  RankedItem,
+} from "./matching.service.js";
 
 const scoreBodySchema = z.object({ cvText: z.string().min(1) });
 

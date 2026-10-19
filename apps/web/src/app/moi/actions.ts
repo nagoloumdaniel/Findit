@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 
 import { saveProfile } from "../../lib/profile-api";
-import type { ProfileExperience, ProfileLanguage, ProfileLink } from "../../lib/profile-api";
+import type {
+  ProfileCertification,
+  ProfileContractPreference,
+  ProfileEducation,
+  ProfileExperience,
+  ProfileLanguage,
+  ProfileLink,
+  ProfileProject,
+} from "../../lib/profile-api";
 
 /*
  * Enregistrement du profil depuis le formulaire.
@@ -62,6 +70,83 @@ const parseExperiences = (value: string): ProfileExperience[] =>
     })
     .filter((experience) => experience.title.length > 0 && experience.company.length > 0);
 
+/** Une ligne « école | diplôme | domaine | début | fin | description » par formation. */
+const parseEducation = (value: string): ProfileEducation[] =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [school = "", degree = "", field = "", startDate = "", endDate = "", description = ""] =
+        line.split("|").map((part) => part.trim());
+      return {
+        school,
+        degree,
+        field,
+        ...(startDate === "" ? {} : { startDate }),
+        ...(endDate === "" ? {} : { endDate }),
+        ...(description === "" ? {} : { description }),
+      };
+    })
+    .filter((education) => education.school.length > 0);
+
+/** Une ligne « nom | organisme | date » par certification. */
+const parseCertifications = (value: string): ProfileCertification[] =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [name = "", issuer = "", date = ""] = line.split("|").map((part) => part.trim());
+      return { name, ...(issuer === "" ? {} : { issuer }), ...(date === "" ? {} : { date }) };
+    })
+    .filter((certification) => certification.name.length > 0);
+
+/** Une ligne « nom | rôle | description | url | compétences » par projet. */
+const parseProjects = (value: string): ProfileProject[] =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [name = "", role = "", description = "", url = "", skillsRaw = ""] = line
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        name,
+        ...(role === "" ? {} : { role }),
+        ...(description === "" ? {} : { description }),
+        ...(url === "" ? {} : { url }),
+        skills: splitList(skillsRaw),
+      };
+    })
+    .filter((project) => project.name.length > 0);
+
+/** Les six contrats reconnus, pour valider la saisie et rejeter le reste. */
+const CONTRACT_PREFERENCES: ProfileContractPreference[] = [
+  "ALTERNANCE",
+  "INTERNSHIP",
+  "CDI",
+  "CDD",
+  "INTERIM",
+  "STUDENT_JOB",
+];
+
+/** Contrats recherchés, saisis en liste à virgules ; toute valeur inconnue est ignorée. */
+const parseContractPreferences = (value: string): ProfileContractPreference[] => {
+  const seen = new Set<ProfileContractPreference>();
+  for (const raw of splitList(value)) {
+    const normalized = raw.toUpperCase();
+    if (
+      (CONTRACT_PREFERENCES as string[]).includes(normalized) &&
+      !seen.has(normalized as ProfileContractPreference)
+    ) {
+      seen.add(normalized as ProfileContractPreference);
+    }
+  }
+  return [...seen];
+};
+
 const text = (form: FormData, key: string): string => {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -81,6 +166,10 @@ export const saveProfileAction = async (form: FormData): Promise<void> => {
     skills: splitList(text(form, "skills")),
     languages: parseLanguages(text(form, "languages")),
     experiences: parseExperiences(text(form, "experiences")),
+    education: parseEducation(text(form, "education")),
+    certifications: parseCertifications(text(form, "certifications")),
+    projects: parseProjects(text(form, "projects")),
+    preferredContracts: parseContractPreferences(text(form, "preferredContracts")),
     cvText: optional(text(form, "cvText")),
   });
 

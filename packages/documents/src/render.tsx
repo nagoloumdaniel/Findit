@@ -38,7 +38,10 @@ const trimWords = (text: string, maxWords: number): string => {
   if (words.length <= maxWords) {
     return text;
   }
-  return `${words.slice(0, maxWords).join(" ").replace(/[,;:]$/, "")}.`;
+  return `${words
+    .slice(0, maxWords)
+    .join(" ")
+    .replace(/[,;:]$/, "")}.`;
 };
 
 /*

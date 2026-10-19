@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { fetchMatchingHistory } from "../../lib/api";
+import { contractLabels } from "../../lib/labels";
 import { fetchProfile, isProfileConfigured } from "../../lib/profile-api";
 
 import { saveProfileAction } from "./actions";
@@ -97,6 +98,85 @@ export default async function MySpacePage() {
                   {experience.description === "" ? "" : ` · ${experience.description}`}
                 </span>
               </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-label="Formation">
+        <h2>Formation</h2>
+        {profile.education.length === 0 ? (
+          <p className="dashboard-lead">Aucune formation enregistrée.</p>
+        ) : (
+          <ul className="dashboard-list">
+            {profile.education.map((education) => (
+              <li
+                className="dashboard-row"
+                key={`${education.school}-${education.degree}-${education.field}`}
+              >
+                <span className="dashboard-row-title">
+                  {education.degree === ""
+                    ? education.school
+                    : `${education.degree} - ${education.school}`}
+                </span>
+                <span className="dashboard-row-meta">
+                  {[education.field, education.startDate, education.endDate]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  {education.description === "" ? "" : ` · ${education.description}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-label="Certifications">
+        <h2>Certifications</h2>
+        {profile.certifications.length === 0 ? (
+          <p className="dashboard-lead">Aucune certification enregistrée.</p>
+        ) : (
+          <ul className="dashboard-list">
+            {profile.certifications.map((certification) => (
+              <li className="dashboard-row" key={`${certification.name}-${certification.issuer}`}>
+                <span className="dashboard-row-title">{certification.name}</span>
+                <span className="dashboard-row-meta">
+                  {[certification.issuer, certification.date].filter(Boolean).join(" · ")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-label="Projets">
+        <h2>Projets</h2>
+        {profile.projects.length === 0 ? (
+          <p className="dashboard-lead">Aucun projet enregistré.</p>
+        ) : (
+          <ul className="dashboard-list">
+            {profile.projects.map((project) => (
+              <li className="dashboard-row" key={`${project.name}-${project.url ?? ""}`}>
+                <span className="dashboard-row-title">{project.name}</span>
+                <span className="dashboard-row-meta">
+                  {[project.role, project.description].filter(Boolean).join(" · ")}
+                  {project.url === undefined || project.url === "" ? "" : ` · ${project.url}`}
+                  {project.skills.length === 0 ? "" : ` · ${project.skills.join(", ")}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-label="Contrats recherchés">
+        <h2>Contrats recherchés</h2>
+        {profile.preferredContracts.length === 0 ? (
+          <p className="dashboard-lead">Aucune préférence de contrat enregistrée.</p>
+        ) : (
+          <ul className="tag-list">
+            {profile.preferredContracts.map((contract) => (
+              <li key={contract}>{contractLabels[contract] ?? contract}</li>
             ))}
           </ul>
         )}
@@ -209,6 +289,66 @@ export default async function MySpacePage() {
                 )
                 .join("\n")}
             />
+          </label>
+          <label>
+            Formations (une par ligne : « école | diplôme | domaine | début | fin | description »)
+            <textarea
+              name="education"
+              rows={4}
+              defaultValue={profile.education
+                .map((education) =>
+                  [
+                    education.school,
+                    education.degree,
+                    education.field,
+                    education.startDate ?? "",
+                    education.endDate ?? "",
+                    education.description ?? "",
+                  ]
+                    .join(" | ")
+                    .replace(/( \| )+$/u, ""),
+                )
+                .join("\n")}
+            />
+          </label>
+          <label>
+            Certifications (une par ligne : « nom | organisme | date »)
+            <textarea
+              name="certifications"
+              rows={3}
+              defaultValue={profile.certifications
+                .map((certification) =>
+                  [certification.name, certification.issuer ?? "", certification.date ?? ""]
+                    .join(" | ")
+                    .replace(/( \| )+$/u, ""),
+                )
+                .join("\n")}
+            />
+          </label>
+          <label>
+            Projets (une par ligne : « nom | rôle | description | url | compétences »)
+            <textarea
+              name="projects"
+              rows={4}
+              defaultValue={profile.projects
+                .map((project) =>
+                  [
+                    project.name,
+                    project.role ?? "",
+                    project.description ?? "",
+                    project.url ?? "",
+                    project.skills.join(", "),
+                  ]
+                    .join(" | ")
+                    .replace(/( \| )+$/u, ""),
+                )
+                .join("\n")}
+            />
+          </label>
+          <label>
+            Contrats recherchés (séparés par des virgules : ALTERNANCE, INTERNSHIP, CDI, CDD,
+            INTERIM, STUDENT_JOB)
+            <input name="preferredContracts" defaultValue={profile.preferredContracts.join(", ")} />
           </label>
           <label>
             CV (texte collé)

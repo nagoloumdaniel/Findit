@@ -31,9 +31,7 @@ export const groupSkills = (skills: CvSkill[]): SkillGroup[] | null => {
 
   const groups = SKILL_GROUPS.map((group) => ({
     ...group,
-    names: skills
-      .filter((skill) => skill.category === group.category)
-      .map((skill) => skill.name),
+    names: skills.filter((skill) => skill.category === group.category).map((skill) => skill.name),
   })).filter((group) => group.names.length > 0);
 
   const leftovers = skills

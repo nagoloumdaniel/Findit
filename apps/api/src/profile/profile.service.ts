@@ -30,6 +30,39 @@ export type ProfileExperience = {
   description: string;
 };
 
+/** Une formation : école, diplôme, domaine et période. */
+export type ProfileEducation = {
+  school: string;
+  degree: string;
+  field: string;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  description?: string | undefined;
+};
+
+/** Une certification, avec organisme et date facultatives. */
+export type ProfileCertification = {
+  name: string;
+  issuer?: string | undefined;
+  date?: string | undefined;
+};
+
+/** Un projet personnel ou académique, avec ses compétences. */
+export type ProfileProject = {
+  name: string;
+  role?: string | undefined;
+  description?: string | undefined;
+  url?: string | undefined;
+  skills: string[];
+};
+
+/**
+ * Un type de contrat recherché. Sous-ensemble exact de l'enum `ContractType` :
+ * aucune valeur hors de cette liste n'entre dans le profil.
+ */
+export type ProfileContractPreference =
+  "ALTERNANCE" | "INTERNSHIP" | "CDI" | "CDD" | "INTERIM" | "STUDENT_JOB";
+
 /**
  * Forme JSON du profil, telle que le contrat d'API la promet au web.
  *
@@ -47,6 +80,10 @@ export type ProfileView = {
   skills: string[];
   languages: ProfileLanguage[];
   experiences: ProfileExperience[];
+  education: ProfileEducation[];
+  certifications: ProfileCertification[];
+  projects: ProfileProject[];
+  preferredContracts: ProfileContractPreference[];
   cvText: string | null;
   updatedAt: string | null;
 };
@@ -66,6 +103,10 @@ export type ProfileInput = {
   skills?: string[] | undefined;
   languages?: ProfileLanguage[] | undefined;
   experiences?: ProfileExperience[] | undefined;
+  education?: ProfileEducation[] | undefined;
+  certifications?: ProfileCertification[] | undefined;
+  projects?: ProfileProject[] | undefined;
+  preferredContracts?: ProfileContractPreference[] | undefined;
   cvText?: string | null | undefined;
 };
 
@@ -80,6 +121,10 @@ interface ProfileRow {
   readonly skills: string[];
   readonly languages: unknown;
   readonly experiences: unknown;
+  readonly education: unknown;
+  readonly certifications: unknown;
+  readonly projects: unknown;
+  readonly preferredContracts: string[];
   readonly cvText: string | null;
   readonly updatedAt: Date;
 }
@@ -95,6 +140,10 @@ interface ProfileWrite {
   skills?: string[];
   languages?: ProfileLanguage[];
   experiences?: ProfileExperience[];
+  education?: ProfileEducation[];
+  certifications?: ProfileCertification[];
+  projects?: ProfileProject[];
+  preferredContracts?: ProfileContractPreference[];
   cvText?: string | null;
 }
 
@@ -109,6 +158,10 @@ const emptyProfile = (): ProfileView => ({
   skills: [],
   languages: [],
   experiences: [],
+  education: [],
+  certifications: [],
+  projects: [],
+  preferredContracts: [],
   cvText: null,
   updatedAt: null,
 });
@@ -128,6 +181,10 @@ const toView = (row: ProfileRow): ProfileView => ({
   skills: row.skills,
   languages: row.languages as ProfileLanguage[],
   experiences: row.experiences as ProfileExperience[],
+  education: row.education as ProfileEducation[],
+  certifications: row.certifications as ProfileCertification[],
+  projects: row.projects as ProfileProject[],
+  preferredContracts: row.preferredContracts as ProfileContractPreference[],
   cvText: row.cvText,
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -167,6 +224,11 @@ export class ProfileService {
     if (input.skills !== undefined) write.skills = [...input.skills];
     if (input.languages !== undefined) write.languages = input.languages;
     if (input.experiences !== undefined) write.experiences = input.experiences;
+    if (input.education !== undefined) write.education = input.education;
+    if (input.certifications !== undefined) write.certifications = input.certifications;
+    if (input.projects !== undefined) write.projects = input.projects;
+    if (input.preferredContracts !== undefined)
+      write.preferredContracts = [...input.preferredContracts];
     if (input.cvText !== undefined) write.cvText = input.cvText;
 
     const row = await this.prisma.profile.upsert({

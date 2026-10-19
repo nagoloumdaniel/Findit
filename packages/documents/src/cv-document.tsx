@@ -315,7 +315,13 @@ const Skills = ({ skills, styles }: { skills: CvSkill[]; styles: CvStyles }) => 
   );
 };
 
-const ExperienceEntry = ({ experience, styles }: { experience: CvExperience; styles: CvStyles }) => {
+const ExperienceEntry = ({
+  experience,
+  styles,
+}: {
+  experience: CvExperience;
+  styles: CvStyles;
+}) => {
   const heading = clean([experience.title, experience.company]).join(" - ");
   const dates = period(experience.startDate, experience.endDate);
   return (
@@ -409,7 +415,12 @@ export const CvDocument = ({
     <Document>
       <Page size="A4" style={styles.page}>
         {data.identity !== undefined && (
-          <Header identity={data.identity} links={data.links} styles={styles} photoDataUrl={photo} />
+          <Header
+            identity={data.identity}
+            links={data.links}
+            styles={styles}
+            photoDataUrl={photo}
+          />
         )}
         {data.summary !== undefined && (
           <Section title="Profil" styles={styles}>
@@ -435,7 +446,11 @@ export const CvDocument = ({
         {data.projects.length > 0 && (
           <Section title="Projets" styles={styles}>
             {data.projects.map((project, index) => (
-              <ProjectEntry key={`${project.name ?? ""}-${String(index)}`} project={project} styles={styles} />
+              <ProjectEntry
+                key={`${project.name ?? ""}-${String(index)}`}
+                project={project}
+                styles={styles}
+              />
             ))}
           </Section>
         )}

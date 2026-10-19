@@ -29,6 +29,36 @@ export type ProfileExperience = {
   description: string;
 };
 
+/** Une formation : école, diplôme, domaine et période. */
+export type ProfileEducation = {
+  school: string;
+  degree: string;
+  field: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+};
+
+/** Une certification, avec organisme et date facultatives. */
+export type ProfileCertification = {
+  name: string;
+  issuer?: string;
+  date?: string;
+};
+
+/** Un projet, avec son rôle et ses compétences. */
+export type ProfileProject = {
+  name: string;
+  role?: string;
+  description?: string;
+  url?: string;
+  skills: string[];
+};
+
+/** Un contrat recherché, sous-ensemble des six catégories de la plateforme. */
+export type ProfileContractPreference =
+  "ALTERNANCE" | "INTERNSHIP" | "CDI" | "CDD" | "INTERIM" | "STUDENT_JOB";
+
 export type Profile = {
   fullName: string;
   headline: string | null;
@@ -39,6 +69,10 @@ export type Profile = {
   skills: string[];
   languages: ProfileLanguage[];
   experiences: ProfileExperience[];
+  education: ProfileEducation[];
+  certifications: ProfileCertification[];
+  projects: ProfileProject[];
+  preferredContracts: ProfileContractPreference[];
   cvText: string | null;
   updatedAt: string | null;
 };
@@ -54,6 +88,10 @@ export const EMPTY_PROFILE: Profile = {
   skills: [],
   languages: [],
   experiences: [],
+  education: [],
+  certifications: [],
+  projects: [],
+  preferredContracts: [],
   cvText: null,
   updatedAt: null,
 };
@@ -121,3 +159,85 @@ export const saveProfile = async (
     return { ok: false, reason: "L’API est injoignable : rien n’a été enregistré." };
   }
 };
+
+/** Un modèle de mise en page de CV, aligné sur l'API. */
+export type CvTemplate = "classique" | "moderne" | "compact";
+
+/** Corps de `POST /api/documents/cv`. */
+export type CvDocumentRequest = {
+  jobSlug: string;
+  template?: CvTemplate;
+  showPhoto?: boolean;
+  photoDataUrl?: string | null;
+  accentColor?: string;
+  format?: "pdf" | "docx";
+};
+
+/** Corps de `POST /api/documents/letter`. */
+export type LetterDocumentRequest = {
+  jobSlug: string;
+  accentColor?: string;
+  format?: "pdf" | "docx";
+};
+
+/** Fichier généré, renvoyé en base64 pour être téléchargé côté client. */
+export type GeneratedDocument = {
+  fileName: string;
+  contentType: string;
+  contentBase64: string;
+};
+
+export type DocumentResult = { ok: true; data: GeneratedDocument } | { ok: false; reason: string };
+
+/** Extrait le nom de fichier de l'en-tête `Content-Disposition`, avec repli. */
+const fileNameFromDisposition = (value: string | null, fallback: string): string => {
+  if (value === null) {
+    return fallback;
+  }
+  const match = /filename="?([^";]+)"?/iu.exec(value);
+  return match?.[1] ?? fallback;
+};
+
+/*
+ * Appelle une route de documents et renvoie le fichier en base64. La clé
+ * interne reste ici, côté serveur : le navigateur ne la voit jamais.
+ */
+const fetchDocument = async (path: string, body: unknown): Promise<DocumentResult> => {
+  const key = internalKey();
+  if (key === undefined) {
+    return { ok: false, reason: "Espace personnel non configuré : INTERNAL_API_KEY manquante." };
+  }
+
+  try {
+    const response = await fetch(new URL(path, apiUrl()), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-key": key },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) {
+      return { ok: false, reason: `L’API a refusé la génération (${String(response.status)}).` };
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return {
+      ok: true,
+      data: {
+        fileName: fileNameFromDisposition(response.headers.get("content-disposition"), "document"),
+        contentType: response.headers.get("content-type") ?? "application/octet-stream",
+        contentBase64: buffer.toString("base64"),
+      },
+    };
+  } catch {
+    return { ok: false, reason: "L’API est injoignable : rien n’a été généré." };
+  }
+};
+
+/** Génère le CV du profil pour une offre. */
+export const generateCvDocument = (request: CvDocumentRequest): Promise<DocumentResult> =>
+  fetchDocument("/api/documents/cv", request);
+
+/** Génère la lettre de motivation pour une offre. */
+export const generateLetterDocument = (request: LetterDocumentRequest): Promise<DocumentResult> =>
+  fetchDocument("/api/documents/letter", request);

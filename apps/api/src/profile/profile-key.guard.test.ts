@@ -81,6 +81,10 @@ describe("ProfileController — garde et non-divulgation", () => {
       skills: ["typescript"],
       languages: [],
       experiences: [],
+      education: [],
+      certifications: [],
+      projects: [],
+      preferredContracts: [],
       cvText: null,
       updatedAt: new Date("2026-10-07T04:00:00.000Z"),
     });
@@ -151,6 +155,10 @@ describe("ProfileController — garde et non-divulgation", () => {
       skills: ["typescript"],
       languages: [],
       experiences: [],
+      education: [],
+      certifications: [],
+      projects: [],
+      preferredContracts: [],
       cvText: null,
       updatedAt: "2026-10-07T04:00:00.000Z",
     });

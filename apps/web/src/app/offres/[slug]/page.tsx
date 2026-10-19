@@ -3,6 +3,8 @@ import { PageShell } from "@findit/ui";
 import Link from "next/link";
 
 import { fetchJobDetail } from "../../../lib/api";
+import { isProfileConfigured } from "../../../lib/profile-api";
+import { CandidatureSection } from "./candidature";
 import {
   contractLabels,
   departmentLabels,
@@ -177,6 +179,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
           </ul>
         </section>
       ) : null}
+
+      {/*
+       * La section Candidature ne s'affiche que lorsque l'espace personnel est
+       * configuré : sans clé interne côté serveur, rien n'est générable, et
+       * l'offrir laisserait croire qu'une candidature est possible ici.
+       */}
+      {isProfileConfigured() ? <CandidatureSection jobSlug={job.slug} /> : null}
 
       {/*
        * Le bouton renvoie vers la source d'origine. L'application ne transmet

@@ -1,7 +1,10 @@
 import { parseApiEnv } from "@findit/config";
 import { computeCostMicroUsd, createDeepSeekModel } from "@findit/ai";
 import { type PrismaClient, JobStatus } from "@findit/database";
-import { computeMatch as scoreDeterministically, type ResumeMatchInput } from "@findit/matching-engine";
+import {
+  computeMatch as scoreDeterministically,
+  type ResumeMatchInput,
+} from "@findit/matching-engine";
 import { computeMatch, structureCv } from "@findit/matching";
 import type { JobOfferLite } from "@findit/matching";
 import { publishedAfterFor, type FreshnessWindow } from "@findit/shared";
@@ -211,9 +214,10 @@ export class MatchingService {
       // compétence « prouvée par l'usage » n'est donc déclarée, plutôt qu'une
       // liste inventée.
       evidenceSkills: [],
-      titles: [profile?.headline ?? "", ...experiences.map((experience) => experience.title)].filter(
-        (title) => title.trim() !== "",
-      ),
+      titles: [
+        profile?.headline ?? "",
+        ...experiences.map((experience) => experience.title),
+      ].filter((title) => title.trim() !== ""),
       languages,
     };
 

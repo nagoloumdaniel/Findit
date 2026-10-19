@@ -19,6 +19,10 @@ const emptyProfile: ProfileView = {
   skills: [],
   languages: [],
   experiences: [],
+  education: [],
+  certifications: [],
+  projects: [],
+  preferredContracts: [],
   cvText: null,
   updatedAt: null,
 };

@@ -91,6 +91,34 @@ const profileExperienceSchema = z.object({
   period: z.string(),
   description: z.string(),
 });
+const profileEducationSchema = z.object({
+  school: z.string(),
+  degree: z.string(),
+  field: z.string(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  description: z.string().optional(),
+});
+const profileCertificationSchema = z.object({
+  name: z.string(),
+  issuer: z.string().optional(),
+  date: z.string().optional(),
+});
+const profileProjectSchema = z.object({
+  name: z.string(),
+  role: z.string().optional(),
+  description: z.string().optional(),
+  url: z.string().optional(),
+  skills: z.array(z.string()),
+});
+const profileContractPreferenceSchema = z.enum([
+  "ALTERNANCE",
+  "INTERNSHIP",
+  "CDI",
+  "CDD",
+  "INTERIM",
+  "STUDENT_JOB",
+]);
 
 export const profileInputSchema = z.object({
   fullName: z.string().optional(),
@@ -102,6 +130,10 @@ export const profileInputSchema = z.object({
   skills: z.array(z.string()).optional(),
   languages: z.array(profileLanguageSchema).optional(),
   experiences: z.array(profileExperienceSchema).optional(),
+  education: z.array(profileEducationSchema).optional(),
+  certifications: z.array(profileCertificationSchema).optional(),
+  projects: z.array(profileProjectSchema).optional(),
+  preferredContracts: z.array(profileContractPreferenceSchema).optional(),
   cvText: z.string().nullable().optional(),
 });
 

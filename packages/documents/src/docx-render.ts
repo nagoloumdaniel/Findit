@@ -126,7 +126,9 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
           spacing: { after: 40 },
-          children: [new TextRun({ text: identity.fullName, bold: true, size: theme.nameSize, color: INK })],
+          children: [
+            new TextRun({ text: identity.fullName, bold: true, size: theme.nameSize, color: INK }),
+          ],
         }),
       );
     }
@@ -135,7 +137,12 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
         new Paragraph({
           spacing: { after: 40 },
           children: [
-            new TextRun({ text: identity.title, bold: true, size: theme.headlineSize, color: accent }),
+            new TextRun({
+              text: identity.title,
+              bold: true,
+              size: theme.headlineSize,
+              color: accent,
+            }),
           ],
         }),
       );
@@ -190,7 +197,12 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
           new Paragraph({
             spacing: { after: 20 },
             children: [
-              new TextRun({ text: `${group.label}: `, bold: true, size: theme.bodySize, color: INK }),
+              new TextRun({
+                text: `${group.label}: `,
+                bold: true,
+                size: theme.bodySize,
+                color: INK,
+              }),
               new TextRun({ text: group.names.join(", "), size: theme.bodySize, color: INK }),
             ],
           }),
@@ -210,7 +222,12 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
           new Paragraph({
             spacing: { after: 20 },
             children: [
-              new TextRun({ text: headingText, bold: true, size: theme.entryTitleSize, color: INK }),
+              new TextRun({
+                text: headingText,
+                bold: true,
+                size: theme.entryTitleSize,
+                color: INK,
+              }),
             ],
           }),
         );
@@ -239,7 +256,12 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
           new Paragraph({
             spacing: { after: 20 },
             children: [
-              new TextRun({ text: project.name, bold: true, size: theme.entryTitleSize, color: INK }),
+              new TextRun({
+                text: project.name,
+                bold: true,
+                size: theme.entryTitleSize,
+                color: INK,
+              }),
             ],
           }),
         );
@@ -270,7 +292,12 @@ export const buildCvDocx = (data: CvDocumentData, options: ResolvedCvOptions): P
           new Paragraph({
             spacing: { after: 20 },
             children: [
-              new TextRun({ text: titleWithDates, bold: true, size: theme.entryTitleSize, color: INK }),
+              new TextRun({
+                text: titleWithDates,
+                bold: true,
+                size: theme.entryTitleSize,
+                color: INK,
+              }),
             ],
           }),
         );
@@ -371,7 +398,9 @@ export const buildCoverLetterDocx = (
     new Paragraph({
       spacing: { after: 60 },
       border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: hex("#d1d5db"), space: 4 } },
-      children: [new TextRun({ text: `Objet : ${data.subject}`, bold: true, size: 22, color: accent })],
+      children: [
+        new TextRun({ text: `Objet : ${data.subject}`, bold: true, size: 22, color: accent }),
+      ],
     }),
   );
 

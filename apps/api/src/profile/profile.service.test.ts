@@ -13,6 +13,10 @@ const storedRow = () => ({
   skills: ["typescript"],
   languages: [{ name: "français", level: "natif" }],
   experiences: [{ title: "Dev", company: "Acme", period: "2024", description: "desc" }],
+  education: [{ school: "Lycée", degree: "BTS SIO", field: "SLAM" }],
+  certifications: [{ name: "Certification" }],
+  projects: [{ name: "Portfolio", skills: ["react"] }],
+  preferredContracts: ["ALTERNANCE"],
   cvText: "un CV",
   updatedAt: new Date("2026-10-07T04:00:00.000Z"),
 });
@@ -45,6 +49,10 @@ describe("ProfileService - lecture", () => {
       skills: [],
       languages: [],
       experiences: [],
+      education: [],
+      certifications: [],
+      projects: [],
+      preferredContracts: [],
       cvText: null,
       updatedAt: null,
     });

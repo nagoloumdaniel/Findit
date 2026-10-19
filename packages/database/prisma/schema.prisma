@@ -1047,6 +1047,14 @@ model Profile {
   languages   Json    @default("[]")
   /// Expériences : `[{ title, company, period, description }]`.
   experiences Json    @default("[]")
+  /// Formations : `[{ school, degree, field, startDate?, endDate?, description? }]`.
+  education       Json       @default("[]")
+  /// Certifications : `[{ name, issuer?, date? }]`.
+  certifications  Json       @default("[]")
+  /// Projets : `[{ name, role?, description?, url?, skills }]`.
+  projects        Json       @default("[]")
+  /// Contrats recherchés, sous-ensemble de l'enum `ContractType`.
+  preferredContracts String[] @default([])
   cvText      String?
 
   createdAt DateTime @default(now())

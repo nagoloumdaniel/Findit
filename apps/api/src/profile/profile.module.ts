@@ -19,5 +19,11 @@ import { ProfileService } from "./profile.service.js";
       useFactory: (): string => parseApiEnv(process.env).INTERNAL_API_KEY,
     },
   ],
+  /*
+   * `ProfileService`, `ProfileKeyGuard` et la clé sont réutilisés par les
+   * modules `resume` et `documents` : un seul garde et une seule lecture du
+   * profil, plutôt que des copies qui divergeraient.
+   */
+  exports: [ProfileService, ProfileKeyGuard, PROFILE_INTERNAL_KEY],
 })
 export class ProfileModule {}
