@@ -19,10 +19,14 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Seuls ces deux contrats sont dans le périmètre.
+/// Les six catégories de contrat gérées par la plateforme.
 enum ContractType {
   ALTERNANCE
   INTERNSHIP
+  CDI
+  CDD
+  INTERIM
+  STUDENT_JOB
 }
 
 /// Seuls ces métiers sont dans le périmètre.
@@ -157,7 +161,7 @@ model Job {
   /// Dernier passage ayant confirmé que l'offre est toujours en ligne.
   lastSeenAt  DateTime
   updatedAt   DateTime @updatedAt
-  /// publishedAt + 72 h. Stocké pour que l'expiration soit indexable.
+  /// publishedAt + 120 h (cinq jours). Stocké pour que l'expiration soit indexable.
   expiresAt   DateTime
 
   canonicalUrl String

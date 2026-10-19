@@ -14,7 +14,14 @@ import {
 
 describe("job scope", () => {
   it("contains exactly the validated contracts and roles", () => {
-    expect(JOB_CONTRACTS).toEqual(["ALTERNANCE", "INTERNSHIP"]);
+    expect(JOB_CONTRACTS).toEqual([
+      "ALTERNANCE",
+      "INTERNSHIP",
+      "CDI",
+      "CDD",
+      "INTERIM",
+      "STUDENT_JOB",
+    ]);
     expect(JOB_ROLE_CATEGORIES).toEqual([
       "FRONTEND",
       "BACKEND",
@@ -30,7 +37,7 @@ describe("job scope", () => {
 
   it("uses the validated freshness windows", () => {
     expect(DEFAULT_MAX_AGE_HOURS).toBe(24);
-    expect(EXTENDED_MAX_AGE_HOURS).toBe(72);
+    expect(EXTENDED_MAX_AGE_HOURS).toBe(120);
   });
 
   it("covers the eight Île-de-France departments and nothing else", () => {
@@ -45,13 +52,13 @@ describe("publishedAfterFor", () => {
     expect(publishedAfterFor("LAST_24H", now).toISOString()).toBe("2026-07-16T12:00:00.000Z");
   });
 
-  it("bounds the extended window to the last 72 hours", () => {
-    expect(publishedAfterFor("LAST_72H", now).toISOString()).toBe("2026-07-14T12:00:00.000Z");
+  it("bounds the extended window to the last 120 hours", () => {
+    expect(publishedAfterFor("LAST_5D", now).toISOString()).toBe("2026-07-12T12:00:00.000Z");
   });
 
   it("never reaches further back than the extended window", () => {
     const oldest = Math.min(
-      ...(["LAST_24H", "LAST_72H"] as const).map((window) =>
+      ...(["LAST_24H", "LAST_5D"] as const).map((window) =>
         publishedAfterFor(window, now).getTime(),
       ),
     );
@@ -61,9 +68,13 @@ describe("publishedAfterFor", () => {
 });
 
 describe("default flux", () => {
-  it("shows only alternance by default, without dropping the internship from the scope", () => {
+  it("shows only alternance by default, without dropping the other contracts from the scope", () => {
     expect(DEFAULT_CONTRACTS).toEqual(["ALTERNANCE"]);
     expect(JOB_CONTRACTS).toContain("INTERNSHIP");
+    expect(JOB_CONTRACTS).toContain("CDI");
+    expect(JOB_CONTRACTS).toContain("CDD");
+    expect(JOB_CONTRACTS).toContain("INTERIM");
+    expect(JOB_CONTRACTS).toContain("STUDENT_JOB");
   });
 
   it("shows only the development roles by default", () => {

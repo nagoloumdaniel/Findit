@@ -16,6 +16,10 @@ export const roleLabels: Record<string, string> = {
 export const contractLabels: Record<string, string> = {
   ALTERNANCE: "Alternance",
   INTERNSHIP: "Stage",
+  CDI: "CDI",
+  CDD: "CDD",
+  INTERIM: "Intérim",
+  STUDENT_JOB: "Job étudiant",
 };
 
 export const workModeLabels: Record<string, string> = {

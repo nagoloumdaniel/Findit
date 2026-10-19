@@ -127,7 +127,7 @@ describe("createFranceTravailConnector", () => {
     expect(url).toContain("motsCles=d%C3%A9veloppeur");
     expect(url).toContain("region=11");
     expect(url).toContain("natureContrat=E2%2CFS");
-    expect(url).toContain("publieeDepuis=3");
+    expect(url).toContain("publieeDepuis=7");
     expect(url).toContain("range=0-149");
 
     const headers = init?.headers as Record<string, string>;

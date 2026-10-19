@@ -57,7 +57,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
           <h2>Cette offre n’est plus disponible.</h2>
           <p>
             Elle a expiré, elle est hors de la fenêtre demandée, ou elle n’existe pas. Une offre
-            n’est jamais affichée au-delà de 72 heures après sa publication.
+            n’est jamais affichée au-delà de cinq jours après sa publication.
           </p>
         </div>
       </PageShell>

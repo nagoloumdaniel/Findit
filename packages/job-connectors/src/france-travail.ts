@@ -55,10 +55,10 @@ const NATURE_CONTRAT_ALTERNANCE = "E2,FS";
 const REGION_CODES: ReadonlyMap<string, string> = new Map([["Île-de-France, France", "11"]]);
 
 /**
- * `publieeDepuis` n'accepte que 1, 3, 7, 14 ou 31 jours. Trois jours englobent
- * la fenêtre de fraîcheur du projet (72 h) sans demander plus que nécessaire.
+ * `publieeDepuis` n'accepte que 1, 3, 7, 14 ou 31 jours. Sept jours englobent
+ * la fenêtre de fraîcheur du projet (120 h) sans demander plus que nécessaire.
  */
-const PUBLIEE_DEPUIS_DAYS = 3;
+const PUBLIEE_DEPUIS_DAYS = 7;
 
 /** Taille de page maximale acceptée par l'API. */
 const PAGE_SIZE = 150;

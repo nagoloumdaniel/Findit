@@ -63,7 +63,7 @@ describe("JobsService.findBySlug", () => {
   it("ne livre qu'un extrait d'une offre de job board", async () => {
     const service = new JobsService(createPrisma(jobRow()) as never);
 
-    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_72H", now);
+    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_5D", now);
 
     expect(job?.origin).toBe("JOB_BOARD");
     expect(job?.descriptionTruncated).toBe(true);
@@ -92,7 +92,7 @@ describe("JobsService.findBySlug", () => {
     });
     const service = new JobsService(createPrisma(row) as never);
 
-    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_72H", now);
+    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_5D", now);
 
     expect(job?.origin).toBe("OFFICIAL");
     expect(job?.descriptionTruncated).toBe(false);
@@ -103,7 +103,7 @@ describe("JobsService.findBySlug", () => {
   it("ne dépouille pas une offre dont la source est inconnue du registre", async () => {
     const service = new JobsService(createPrisma(jobRow(), []) as never);
 
-    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_72H", now);
+    const job = await service.findBySlug("stage-developpeur-full-stack-paris-75", "LAST_5D", now);
 
     expect(job?.origin).toBe("OFFICIAL");
     expect(job?.description).toBe(longDescription);
@@ -112,7 +112,7 @@ describe("JobsService.findBySlug", () => {
   it("rend null quand l'offre n'est pas dans la fenêtre publique", async () => {
     const service = new JobsService(createPrisma(null) as never);
 
-    expect(await service.findBySlug("inconnue", "LAST_72H", now)).toBeNull();
+    expect(await service.findBySlug("inconnue", "LAST_5D", now)).toBeNull();
   });
 });
 
@@ -134,7 +134,7 @@ describe("JobsService.list", () => {
 
     const list = await service.list(
       {
-        freshness: "LAST_72H",
+        freshness: "LAST_5D",
         sort: "DATE",
         page: 1,
         pageSize: 20,
@@ -158,7 +158,7 @@ describe("JobsService.stats", () => {
 
     const stats = await service.stats(now);
 
-    expect(stats).toEqual({ publishedLast24h: 3, publishedLast72h: 9, lastPublishedAt });
+    expect(stats).toEqual({ publishedLast24h: 3, publishedLast5d: 9, lastPublishedAt });
 
     // Les deux comptes portent la même fenêtre publique, à l'ancienneté près.
     const first = prisma.job.count.mock.calls[0]?.[0] as {
@@ -172,7 +172,7 @@ describe("JobsService.stats", () => {
     const firstWindowHours = (now.getTime() - first.where.publishedAt.gte.getTime()) / 3_600_000;
     const secondWindowHours = (now.getTime() - second.where.publishedAt.gte.getTime()) / 3_600_000;
     expect(firstWindowHours).toBe(24);
-    expect(secondWindowHours).toBe(72);
+    expect(secondWindowHours).toBe(120);
   });
 
   it("rend null quand aucune offre n'est publiée dans la fenêtre", async () => {
@@ -182,7 +182,7 @@ describe("JobsService.stats", () => {
 
     await expect(service.stats(now)).resolves.toEqual({
       publishedLast24h: 0,
-      publishedLast72h: 0,
+      publishedLast5d: 0,
       lastPublishedAt: null,
     });
   });
@@ -202,7 +202,7 @@ describe("JobsService.filters", () => {
       .mockResolvedValueOnce([{ workMode: "REMOTE", _count: { _all: 1 } }]);
     const service = new JobsService(prisma as never);
 
-    const filters = await service.filters("LAST_72H", now);
+    const filters = await service.filters("LAST_5D", now);
 
     expect(filters.roles).toEqual([{ value: "FULLSTACK", count: 4 }]);
     expect(filters.contracts).toEqual([{ value: "ALTERNANCE", count: 2 }]);

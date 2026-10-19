@@ -50,11 +50,11 @@ describe("decideIngestion", () => {
     expect(decision.draft.requirements).toEqual(["React"]);
   });
 
-  it("sets expiry 72 hours after publication, never after collection", () => {
+  it("sets expiry 120 hours after publication, never after collection", () => {
     const decision = decideIngestion(offer(), NOW);
     if (decision.outcome === "REJECTED") throw new Error("attendu accepté");
 
-    expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-20T09:00:00.000Z");
+    expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-22T09:00:00.000Z");
   });
 
   it("rejects a job that is not development, and names the stage", () => {
@@ -78,7 +78,7 @@ describe("decideIngestion", () => {
 
   it("rejects a dated-but-too-old offer", () => {
     const decision = decideIngestion(
-      offer({ publishedAt: new Date("2026-07-13T09:00:00.000Z") }),
+      offer({ publishedAt: new Date("2026-07-11T09:00:00.000Z") }),
       NOW,
     );
 
@@ -98,14 +98,14 @@ describe("decideIngestion", () => {
     // La date stockée reste minuit : c'est la décision qui élargit la journée.
     expect(decision.draft.publishedAt.toISOString()).toBe("2026-07-14T00:00:00.000Z");
     // L'expiration suit la même référence, sinon l'offre naîtrait déjà expirée.
-    expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-17T23:59:59.999Z");
+    expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-19T23:59:59.999Z");
   });
 
-  it("keeps the 72-hour window at its real bound, not four whole days", () => {
-    // Le 13 à minuit : journée élargie au 13 à 23 h 59, + 72 h = 16 à 23 h 59,
+  it("keeps the 120-hour window at its real bound, not five whole days", () => {
+    // Le 11 à minuit : journée élargie au 11 à 23 h 59, + 120 h = 16 à 23 h 59,
     // déjà passé le 17 à 12 h. Une date seule ne repousse pas le seuil d'un jour.
     const decision = decideIngestion(
-      offer({ publishedAt: new Date("2026-07-13T00:00:00.000Z") }),
+      offer({ publishedAt: new Date("2026-07-11T00:00:00.000Z") }),
       NOW,
     );
 

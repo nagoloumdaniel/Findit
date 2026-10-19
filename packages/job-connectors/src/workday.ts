@@ -139,8 +139,8 @@ const parseSite = (atsIdentifier: string): WorkdaySite => {
 
 /**
  * Le libellé relatif dit-il que l'offre est encore fraîche ? « aujourd'hui »,
- * « hier » et « il y a N jours » (N ≤ 4) méritent le détail - la fenêtre de
- * publication du projet est de 72 h, un jour de marge absorbe les fuseaux. Un
+ * « hier » et « il y a N jours » (N ≤ 5) méritent le détail - la fenêtre de
+ * publication du projet est de 120 h, un jour de marge absorbe les fuseaux. Un
  * libellé illisible mérite aussi le détail : dans le doute, on lit la vraie
  * date plutôt que de deviner. Seul le vieux certain est écarté sans requête.
  *
@@ -169,7 +169,7 @@ const deservesDetail = (postedOn: string | null | undefined): boolean => {
   for (const pattern of AGE_PATTERNS) {
     const count = pattern.exec(label)?.groups?.["count"];
     if (count !== undefined) {
-      return Number(count) <= 4;
+      return Number(count) <= 5;
     }
   }
 

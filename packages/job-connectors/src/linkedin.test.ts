@@ -188,14 +188,14 @@ describe("mapLinkedinItem", () => {
 describe("isWithinLinkedinWindow", () => {
   const hoursAgo = (hours: number): Date => new Date(NOW.getTime() - hours * 60 * 60 * 1000);
 
-  it("garde une offre de moins de 3 jours, y compris juste à la borne", () => {
+  it("garde une offre de moins de 5 jours, y compris juste à la borne", () => {
     expect(isWithinLinkedinWindow(hoursAgo(1), NOW)).toBe(true);
-    expect(isWithinLinkedinWindow(hoursAgo(71), NOW)).toBe(true);
+    expect(isWithinLinkedinWindow(hoursAgo(119), NOW)).toBe(true);
     expect(isWithinLinkedinWindow(hoursAgo(LINKEDIN_FRESHNESS_HOURS), NOW)).toBe(true);
   });
 
-  it("écarte une offre au-delà de 3 jours, ou sans date prouvable", () => {
-    expect(isWithinLinkedinWindow(hoursAgo(73), NOW)).toBe(false);
+  it("écarte une offre au-delà de 5 jours, ou sans date prouvable", () => {
+    expect(isWithinLinkedinWindow(hoursAgo(121), NOW)).toBe(false);
     expect(isWithinLinkedinWindow(hoursAgo(24 * 7), NOW)).toBe(false);
     expect(isWithinLinkedinWindow(null, NOW)).toBe(false);
   });
@@ -259,7 +259,7 @@ describe("createLinkedinConnector", () => {
     expect(seen).toHaveLength(0);
   });
 
-  it("écarte les offres hors fenêtre de 3 jours, et le signale", async () => {
+  it("écarte les offres hors fenêtre de 5 jours, et le signale", async () => {
     const fresh = { ...item, id: "fraiche", postedAt: "2026-10-07T09:00:00.000Z" };
     const stale = { ...item, id: "ancienne", postedAt: "2026-10-01T09:00:00.000Z" };
     const { context, notices } = fakeApify([fresh, stale]);
@@ -279,16 +279,16 @@ describe("createLinkedinConnector", () => {
     await expect(connector.collect({} as never, target, context)).resolves.toEqual([]);
   });
 
-  it("garde l'offre datée du surlendemain, que la date seule faisait tomber", async () => {
-    // Sans l'extension à la journée, « 2026-10-04 » vaut minuit UTC : 3 j 12 h
-    // au 2026-10-07 12 h, donc au-delà de 72 h, et l'offre était perdue.
+  it("garde les offres des cinq derniers jours, dates seules comprises", async () => {
+    // Une date sans heure (« 2026-10-04 ») vaut minuit UTC : 3 j 12 h au
+    // 2026-10-07 12 h. La fenêtre de 120 h conserve désormais ces deux offres.
     const dayThree = { ...item, id: "j-3", postedAt: "2026-10-04" };
     const dayFour = { ...item, id: "j-4", postedAt: "2026-10-03" };
     const { context } = fakeApify([dayThree, dayFour]);
 
     const jobs = await connector.collect({} as never, target, context);
 
-    expect(jobs.map((job) => job.sourceJobId)).toEqual(["j-3"]);
+    expect(jobs.map((job) => job.sourceJobId)).toEqual(["j-3", "j-4"]);
   });
 
   it("rend toutes les offres quand limitPerSource est atteint pile, et lit au plus ce plafond", async () => {

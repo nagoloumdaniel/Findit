@@ -65,7 +65,7 @@ export type JobDetail = JobListItem & {
 export type JobStats = {
   /// Nombre réel d'offres publiées sur la fenêtre par défaut. Jamais estimé.
   publishedLast24h: number;
-  publishedLast72h: number;
+  publishedLast5d: number;
   /// Date de la dernière offre publiée, ou null si la base est vide.
   lastPublishedAt: Date | null;
 };
@@ -88,7 +88,7 @@ export class JobsService {
    *
    * Deux règles y sont tenues sans exception : seules les offres PUBLISHED
    * sortent, et la borne de publication ne dépasse jamais la fenêtre demandée.
-   * La base porte déjà la limite des 72 h, mais l'API la réapplique : une offre
+   * La base porte déjà la limite des 120 h, mais l'API la réapplique : une offre
    * dont l'expiration n'aurait pas encore été traitée par le worker ne peut pas
    * réapparaître dans la liste.
    */
@@ -256,21 +256,21 @@ export class JobsService {
   async stats(now: Date = new Date()): Promise<JobStats> {
     const published = { status: JobStatus.PUBLISHED, expiresAt: { gt: now } };
 
-    const [publishedLast24h, publishedLast72h, latest] = await Promise.all([
+    const [publishedLast24h, publishedLast5d, latest] = await Promise.all([
       this.prisma.job.count({
         where: { ...published, publishedAt: { gte: publishedAfterFor("LAST_24H", now) } },
       }),
       this.prisma.job.count({
-        where: { ...published, publishedAt: { gte: publishedAfterFor("LAST_72H", now) } },
+        where: { ...published, publishedAt: { gte: publishedAfterFor("LAST_5D", now) } },
       }),
       this.prisma.job.findFirst({
-        where: { ...published, publishedAt: { gte: publishedAfterFor("LAST_72H", now) } },
+        where: { ...published, publishedAt: { gte: publishedAfterFor("LAST_5D", now) } },
         orderBy: { publishedAt: "desc" },
         select: { publishedAt: true },
       }),
     ]);
 
-    return { publishedLast24h, publishedLast72h, lastPublishedAt: latest?.publishedAt ?? null };
+    return { publishedLast24h, publishedLast5d, lastPublishedAt: latest?.publishedAt ?? null };
   }
 
   async filters(freshness: JobQuery["freshness"], now: Date = new Date()): Promise<JobFilters> {

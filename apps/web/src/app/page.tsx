@@ -62,16 +62,16 @@ export default async function HomePage({ searchParams }: PageProps) {
         </nav>
         <h1>Alternances développeur en Île-de-France</h1>
         <p className="intro">
-          Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des 3
+          Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des 5
           derniers jours, de la plus récente à la plus ancienne. Les stages, le mobile et les
           métiers de la data restent à un filtre près.
         </p>
 
         {stats.ok ? (
           <p className="hero-note">
-            {stats.data.publishedLast72h === 0
-              ? "Aucune offre publiée durant les 3 derniers jours."
-              : `${stats.data.publishedLast72h} offre${stats.data.publishedLast72h > 1 ? "s" : ""} publiée${stats.data.publishedLast72h > 1 ? "s" : ""} durant les 3 derniers jours.`}
+            {stats.data.publishedLast5d === 0
+              ? "Aucune offre publiée durant les 5 derniers jours."
+              : `${stats.data.publishedLast5d} offre${stats.data.publishedLast5d > 1 ? "s" : ""} publiée${stats.data.publishedLast5d > 1 ? "s" : ""} durant les 5 derniers jours.`}
             {/*
               Les deux comptes ne mesurent pas la même chose : ce paragraphe compte
               tout ce qui est publié, la liste n'affiche que ce qui entre dans le
@@ -79,7 +79,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               « 12 offres publiées » au-dessus de « 3 offres » se lit comme une
               erreur — constat du 2026-10-07, corrigé ici.
             */}
-            {jobs.ok && jobs.data.total < stats.data.publishedLast72h
+            {jobs.ok && jobs.data.total < stats.data.publishedLast5d
               ? ` ${String(jobs.data.total)} ${jobs.data.total > 1 ? "correspondent" : "correspond"} au périmètre affiché ci-dessous.`
               : null}
             {stats.data.lastPublishedAt

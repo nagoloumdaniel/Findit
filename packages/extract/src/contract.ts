@@ -20,11 +20,20 @@ export const PERIMETER_CONTRACT_TERMS: readonly string[] = [
   "alternance",
   "alternant",
   "apprenti",
+  "apprentice",
+  "apprenticeship",
   "professionnalisation",
   "stage",
   "stagiaire",
   "internship",
-  "apprentice",
+  "cdi",
+  "cdd",
+  "interim",
+  "interimaire",
+  "job etudiant",
+  "emploi etudiant",
+  "student job",
+  "job d'ete",
 ];
 
 /** Minuscules sans accent : « Stagiaire » et « stagiaire » se rejoignent. */

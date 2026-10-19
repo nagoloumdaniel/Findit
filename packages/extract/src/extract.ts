@@ -81,7 +81,7 @@ const SYSTEM_PROMPT = [
   "- N'invente jamais une information absente de la page.",
   "- Un champ absent de la page doit rester absent : ne le remplis pas.",
   "- Ignore les offres qui concernent une école, un organisme de formation, un bootcamp, un campus ou l'obtention d'un diplôme.",
-  "- Ne retiens que les contrats d'alternance (alternance, apprentissage, professionnalisation) et de stage (stage, internship). Ignore les CDI, les CDD qui ne sont pas des alternances, le freelance, l'intérim, le service civique et le bénévolat.",
+  "- Ne retiens que les contrats du périmètre : alternance (alternance, apprentissage, professionnalisation), stage (stage, internship), CDI, CDD, intérim (travail temporaire) et job étudiant. Ignore le freelance, le bénévolat et le service civique.",
   "- Quand le contrat n'est pas nommé dans l'offre, garde-la : c'est la validation qui tranche, pas toi.",
   "- technologies liste les technologies ou compétences techniques nommées dans l'offre ; liste vide si aucune n'est nommée.",
   "- publishedAt est la date de publication au format ISO (AAAA-MM-JJ). Si la page donne une date relative (« il y a 3 jours », « publié cette semaine »), convertis-la en te servant de la date du jour fournie ; sinon absent.",

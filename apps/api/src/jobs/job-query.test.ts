@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { freshnessQuerySchema, jobQuerySchema, jobSlugSchema } from "./job-query.js";
 
 describe("jobQuerySchema", () => {
-  it("defaults to the last 3 days across the whole scope", () => {
+  it("defaults to the last 5 days across the whole scope", () => {
     const query = jobQuerySchema.parse({});
 
     // Toute la fenêtre de publication par défaut (choix du propriétaire) ;
     // 24 heures reste un resserrement possible.
-    expect(query.freshness).toBe("LAST_72H");
+    expect(query.freshness).toBe("LAST_5D");
     expect(query.role).toBeUndefined();
     expect(query.department).toBeUndefined();
     expect(query.contract).toBeUndefined();
@@ -32,9 +32,10 @@ describe("jobQuerySchema", () => {
     expect(jobQuerySchema.parse({ role: "DATA_ENGINEER" }).role).toBe("DATA_ENGINEER");
   });
 
-  it("rejects a contract outside alternance and internship", () => {
-    expect(() => jobQuerySchema.parse({ contract: "CDI" })).toThrow();
+  it("rejects a contract outside the six supported categories", () => {
+    expect(() => jobQuerySchema.parse({ contract: "VIE" })).toThrow();
     expect(jobQuerySchema.parse({ contract: "INTERNSHIP" }).contract).toBe("INTERNSHIP");
+    expect(jobQuerySchema.parse({ contract: "CDI" }).contract).toBe("CDI");
   });
 
   it("coerces paging and caps the page size", () => {
@@ -58,8 +59,8 @@ describe("jobQuerySchema", () => {
 });
 
 describe("freshnessQuerySchema", () => {
-  it("defaults to the last 3 days and offers no wider window", () => {
-    expect(freshnessQuerySchema.parse({}).freshness).toBe("LAST_72H");
+  it("defaults to the last 5 days and offers no wider window", () => {
+    expect(freshnessQuerySchema.parse({}).freshness).toBe("LAST_5D");
     expect(freshnessQuerySchema.parse({ freshness: "LAST_24H" }).freshness).toBe("LAST_24H");
     expect(() => freshnessQuerySchema.parse({ freshness: "LAST_7D" })).toThrow();
   });

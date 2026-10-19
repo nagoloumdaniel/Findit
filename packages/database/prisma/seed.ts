@@ -32,8 +32,8 @@ config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 const HOUR = 60 * 60 * 1000;
 const now = Date.now();
 const at = (hoursAgo: number): Date => new Date(now - hoursAgo * HOUR);
-/// Toute offre expire au plus tard 72 h après sa publication.
-const expiryFor = (publishedAt: Date): Date => new Date(publishedAt.getTime() + 72 * HOUR);
+/// Toute offre expire au plus tard 120 h (cinq jours) après sa publication.
+const expiryFor = (publishedAt: Date): Date => new Date(publishedAt.getTime() + 120 * HOUR);
 
 const main = async (): Promise<void> => {
   const connectionString = process.env["DATABASE_URL"];

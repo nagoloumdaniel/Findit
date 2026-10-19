@@ -21,12 +21,12 @@ export const LINKEDIN_MAX_ITEMS_CEILING = 100;
 /**
  * Fenêtre de fraîcheur du projet, en heures. LinkedIn ne sait filtrer que 24 h,
  * 7 jours ou 30 jours : l'acteur est donc lancé sur `pastWeek`, et c'est **ici**
- * que la fenêtre de 3 jours est rétablie à partir de `postedAt` (registre,
+ * que la fenêtre de cinq jours est rétablie à partir de `postedAt` (registre,
  * « Écarts … à traiter par notre propre filtre »). Même valeur que
  * `EXTENDED_MAX_AGE_HOURS` (`packages/shared/src/job-scope.ts:45`), que
  * l'ingestion applique de son côté : deux gardes au même seuil, pas deux seuils.
  */
-export const LINKEDIN_FRESHNESS_HOURS = 72;
+export const LINKEDIN_FRESHNESS_HOURS = 120;
 
 /** Zone unique du périmètre, telle que le registre la fixe pour LinkedIn. */
 const LOCATIONS = new Set(["Île-de-France, France"]);
@@ -114,11 +114,11 @@ const parseDate = (value: string | number | null | undefined): Date | null => {
 };
 
 /**
- * Vrai quand la date prouve que l'offre est dans la fenêtre de 3 jours.
+ * Vrai quand la date prouve que l'offre est dans la fenêtre de cinq jours.
  *
  * Une date absente ou illisible rend `false` : sans date, la fraîcheur n'est pas
  * prouvable, et l'acteur a pu ramener une offre de 7 jours. Le seuil est
- * inclusif, comme l'ingestion (`ageHours > 72` rejette).
+ * inclusif, comme l'ingestion (`ageHours > 120` rejette).
  */
 export const isWithinLinkedinWindow = (publishedAt: Date | null, now: Date): boolean =>
   publishedAt !== null &&

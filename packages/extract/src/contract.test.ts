@@ -31,7 +31,7 @@ describe("mentionsPerimeterContract", () => {
     expect(
       mentionsPerimeterContract(
         page({
-          text: "Senior Backend Engineer — CDI — Analytics Engineer Mexico",
+          text: "Senior Backend Engineer — Freelance — Analytics Engineer Mexico",
         }),
       ),
     ).toBe(false);
@@ -44,12 +44,12 @@ describe("mentionsPerimeterContract", () => {
       ),
     ).toBe(true);
     expect(
-      mentionsPerimeterContract(page({ text: "", html: "<html><body>CDI</body></html>" })),
+      mentionsPerimeterContract(page({ text: "", html: "<html><body>Freelance</body></html>" })),
     ).toBe(false);
   });
 
   it("ne se laisse pas tromper par un mot proche sans contrat", () => {
-    // « stage » n'apparaît pas ; « backstage » n'est pas un contrat.
-    expect(mentionsPerimeterContract(page({ text: "Backend developer, CDI" }))).toBe(false);
+    // « stage » n'apparaît pas ; « freelance » n'est pas un contrat du périmètre.
+    expect(mentionsPerimeterContract(page({ text: "Backend developer, freelance" }))).toBe(false);
   });
 });

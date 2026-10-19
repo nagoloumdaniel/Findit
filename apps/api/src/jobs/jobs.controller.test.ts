@@ -14,7 +14,7 @@ import type { JobDetail, JobFilters, JobList, JobStats } from "./jobs.service.js
  */
 const jobList: JobList = { items: [], total: 0, page: 1, pageSize: 20 };
 
-const jobStats: JobStats = { publishedLast24h: 2, publishedLast72h: 5, lastPublishedAt: null };
+const jobStats: JobStats = { publishedLast24h: 2, publishedLast5d: 5, lastPublishedAt: null };
 
 const jobFilters: JobFilters = { roles: [], contracts: [], departments: [], workModes: [] };
 
@@ -78,7 +78,7 @@ describe("JobsController", () => {
 
     expect(response.statusCode).toBe(200);
     expect(service.list).toHaveBeenCalledWith(
-      expect.objectContaining({ freshness: "LAST_72H", sort: "DATE", page: 1, pageSize: 20 }),
+      expect.objectContaining({ freshness: "LAST_5D", sort: "DATE", page: 1, pageSize: 20 }),
     );
   });
 
@@ -123,7 +123,7 @@ describe("JobsController", () => {
     const response = await app!.inject({ method: "GET", url: "/api/jobs/filters" });
 
     expect(response.statusCode).toBe(200);
-    expect(service.filters).toHaveBeenCalledWith("LAST_72H");
+    expect(service.filters).toHaveBeenCalledWith("LAST_5D");
   });
 
   it("passe le slug et la fraîcheur au détail", async () => {

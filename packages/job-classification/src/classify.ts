@@ -88,7 +88,7 @@ export const classifyJob = (input: ClassificationInput): JobClassification => {
     const named = fromTitle.reason ?? fromLabel.reason;
     reasons.push(
       named === null
-        ? "Aucun contrat du périmètre n'est nommé : ni alternance, ni stage."
+        ? "Aucun contrat du périmètre n'est nommé."
         : `Le contrat lu est « ${named} », qui est hors périmètre.`,
     );
 

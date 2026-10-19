@@ -565,11 +565,11 @@ describe("runAgent - cascade de récupération", () => {
 // Porte déterministe avant le modèle (coût)
 // ---------------------------------------------------------------------------
 
-/** Une page sans aucun contrat du périmètre : un board d'entreprise en CDI. */
+/** Une page sans aucun contrat du périmètre : un board d'entreprise en freelance. */
 const makeOutOfScopePage = (url: string): CrawledPage => ({
   ...makePage(url),
-  html: "<html><body>Senior Backend Engineer — CDI — Mexico</body></html>",
-  text: "Senior Backend Engineer — CDI — Mexico",
+  html: "<html><body>Senior Backend Engineer — Freelance — Mexico</body></html>",
+  text: "Senior Backend Engineer — Freelance — Mexico",
 });
 
 describe("runAgent - porte déterministe", () => {

@@ -6,7 +6,7 @@ import { persistOffers } from "./persist.js";
 
 const NOW = new Date("2026-10-06T08:00:00.000Z");
 const PUBLISHED_AT = new Date("2026-10-06T06:00:00.000Z");
-const EXPIRES_AT = new Date(PUBLISHED_AT.getTime() + 72 * 3600 * 1000);
+const EXPIRES_AT = new Date(PUBLISHED_AT.getTime() + 120 * 3600 * 1000);
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -194,7 +194,7 @@ describe("persistOffers - rejets", () => {
     const prisma = createPrisma();
 
     const result = await persistOffers(
-      [offer({ title: "Développeur Back-end", contractType: "CDI" })],
+      [offer({ title: "Développeur Back-end", contractType: "Freelance" })],
       depsFor(prisma),
     );
 

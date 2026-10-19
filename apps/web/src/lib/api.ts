@@ -58,7 +58,7 @@ export type JobFilterOptions = {
 
 export type JobStats = {
   publishedLast24h: number;
-  publishedLast72h: number;
+  publishedLast5d: number;
   lastPublishedAt: string | null;
 };
 

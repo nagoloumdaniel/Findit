@@ -1,4 +1,16 @@
-export const JOB_CONTRACTS = ["ALTERNANCE", "INTERNSHIP"] as const;
+/*
+ * Les six catégories de contrat que la plateforme gère. Chaque offre porte un
+ * type normalisé parmi celles-ci ; une valeur brute ambiguë est conservée dans
+ * les motifs de classification, jamais transformée en certitude.
+ */
+export const JOB_CONTRACTS = [
+  "ALTERNANCE",
+  "INTERNSHIP",
+  "CDI",
+  "CDD",
+  "INTERIM",
+  "STUDENT_JOB",
+] as const;
 export type JobContract = (typeof JOB_CONTRACTS)[number];
 
 export const JOB_ROLE_CATEGORIES = [
@@ -42,7 +54,8 @@ export const ILE_DE_FRANCE_DEPARTMENTS = ["75", "77", "78", "91", "92", "93", "9
 export type IleDeFranceDepartment = (typeof ILE_DE_FRANCE_DEPARTMENTS)[number];
 
 export const DEFAULT_MAX_AGE_HOURS = 24;
-export const EXTENDED_MAX_AGE_HOURS = 72;
+/// Plafond absolu de fraîcheur : cinq jours calendaires glissants (120 h).
+export const EXTENDED_MAX_AGE_HOURS = 120;
 
 /// Millisecondes d'une journée, moins une : la fin d'une journée UTC.
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,9 +64,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Une date sans heure désigne une journée entière.
  *
  * Le POURQUOI : plusieurs sources ne donnent qu'un jour (« 2026-10-04 »), que
- * `new Date` place à minuit UTC. Comparer ce minuit à un seuil de 72 h fait
- * tomber l'offre dès le début du 4e jour, alors que la source dit seulement
- * qu'elle est du 4. Une date à minuit UTC exactement est donc étendue à la fin
+ * `new Date` place à minuit UTC. Comparer ce minuit à un seuil de 120 h fait
+ * tomber l'offre dès le début du 6e jour, alors que la source dit seulement
+ * qu'elle est du 6. Une date à minuit UTC exactement est donc étendue à la fin
  * de sa journée ; une date horodatée n'est jamais touchée. La date publiée
  * stockée, elle, reste celle de la source : seule la décision de fraîcheur (et
  * l'expiration qui en découle) élargit la journée.
@@ -71,7 +84,7 @@ export const endOfDayIfDateOnly = (date: Date): Date =>
 /// jamais être affichée.
 export const FRESHNESS_WINDOWS = {
   LAST_24H: DEFAULT_MAX_AGE_HOURS,
-  LAST_72H: EXTENDED_MAX_AGE_HOURS,
+  LAST_5D: EXTENDED_MAX_AGE_HOURS,
 } as const;
 export type FreshnessWindow = keyof typeof FRESHNESS_WINDOWS;
 

@@ -53,17 +53,32 @@ describe("classifyJob", () => {
     expect(decision.reasons.join(" ")).toContain("Le titre ne dit pas le contrat");
   });
 
-  it("rejects the permanent roles that fill these boards", () => {
-    for (const title of [
-      "Senior/Staff - Backend Engineer - remote friendly",
-      "Senior Product Engineer - iOS/Swift",
-      "Account Executive, Majors",
-    ]) {
-      expect(classifyJob({ title, commitmentLabel: "Permanent" })).toMatchObject({
-        outcome: "REJECTED",
-        contractType: null,
-      });
-    }
+  it("accepts a permanent developer now that CDI is in scope", () => {
+    expect(classifyJob({ title: "Backend Engineer", commitmentLabel: "Permanent" })).toMatchObject({
+      outcome: "ACCEPTED",
+      contractType: "CDI",
+      roleCategory: "BACKEND",
+    });
+  });
+
+  it("still rejects a permanent role that is not a developer job", () => {
+    expect(
+      classifyJob({ title: "Account Executive, Majors", commitmentLabel: "Permanent" }),
+    ).toMatchObject({ outcome: "REJECTED", roleCategory: null });
+  });
+
+  it("reads CDD, intérim and job étudiant as in-scope contracts", () => {
+    expect(classifyJob({ title: "Développeur Front-end", commitmentLabel: "CDD" })).toMatchObject({
+      contractType: "CDD",
+    });
+    expect(
+      classifyJob({ title: "Développeur Full-stack", commitmentLabel: "Mission d'intérim" }),
+    ).toMatchObject({ contractType: "INTERIM" });
+    expect(
+      classifyJob({ title: "Développeur Web", commitmentLabel: "Job étudiant" }),
+    ).toMatchObject({
+      contractType: "STUDENT_JOB",
+    });
   });
 
   it("rejects a real alternance that is not a developer job", () => {
@@ -163,7 +178,7 @@ describe("classifyJob", () => {
       roleCategory: "BACKEND",
       confidence: 40,
     });
-    expect(decision.reasons.join(" ")).toContain("hors périmètre");
+    expect(decision.reasons.join(" ")).toContain("ne disent pas le même contrat");
   });
 
   it("keeps the specific role over the broad one", () => {

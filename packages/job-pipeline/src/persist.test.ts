@@ -21,7 +21,7 @@ const draft = (over: Partial<JobDraft> = {}): JobDraft => ({
   city: "Paris",
   departmentCode: "75",
   publishedAt: NOW,
-  expiresAt: new Date(NOW.getTime() + 72 * 3600 * 1000),
+  expiresAt: new Date(NOW.getTime() + 120 * 3600 * 1000),
   canonicalUrl: "https://example.invalid/offre",
   applyUrl: null,
   externalId: "ext-1",
