@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   Inject,
   Param,
@@ -11,8 +12,7 @@ import {
 } from "@nestjs/common";
 import { z } from "zod";
 
-import { CurrentUser, SessionGuard } from "../auth/auth.guard.js";
-import type { AuthUser } from "../auth/auth.service.js";
+import { ProfileKeyGuard } from "../profile/profile.controller.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { ResumeService } from "./resume.service.js";
 import type { ResumeImportResult, ResumeSummary } from "./resume.service.js";
@@ -34,8 +34,12 @@ const resumeIdSchema = z.object({
 type ResumeImportBody = z.infer<typeof resumeImportSchema>;
 type ResumeId = z.infer<typeof resumeIdSchema>;
 
+/** L'identifiant du propriétaire passé par le web, ou nul (historique). */
+const ownerOf = (header: string | string[] | undefined): string | null =>
+  typeof header === "string" && header.trim() !== "" ? header : null;
+
 @Controller("api/resume")
-@UseGuards(SessionGuard)
+@UseGuards(ProfileKeyGuard)
 export class ResumeController {
   /*
    * Dépendance nommée explicitement (voir `jobs.controller.ts`) : sans
@@ -52,15 +56,15 @@ export class ResumeController {
   @HttpCode(200)
   import(
     @Body(new ZodValidationPipe(resumeImportSchema)) body: ResumeImportBody,
-    @CurrentUser() user: AuthUser | null,
+    @Headers("x-user-id") ownerHeader?: string,
   ): Promise<ResumeImportResult> {
-    return this.resume.import(body, user?.id ?? null);
+    return this.resume.import(body, ownerOf(ownerHeader));
   }
 
   /** Liste les CV conservés, sans leur contenu. */
   @Get()
-  list(@CurrentUser() user: AuthUser | null): Promise<ResumeSummary[]> {
-    return this.resume.list(user?.id ?? null);
+  list(@Headers("x-user-id") ownerHeader?: string): Promise<ResumeSummary[]> {
+    return this.resume.list(ownerOf(ownerHeader));
   }
 
   /** Fait d'un CV la version de référence. */
@@ -68,9 +72,9 @@ export class ResumeController {
   @HttpCode(200)
   activate(
     @Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId,
-    @CurrentUser() user: AuthUser | null,
+    @Headers("x-user-id") ownerHeader?: string,
   ): Promise<void> {
-    return this.resume.activate(params.id, user?.id ?? null);
+    return this.resume.activate(params.id, ownerOf(ownerHeader));
   }
 
   /** Supprime un CV conservé. */
@@ -78,8 +82,8 @@ export class ResumeController {
   @HttpCode(200)
   remove(
     @Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId,
-    @CurrentUser() user: AuthUser | null,
+    @Headers("x-user-id") ownerHeader?: string,
   ): Promise<void> {
-    return this.resume.remove(params.id, user?.id ?? null);
+    return this.resume.remove(params.id, ownerOf(ownerHeader));
   }
 }

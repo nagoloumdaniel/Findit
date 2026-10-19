@@ -1,8 +1,7 @@
-import { Controller, Get, HttpCode, Inject, Param, Post, UseGuards } from "@nestjs/common";
+import { Controller, Get, Headers, HttpCode, Inject, Param, Post, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 
-import { CurrentUser, SessionGuard } from "../auth/auth.guard.js";
-import type { AuthUser } from "../auth/auth.service.js";
+import { ProfileKeyGuard } from "../profile/profile.controller.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { FavoritesService } from "./favorites.service.js";
 import type { FavoriteItem } from "./favorites.service.js";
@@ -17,8 +16,12 @@ const slugSchema = z.object({
 
 type Slug = z.infer<typeof slugSchema>;
 
+/** L'identifiant du propriétaire passé par le web, ou nul (historique). */
+const ownerOf = (header: string | string[] | undefined): string | null =>
+  typeof header === "string" && header.trim() !== "" ? header : null;
+
 @Controller("api/favorites")
-@UseGuards(SessionGuard)
+@UseGuards(ProfileKeyGuard)
 export class FavoritesController {
   constructor(@Inject(FavoritesService) private readonly favorites: FavoritesService) {}
 
@@ -27,14 +30,14 @@ export class FavoritesController {
   @HttpCode(200)
   toggle(
     @Param(new ZodValidationPipe(slugSchema)) params: Slug,
-    @CurrentUser() user: AuthUser | null,
+    @Headers("x-user-id") ownerHeader?: string,
   ): Promise<{ favorited: boolean }> {
-    return this.favorites.toggle(params.slug, user?.id ?? null);
+    return this.favorites.toggle(params.slug, ownerOf(ownerHeader));
   }
 
   /** Liste les favoris de l'utilisateur. */
   @Get()
-  list(@CurrentUser() user: AuthUser | null): Promise<FavoriteItem[]> {
-    return this.favorites.list(user?.id ?? null);
+  list(@Headers("x-user-id") ownerHeader?: string): Promise<FavoriteItem[]> {
+    return this.favorites.list(ownerOf(ownerHeader));
   }
 }

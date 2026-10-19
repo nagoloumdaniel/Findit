@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 
-import { AuthModule } from "../auth/auth.module.js";
+import { ProfileModule } from "../profile/profile.module.js";
 import { ResumeController } from "./resume.controller.js";
 import { ResumeService } from "./resume.service.js";
 
 @Module({
-  imports: [AuthModule],
+  imports: [ProfileModule],
   controllers: [ResumeController],
   providers: [ResumeService],
 })
