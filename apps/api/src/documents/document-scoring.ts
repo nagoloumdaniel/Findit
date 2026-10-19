@@ -1,5 +1,5 @@
 import type { CvDocumentData } from "@findit/documents";
-import { computeMatch, type MatchResult } from "@findit/matching-engine";
+import { computeMatch, detectSkillsInText, type MatchResult } from "@findit/matching-engine";
 
 /**
  * Offre sous la forme attendue par le moteur de scoring déterministe. Elle est
@@ -54,4 +54,43 @@ export const scoreCvDocument = (cv: CvDocumentData, job: ScoredJob): MatchResult
       description: job.description,
     },
   );
+};
+
+/**
+ * Score d'une lettre contre une offre, déterministe et limité.
+ *
+ * Le POURQUOI : la lettre est générée anti-invention (aucune compétence inventée
+ * ne survit à la génération), donc son score se concentre sur ce qui reste
+ * mesurable sans IA : l'adéquation, c'est-à-dire la part des compétences exigées
+ * par l'offre que la lettre cite réellement. La qualité rédactionnelle et la
+ * cohérence narrative restent hors de ce score : ce n'est pas un jugement de
+ * style, seulement une couverture constatée et citée.
+ */
+export type LetterScore = {
+  /// Part des compétences de l'offre citées par la lettre, entre 0 et 100.
+  score: number;
+  offerSkills: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+};
+
+export const scoreLetterDocument = (letterText: string, job: ScoredJob): LetterScore => {
+  // L'adéquation porte sur tout ce que l'offre nomme : exigences, missions et
+  // description. Une lettre qui reprend les termes de l'offre est plus adaptée.
+  const offer = detectSkillsInText(
+    [job.title, ...job.requirements, ...job.responsibilities, job.description].join("\n"),
+  );
+  const letter = detectSkillsInText(letterText);
+  const letterIds = new Set(letter.map((entry) => entry.id));
+
+  const matched = offer.filter((entry) => letterIds.has(entry.id));
+  const missing = offer.filter((entry) => !letterIds.has(entry.id));
+  const score = offer.length === 0 ? 0 : Math.round((matched.length / offer.length) * 100);
+
+  return {
+    score,
+    offerSkills: offer.map((entry) => entry.label),
+    matchedSkills: matched.map((entry) => entry.label),
+    missingSkills: missing.map((entry) => entry.label),
+  };
 };

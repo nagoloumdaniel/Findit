@@ -1,7 +1,7 @@
 import type { CvDocumentData } from "@findit/documents";
 import { describe, expect, it } from "vitest";
 
-import { scoreCvDocument } from "./document-scoring.js";
+import { scoreCvDocument, scoreLetterDocument } from "./document-scoring.js";
 import type { ScoredJob } from "./document-scoring.js";
 
 const cv = (overrides: Partial<CvDocumentData> = {}): CvDocumentData => ({
@@ -62,5 +62,38 @@ describe("scoreCvDocument", () => {
 
   it("est déterministe : le même couple redonne le même score", () => {
     expect(scoreCvDocument(cv(), job())).toEqual(scoreCvDocument(cv(), job()));
+  });
+});
+
+describe("scoreLetterDocument", () => {
+  it("mesure l'adéquation par les compétences de l'offre réellement citées", () => {
+    const result = scoreLetterDocument(
+      "Je maîtrise TypeScript et React, et j'ai l'habitude du travail en équipe.",
+      job(),
+    );
+
+    expect(result.offerSkills).toContain("TypeScript");
+    expect(result.offerSkills).toContain("React");
+    expect(result.matchedSkills).toContain("TypeScript");
+    expect(result.matchedSkills).toContain("React");
+    expect(result.missingSkills).toContain("Next.js");
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it("rend un score faible quand la lettre n'aborde aucune compétence de l'offre", () => {
+    const result = scoreLetterDocument("Je suis motivé et rigoureux.", job());
+
+    expect(result.score).toBe(0);
+    expect(result.matchedSkills).toEqual([]);
+  });
+
+  it("rend un score nul, jamais inventé, quand l'offre ne nomme rien de lisible", () => {
+    const result = scoreLetterDocument(
+      "Je suis disponible immédiatement.",
+      job({ title: "Poste polyvalent", requirements: [], responsibilities: [], description: "" }),
+    );
+
+    expect(result.score).toBe(0);
+    expect(result.offerSkills).toEqual([]);
   });
 });
