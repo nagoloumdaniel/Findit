@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
 import type { SessionUser } from "../lib/auth";
@@ -12,11 +13,59 @@ export type AppShellProps = Readonly<{
   children: ReactNode;
 }>;
 
+/** Icônes SVG de la barre latérale, tracées au trait pour rester sobres. */
+const ICONS = {
+  search: (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  ),
+  profile: (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+    </svg>
+  ),
+  dashboard: (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
+} as const;
+
 /** Liens de la barre latérale. */
 const NAV_ITEMS = [
-  { href: "/", label: "Recherche", icon: "🔍" },
-  { href: "/moi", label: "Mon profil", icon: "👤" },
-  { href: "/dashboard", label: "Dashboard", icon: "🧭" },
+  { href: "/", label: "Recherche", icon: ICONS.search },
+  { href: "/moi", label: "Mon profil", icon: ICONS.profile },
+  { href: "/dashboard", label: "Dashboard", icon: ICONS.dashboard },
 ] as const;
 
 /** Nom affiché : le prénom/nom du profil, sinon l'email. */
@@ -34,6 +83,10 @@ const initialsOf = (user: SessionUser): string => {
   return (first + last).toUpperCase();
 };
 
+/** Vrai quand l'adresse courante correspond à ce lien (la racine exactement). */
+const isActive = (pathname: string, href: string): boolean =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
 /*
  * Coquille d'application : barre latérale (repliable), barre supérieure avec la
  * bascule de thème et la connexion/déconnexion en haut à droite, contenu et pied
@@ -42,6 +95,7 @@ const initialsOf = (user: SessionUser): string => {
  */
 export const AppShell = ({ user, children }: AppShellProps) => {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className={`app-shell${collapsed ? " app-shell-collapsed" : ""}`}>
@@ -52,14 +106,23 @@ export const AppShell = ({ user, children }: AppShellProps) => {
         </Link>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className="sidebar-link" title={item.label}>
-              <span className="sidebar-icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              {collapsed ? null : <span className="sidebar-label">{item.label}</span>}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-link${active ? " sidebar-link-active" : ""}`}
+                title={item.label}
+                aria-current={active ? "page" : undefined}
+              >
+                <span className="sidebar-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                {collapsed ? null : <span className="sidebar-label">{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 

@@ -1556,9 +1556,20 @@ button.filters-toggle-button {
   color: var(--fg);
 }
 
+.sidebar-link-active {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.sidebar-link-active .sidebar-label {
+  font-weight: var(--weight-semibold);
+}
+
 .sidebar-icon {
   flex: 0 0 auto;
   width: 1.25rem;
+  display: grid;
+  place-items: center;
   text-align: center;
   font-size: var(--text-md);
 }
