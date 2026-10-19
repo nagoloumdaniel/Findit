@@ -253,6 +253,7 @@ export type CvScore = {
   missingSkills: string[];
   strengths: string[];
   weaknesses: string[];
+  recommendations: string[];
   confidence: number;
   insufficientDataWarning: string | null;
 };

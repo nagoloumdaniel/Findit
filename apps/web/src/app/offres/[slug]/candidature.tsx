@@ -207,6 +207,13 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
               Exigences non couvertes : {score.missingSkills.join(", ")}.
             </p>
           ) : null}
+          {score.recommendations.length > 0 ? (
+            <ul className="detail-note" style={{ margin: "0.25rem 0 0", paddingLeft: "1.25rem" }}>
+              {score.recommendations.map((recommendation) => (
+                <li key={recommendation}>{recommendation}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : score !== null ? (
         <p className="detail-note" role="note">

@@ -62,7 +62,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : nouveau service dans `apps/api/src/documents` (ou package dédié), `packages/database/prisma`.
 - **Acceptation** : les scores de profil, de CV généré et de lettre restent distincts et explicables.
 
-### 2.2 Boucle de qualité > 90 % avec itérations
+### 2.2 ✅ Boucle de qualité > 90 % avec itérations
 
 - **Objectif** : générer, analyser, améliorer, réévaluer le document jusqu'au seuil cible ou une limite de tentatives, sans jamais manipuler le score (§16.3).
 - **État** : la génération est en une passe, sans réévaluation.
