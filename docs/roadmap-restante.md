@@ -186,7 +186,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 ### 6.3 Authentification multi-utilisateurs (différé, Q-2)
 
 - **Objectif** : comptes et rôles distincts, contrôle d'accès par document (§18, §19).
-- **État** : socle d'authentification livré (tables `User` + `Session`, service `AuthService` : inscription/connexion/déconnexion, hachage scrypt, gardes `SessionGuard`/`OperatorGuard`, migration, tests). Reste l'isolation des données (`ownerId` sur `Profile`/`Favorite`/`Resume`), l'écran de connexion du web et le garde du dashboard.
+- **État** : socle livré (tables `User` + `Session`, `AuthService` inscription/connexion/déconnexion, hachage scrypt, gardes `SessionGuard`/`OperatorGuard`) et isolation par `ownerId` sur `Favorite` et `Resume` (services + contrôleurs par session). Le `Profile` reste singleton (un seul candidat), et l'écran de connexion du web + le garde du dashboard restent à faire.
 - **Note** : la décision proposée est documentée dans `docs/adr-auth-multi-utilisateurs.md` (session serveur + rôles `candidate`/`operator`). L'isolation par document et l'interface sont le suivi restant.
 
 ---
