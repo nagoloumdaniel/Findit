@@ -49,10 +49,10 @@ const EVENT_PRICES: Readonly<Record<string, number>> = {
 };
 
 /** Zones de recherche connues : la région que l'acteur filtre lui-même. */
-const LOCATIONS = new Set(["Île-de-France"]);
+const LOCATIONS = new Set(["Île-de-France", "France"]);
 
 /** Alternance et stage : les deux contrats du périmètre du projet. */
-const CONTRACT_TYPES = ["ALTERNANCE", "STAGE"] as const;
+const CONTRACT_TYPES = ["CDI", "CDD", "ALTERNANCE", "STAGE", "INTERIM"] as const;
 
 /** Fenêtre de fraîcheur du projet : 3 jours, telle que l'acteur la lit. */
 const POSTED_WITHIN_DAYS = "3d";

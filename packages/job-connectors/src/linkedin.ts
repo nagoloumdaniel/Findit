@@ -29,7 +29,7 @@ export const LINKEDIN_MAX_ITEMS_CEILING = 100;
 export const LINKEDIN_FRESHNESS_HOURS = 120;
 
 /** Zone unique du périmètre, telle que le registre la fixe pour LinkedIn. */
-const LOCATIONS = new Set(["Île-de-France, France"]);
+const LOCATIONS = new Set(["Île-de-France, France", "France"]);
 
 export class LinkedinInputError extends Error {
   override readonly name = "LinkedinInputError";

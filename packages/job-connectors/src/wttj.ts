@@ -50,9 +50,11 @@ const ZONES: ReadonlyMap<string, { latitude: string; longitude: string; radiusKm
   new Map([
     // Paris, rayon de 50 km : couvre la petite couronne et l'essentiel de l'Île-de-France.
     ["Île-de-France, France", { latitude: "48.8566", longitude: "2.3522", radiusKm: 50 }],
+    // Toute la France : un grand rayon depuis le centre du pays.
+    ["France", { latitude: "46.603354", longitude: "1.888334", radiusKm: 1000 }],
   ]);
 
-/** Alternance et stage : les deux contrats du périmètre du projet. */
+/** Alternance et stage : les contrats que l'acteur nomme sans ambiguïté. */
 const CONTRACT_TYPES = ["APPRENTICESHIP", "INTERNSHIP"] as const;
 
 /**

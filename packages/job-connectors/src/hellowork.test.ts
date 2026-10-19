@@ -104,7 +104,7 @@ describe("createHelloworkConnector", () => {
     expect(body).toEqual({
       searchQueries: ["développeur"],
       location: "Île-de-France",
-      contractType: ["ALTERNANCE", "STAGE"],
+      contractType: ["CDI", "CDD", "ALTERNANCE", "STAGE", "INTERIM"],
       datePosted: "3d",
       maxResults: 20,
     });
