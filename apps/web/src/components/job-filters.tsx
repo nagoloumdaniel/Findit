@@ -74,9 +74,43 @@ const FilterGroup = ({ title, paramKey, current, allLabel, options, labels }: Gr
 export const JobFilters = ({ options, current }: JobFiltersProps) => {
   // 5 jours est le défaut (choix du propriétaire) ; 24 heures resserre.
   const freshness = current.get("freshness") ?? "LAST_5D";
+  const sort = current.get("sort") ?? "DATE";
 
   return (
     <section className="filters" aria-label="Filtres">
+      <div className="filter-group">
+        <p className="filter-title">Trier par</p>
+        <ul className="filter-options">
+          <li>
+            <Link
+              href={linkFor(current, "sort", null)}
+              aria-current={sort === "DATE" ? "true" : undefined}
+              className="filter-chip"
+            >
+              Plus récentes
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={linkFor(current, "sort", "SALARY")}
+              aria-current={sort === "SALARY" ? "true" : undefined}
+              className="filter-chip"
+            >
+              Rémunération
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={linkFor(current, "sort", "QUALITY")}
+              aria-current={sort === "QUALITY" ? "true" : undefined}
+              className="filter-chip"
+            >
+              Qualité
+            </Link>
+          </li>
+        </ul>
+      </div>
+
       <div className="filter-group">
         <p className="filter-title">Publiées</p>
         <ul className="filter-options">

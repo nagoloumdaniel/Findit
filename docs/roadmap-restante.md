@@ -126,7 +126,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `apps/api/src/jobs`, `apps/web/src/components/job-filters.tsx`, `apps/web/src/lib/labels.ts`.
 - **Acceptation** : chaque filtre agit réellement sur les résultats ; aucun filtre fantôme.
 
-### 4.2 Tris complémentaires
+### 4.2 ✅ Tris complémentaires
 
 - **Objectif** : pertinence textuelle, rémunération (si fiable), correspondance (uniquement en mode profil) (§8.4).
 - **État** : tri `DATE` et `QUALITY` seulement.

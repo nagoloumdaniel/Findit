@@ -52,6 +52,18 @@ describe("jobQuerySchema", () => {
     expect(jobQuerySchema.parse({ officialOnly: "false" }).officialOnly).toBe(false);
   });
 
+  it("accepte un filtre de salaire et le tri par rémunération", () => {
+    expect(
+      jobQuerySchema.parse({ salaryMin: "30000", salaryMax: "60000", sort: "SALARY" }),
+    ).toMatchObject({
+      salaryMin: 30000,
+      salaryMax: 60000,
+      sort: "SALARY",
+    });
+    expect(() => jobQuerySchema.parse({ salaryMin: "-1" })).toThrow();
+    expect(() => jobQuerySchema.parse({ salaryMax: "abc" })).toThrow();
+  });
+
   it("requires a search term long enough to be meaningful", () => {
     expect(() => jobQuerySchema.parse({ q: "a" })).toThrow();
     expect(jobQuerySchema.parse({ q: "  react  " }).q).toBe("react");

@@ -34,7 +34,13 @@ export const jobQuerySchema = z.object({
     .enum(["true", "false"])
     .transform((value) => value === "true")
     .optional(),
-  sort: z.enum(["DATE", "QUALITY"]).default("DATE"),
+  /// Salaire annuel minimal, en euros : ne garde que les offres dont le salaire
+  /// minimum déclaré atteint ce seuil. Ignoré quand l'offre ne le précise pas.
+  salaryMin: z.coerce.number().int().min(0).max(10_000_000).optional(),
+  /// Salaire annuel maximal, en euros : écarte les offres dont le salaire
+  /// minimum déclaré dépasse ce plafond.
+  salaryMax: z.coerce.number().int().min(0).max(10_000_000).optional(),
+  sort: z.enum(["DATE", "QUALITY", "SALARY"]).default("DATE"),
   page: z.coerce.number().int().min(1).default(1),
   /// Plafonné pour qu'une requête ne puisse pas demander la base entière.
   pageSize: z.coerce.number().int().min(1).max(50).default(20),

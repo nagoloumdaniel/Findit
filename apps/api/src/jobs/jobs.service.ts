@@ -110,6 +110,8 @@ export class JobsService {
       ...(query.department ? { departmentCode: query.department } : {}),
       ...(query.workMode ? { workMode: query.workMode } : {}),
       ...(query.city ? { city: { equals: query.city, mode: "insensitive" as const } } : {}),
+      ...(query.salaryMin ? { salaryMin: { gte: query.salaryMin } } : {}),
+      ...(query.salaryMax ? { salaryMin: { lte: query.salaryMax } } : {}),
       ...(query.q
         ? {
             OR: [
@@ -132,7 +134,9 @@ export class JobsService {
         orderBy:
           query.sort === "QUALITY"
             ? [{ dataQualityScore: "desc" }, { publishedAt: "desc" }]
-            : [{ publishedAt: "desc" }],
+            : query.sort === "SALARY"
+              ? [{ salaryMin: "desc" }, { publishedAt: "desc" }]
+              : [{ publishedAt: "desc" }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
         include: {
