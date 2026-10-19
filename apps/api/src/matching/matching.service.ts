@@ -58,6 +58,9 @@ export type RankedItem = {
   confidence: number;
   /// Non nul quand le score est trop fragile pour être affiché tel quel.
   insufficientDataWarning: string | null;
+  /// Ajustement du score lié aux contrats préférés du profil : +6 si l'offre
+  /// correspond, -6 sinon, 0 quand le profil ne déclare aucune préférence.
+  contractDelta: number;
 };
 
 @Injectable()
@@ -208,6 +211,7 @@ export class MatchingService {
 
     const languages = (profile?.languages ?? []) as { name: string; level?: string }[];
     const experiences = (profile?.experiences ?? []) as { title: string }[];
+    const preferredContracts = new Set<string>(profile?.preferredContracts ?? []);
     const resume: ResumeMatchInput = {
       sectionSkills: profile?.skills ?? [],
       // Le profil ne rattache pas encore de compétences par expérience : aucune
@@ -221,6 +225,8 @@ export class MatchingService {
       languages,
     };
 
+    const clamp = (value: number): number => Math.max(0, Math.min(100, value));
+
     const items = jobs.map((job) => {
       const result = scoreDeterministically(resume, {
         title: job.title,
@@ -231,6 +237,14 @@ export class MatchingService {
         description: job.description,
       });
 
+      /*
+       * Contrats préférés : un contrat recherché bonifie légèrement le score,
+       * un contrat identifié mais non recherché le pénalise. Neutre quand le
+       * profil n'en déclare aucun, pour ne pas pénaliser un profil incomplet.
+       */
+      const contractDelta =
+        preferredContracts.size === 0 ? 0 : preferredContracts.has(job.contractType) ? 6 : -6;
+
       return {
         jobSlug: job.slug,
         jobTitle: job.title,
@@ -238,11 +252,12 @@ export class MatchingService {
         city: job.city,
         contractType: job.contractType,
         publishedAt: job.publishedAt.toISOString(),
-        score: result.score,
+        score: clamp(result.score + contractDelta),
         matchedSkills: result.matchedSkills,
         missingSkills: result.missingSkills,
         confidence: result.confidence,
         insufficientDataWarning: result.insufficientDataWarning,
+        contractDelta,
       };
     });
 

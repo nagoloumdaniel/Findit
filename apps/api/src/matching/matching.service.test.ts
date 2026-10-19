@@ -190,4 +190,45 @@ describe("MatchingService - rankByProfile", () => {
     // l'avertissement le dit au lieu de le maquiller.
     expect(items[0]?.insufficientDataWarning).not.toBeNull();
   });
+
+  it("bonifie un contrat préféré et pénalise un contrat non recherché", async () => {
+    const prisma = createPrisma();
+    prisma.profile.findUnique.mockResolvedValue({
+      skills: ["TypeScript"],
+      headline: "Développeur Front-end",
+      languages: [],
+      experiences: [],
+      preferredContracts: ["ALTERNANCE"],
+    });
+    prisma.job.findMany.mockResolvedValue([
+      { ...rankedJob, slug: "alternance", contractType: "ALTERNANCE" },
+      { ...rankedJob, slug: "cdi", contractType: "CDI" },
+    ]);
+    const service = new MatchingService(prisma as never);
+
+    const items = await service.rankByProfile("LAST_5D", new Date("2026-10-19T12:00:00.000Z"));
+
+    const alternance = items.find((item) => item.jobSlug === "alternance");
+    const cdi = items.find((item) => item.jobSlug === "cdi");
+    expect(alternance?.contractDelta).toBe(6);
+    expect(cdi?.contractDelta).toBe(-6);
+    expect((alternance?.score ?? 0) - (cdi?.score ?? 0)).toBe(12);
+  });
+
+  it("reste neutre sur le contrat quand aucune préférence n'est déclarée", async () => {
+    const prisma = createPrisma();
+    prisma.profile.findUnique.mockResolvedValue({
+      skills: ["TypeScript"],
+      headline: "Développeur",
+      languages: [],
+      experiences: [],
+      preferredContracts: [],
+    });
+    prisma.job.findMany.mockResolvedValue([rankedJob]);
+    const service = new MatchingService(prisma as never);
+
+    const items = await service.rankByProfile("LAST_5D", new Date("2026-10-19T12:00:00.000Z"));
+
+    expect(items[0]?.contractDelta).toBe(0);
+  });
 });
