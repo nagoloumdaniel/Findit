@@ -1,11 +1,16 @@
 "use server";
 
-import { generateCvDocument, generateLetterDocument } from "../../../lib/profile-api";
+import {
+  generateCvDocument,
+  generateLetterDocument,
+  scoreCvDocument,
+} from "../../../lib/profile-api";
 import type {
   CvDocumentRequest,
   GeneratedDocument,
   LetterDocumentRequest,
 } from "../../../lib/profile-api";
+import type { ScoreResult } from "../../../lib/profile-api";
 
 /*
  * Génération de CV et de lettre depuis la page d'une offre.
@@ -33,3 +38,8 @@ export const generateLetterAction = async (
   const result = await generateLetterDocument(request);
   return result.ok ? { ok: true, document: result.data } : { ok: false, reason: result.reason };
 };
+
+/** Lit le score du CV du profil contre l'offre, sans générer de document. */
+export async function scoreCvAction(jobSlug: string): Promise<ScoreResult> {
+  return scoreCvDocument(jobSlug);
+}

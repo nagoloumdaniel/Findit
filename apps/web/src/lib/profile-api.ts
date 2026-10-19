@@ -241,3 +241,44 @@ export const generateCvDocument = (request: CvDocumentRequest): Promise<Document
 /** Génère la lettre de motivation pour une offre. */
 export const generateLetterDocument = (request: LetterDocumentRequest): Promise<DocumentResult> =>
   fetchDocument("/api/documents/letter", request);
+
+/** Score explicable du CV du profil contre une offre, tel que l'API le rend. */
+export type CvScore = {
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  strengths: string[];
+  weaknesses: string[];
+  confidence: number;
+  insufficientDataWarning: string | null;
+};
+
+export type ScoreResult = { ok: true; data: CvScore } | { ok: false; reason: string };
+
+/**
+ * Lit le score du CV du profil contre une offre. Déterministe, sans appel IA :
+ * il dit quelles compétences exigées sont couvertes et lesquelles manquent.
+ */
+export const scoreCvDocument = async (jobSlug: string): Promise<ScoreResult> => {
+  const key = internalKey();
+  if (key === undefined) {
+    return { ok: false, reason: "Espace personnel non configuré : INTERNAL_API_KEY manquante." };
+  }
+
+  try {
+    const response = await fetch(new URL("/api/documents/cv/score", apiUrl()), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-key": key },
+      body: JSON.stringify({ jobSlug }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      return { ok: false, reason: `L’API a refusé le score (${String(response.status)}).` };
+    }
+
+    return { ok: true, data: (await response.json()) as CvScore };
+  } catch {
+    return { ok: false, reason: "L’API est injoignable : le score n’est pas disponible." };
+  }
+};

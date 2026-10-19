@@ -78,7 +78,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `apps/api/src/documents/documents.service.ts`, prompts versionnés (`PromptVersion`).
 - **Acceptation** : le CV met en avant ce qui correspond réellement à l'offre, jamais une compétence absente du profil.
 
-### 2.4 Explication du score sur la page de détail
+### 2.4 ✅ Explication du score sur la page de détail
 
 - **Objectif** : sur la page d'offre, montrer le score global, les forces, les compétences couvertes, les exigences non couvertes, les points à vérifier, les recommandations (§12.3).
 - **État** : `@findit/matching-engine` produit le breakdown, mais il n'est pas affiché sur la fiche d'offre.

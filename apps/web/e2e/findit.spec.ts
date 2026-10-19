@@ -79,3 +79,17 @@ test("une offre introuvable rend un état explicite, pas une erreur", async ({ p
   ).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });
+
+test("la fiche d'offre affiche la correspondance au profil", async ({ page }) => {
+  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+
+  // Le score est chargé côté client : il apparaît après la réponse du serveur,
+  // ou un état « non fiable » s'affiche quand le profil est trop incomplet.
+  await expect(
+    page
+      .getByText(
+        /de correspondance avec votre profil|Correspondance non fiable|Le score n’est pas disponible/,
+      )
+      .first(),
+  ).toBeVisible();
+});

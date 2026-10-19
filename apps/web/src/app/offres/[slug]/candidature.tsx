@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { generateCvAction, generateLetterAction } from "./actions";
+import { generateCvAction, generateLetterAction, scoreCvAction } from "./actions";
 import type { CvTemplate } from "../../../lib/profile-api";
+import type { CvScore } from "../../../lib/profile-api";
 
 type DocFormat = "pdf" | "docx";
 
@@ -42,6 +43,27 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
   const [letterFormat, setLetterFormat] = useState<DocFormat>("pdf");
   const [busy, setBusy] = useState<"cv" | "letter" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [score, setScore] = useState<CvScore | null>(null);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void scoreCvAction(jobSlug)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setScore(result.data);
+        } else {
+          setScoreError(result.reason);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setScoreError("Le score n’est pas disponible.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobSlug]);
 
   const onGenerateCv = async (): Promise<void> => {
     setBusy("cv");
@@ -91,6 +113,31 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
         Les documents sont générés à partir des seuls faits de votre profil, jamais complétés
         d’office.
       </p>
+
+      {score !== null && score.insufficientDataWarning === null ? (
+        <div className="match-score-block">
+          <p className="match-score" aria-label={`Correspondance ${score.score} sur 100`}>
+            <strong className="match-score-value">{score.score}%</strong>
+            <span className="match-score-label">de correspondance avec votre profil</span>
+          </p>
+          {score.matchedSkills.length > 0 ? (
+            <p className="detail-note">Compétences couvertes : {score.matchedSkills.join(", ")}.</p>
+          ) : null}
+          {score.missingSkills.length > 0 ? (
+            <p className="detail-note">
+              Exigences non couvertes : {score.missingSkills.join(", ")}.
+            </p>
+          ) : null}
+        </div>
+      ) : score !== null ? (
+        <p className="detail-note" role="note">
+          Correspondance non fiable : votre profil est trop incomplet pour noter cette offre.
+        </p>
+      ) : scoreError !== null ? (
+        <p className="detail-note" role="note">
+          {scoreError}
+        </p>
+      ) : null}
 
       <div className="profile-form" style={{ marginTop: "1rem" }}>
         <label>
