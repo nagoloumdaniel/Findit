@@ -1,7 +1,8 @@
 import { Controller, Get, HttpCode, Inject, Param, Post, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 
-import { ProfileKeyGuard } from "../profile/profile.controller.js";
+import { CurrentUser, SessionGuard } from "../auth/auth.guard.js";
+import type { AuthUser } from "../auth/auth.service.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { FavoritesService } from "./favorites.service.js";
 import type { FavoriteItem } from "./favorites.service.js";
@@ -17,20 +18,23 @@ const slugSchema = z.object({
 type Slug = z.infer<typeof slugSchema>;
 
 @Controller("api/favorites")
-@UseGuards(ProfileKeyGuard)
+@UseGuards(SessionGuard)
 export class FavoritesController {
   constructor(@Inject(FavoritesService) private readonly favorites: FavoritesService) {}
 
-  /** Ajoute ou retire une offre des favoris. */
+  /** Ajoute ou retire une offre des favoris de l'utilisateur. */
   @Post(":slug/toggle")
   @HttpCode(200)
-  toggle(@Param(new ZodValidationPipe(slugSchema)) params: Slug): Promise<{ favorited: boolean }> {
-    return this.favorites.toggle(params.slug);
+  toggle(
+    @Param(new ZodValidationPipe(slugSchema)) params: Slug,
+    @CurrentUser() user: AuthUser | null,
+  ): Promise<{ favorited: boolean }> {
+    return this.favorites.toggle(params.slug, user?.id ?? null);
   }
 
-  /** Liste les favoris. */
+  /** Liste les favoris de l'utilisateur. */
   @Get()
-  list(): Promise<FavoriteItem[]> {
-    return this.favorites.list();
+  list(@CurrentUser() user: AuthUser | null): Promise<FavoriteItem[]> {
+    return this.favorites.list(user?.id ?? null);
   }
 }

@@ -1,6 +1,7 @@
 import {
   type CanActivate,
   type ExecutionContext,
+  createParamDecorator,
   ForbiddenException,
   Inject,
   Injectable,
@@ -51,3 +52,14 @@ export class OperatorGuard implements CanActivate {
     return true;
   }
 }
+
+/**
+ * Paramètre de contrôleur : l'utilisateur authentifié par `SessionGuard`, ou
+ * `null` quand aucune session n'a été posée (historique antérieur aux comptes).
+ */
+export const CurrentUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): AuthUser | null => {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    return request.user ?? null;
+  },
+);

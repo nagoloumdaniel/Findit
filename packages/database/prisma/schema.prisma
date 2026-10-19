@@ -1072,6 +1072,10 @@ model Profile {
   targetSectors String[] @default([])
   cvText      String?
 
+  /// Propriétaire du profil ; nul pour le singleton historique.
+  ownerId String? @unique
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -1101,23 +1105,34 @@ model Resume {
   warnings String[]
   /// Vrai pour le CV de référence : un seul à la fois.
   active Boolean @default(false)
+
+  /// Propriétaire du CV importé ; nul pour l'historique antérieur.
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
   @@index([active])
   @@index([createdAt])
+  @@index([ownerId])
 }
 
-/// Une offre mise en favori par le propriétaire. Mono-utilisateur : le favori
-/// est un simple lien vers une offre, sans table d'utilisateurs.
+/// Une offre mise en favori par un utilisateur. `ownerId` reste nul pour les
+/// favoris posés avant l'introduction des comptes.
 model Favorite {
   id    String @id @default(uuid(7))
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
+  /// Propriétaire du favori ; nul pour l'historique antérieur.
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
-  @@unique([jobId])
+  @@unique([jobId, ownerId])
   @@index([createdAt])
+  @@index([ownerId])
 }
 
 /// Rôle d'un compte. Le dashboard d'administration exige `OPERATOR` ; l'espace
@@ -1137,6 +1152,10 @@ model User {
   createdAt    DateTime @default(now())
 
   sessions Session[]
+
+  favorites Favorite[]
+  resumes   Resume[]
+  profile   Profile?
 }
 
 /// Une session serveur : le jeton remis au client n'est jamais stocké, seul son

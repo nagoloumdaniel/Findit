@@ -74,7 +74,7 @@ export class ResumeService {
    * que la source n'écrit pas. Le coût du modèle est journalisé dans
    * `ModelCall`.
    */
-  async import(input: ResumeImportInput): Promise<ResumeImportResult> {
+  async import(input: ResumeImportInput, ownerId: string | null): Promise<ResumeImportResult> {
     const fileType = resumeFileType(input.mimeType, input.fileName);
     if (fileType === null) {
       throw new BadRequestException(
@@ -122,6 +122,7 @@ export class ResumeService {
         sanitized.facts,
         structured.confidence,
         warnings,
+        ownerId,
       );
 
       return {
@@ -148,10 +149,14 @@ export class ResumeService {
     facts: ResumeFacts,
     confidence: number,
     warnings: string[],
+    ownerId: string | null,
   ): Promise<string> {
     const contentHash = createHash("sha256").update(buffer).digest("hex");
     return this.prisma.$transaction(async (tx) => {
-      await tx.resume.updateMany({ where: { active: true }, data: { active: false } });
+      await tx.resume.updateMany({
+        where: { active: true, ownerId },
+        data: { active: false },
+      });
       const created = await tx.resume.create({
         data: {
           fileName: input.fileName,
@@ -163,6 +168,7 @@ export class ResumeService {
           confidence,
           warnings,
           active: true,
+          ownerId,
         },
         select: { id: true },
       });
@@ -170,10 +176,11 @@ export class ResumeService {
     });
   }
 
-  /** Liste les CV conservés, du plus récent au plus ancien, sans leur contenu. */
-  async list(): Promise<ResumeSummary[]> {
+  /** Liste les CV conservés de l'utilisateur, sans leur contenu. */
+  async list(ownerId: string | null): Promise<ResumeSummary[]> {
     await this.#purgeExpired();
     const rows = await this.prisma.resume.findMany({
+      where: { ownerId },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -195,21 +202,24 @@ export class ResumeService {
   }
 
   /** Fait d'un CV la version de référence : il devient le seul actif. */
-  async activate(id: string): Promise<void> {
+  async activate(id: string, ownerId: string | null): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const found = await tx.resume.findUnique({ where: { id }, select: { id: true } });
+      const found = await tx.resume.findFirst({ where: { id, ownerId }, select: { id: true } });
       if (found === null) {
         throw new NotFoundException("Ce CV n'existe pas.");
       }
-      await tx.resume.updateMany({ where: { active: true }, data: { active: false } });
+      await tx.resume.updateMany({
+        where: { active: true, ownerId },
+        data: { active: false },
+      });
       await tx.resume.update({ where: { id }, data: { active: true } });
     });
   }
 
   /** Supprime un CV conservé. Un CV inconnu est signalé, pas inventé. */
-  async remove(id: string): Promise<void> {
+  async remove(id: string, ownerId: string | null): Promise<void> {
     try {
-      await this.prisma.resume.delete({ where: { id } });
+      await this.prisma.resume.delete({ where: { id, ownerId } });
     } catch {
       throw new NotFoundException("Ce CV n'existe pas.");
     }

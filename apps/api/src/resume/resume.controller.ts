@@ -8,11 +8,11 @@ import {
   Param,
   Post,
   UseGuards,
-  UsePipes,
 } from "@nestjs/common";
 import { z } from "zod";
 
-import { ProfileKeyGuard } from "../profile/profile.controller.js";
+import { CurrentUser, SessionGuard } from "../auth/auth.guard.js";
+import type { AuthUser } from "../auth/auth.service.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { ResumeService } from "./resume.service.js";
 import type { ResumeImportResult, ResumeSummary } from "./resume.service.js";
@@ -35,7 +35,7 @@ type ResumeImportBody = z.infer<typeof resumeImportSchema>;
 type ResumeId = z.infer<typeof resumeIdSchema>;
 
 @Controller("api/resume")
-@UseGuards(ProfileKeyGuard)
+@UseGuards(SessionGuard)
 export class ResumeController {
   /*
    * Dépendance nommée explicitement (voir `jobs.controller.ts`) : sans
@@ -50,28 +50,36 @@ export class ResumeController {
    */
   @Post("import")
   @HttpCode(200)
-  @UsePipes(new ZodValidationPipe(resumeImportSchema))
-  import(@Body() body: ResumeImportBody): Promise<ResumeImportResult> {
-    return this.resume.import(body);
+  import(
+    @Body(new ZodValidationPipe(resumeImportSchema)) body: ResumeImportBody,
+    @CurrentUser() user: AuthUser | null,
+  ): Promise<ResumeImportResult> {
+    return this.resume.import(body, user?.id ?? null);
   }
 
   /** Liste les CV conservés, sans leur contenu. */
   @Get()
-  list(): Promise<ResumeSummary[]> {
-    return this.resume.list();
+  list(@CurrentUser() user: AuthUser | null): Promise<ResumeSummary[]> {
+    return this.resume.list(user?.id ?? null);
   }
 
   /** Fait d'un CV la version de référence. */
   @Post(":id/activate")
   @HttpCode(200)
-  activate(@Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId): Promise<void> {
-    return this.resume.activate(params.id);
+  activate(
+    @Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId,
+    @CurrentUser() user: AuthUser | null,
+  ): Promise<void> {
+    return this.resume.activate(params.id, user?.id ?? null);
   }
 
   /** Supprime un CV conservé. */
   @Delete(":id")
   @HttpCode(200)
-  remove(@Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId): Promise<void> {
-    return this.resume.remove(params.id);
+  remove(
+    @Param(new ZodValidationPipe(resumeIdSchema)) params: ResumeId,
+    @CurrentUser() user: AuthUser | null,
+  ): Promise<void> {
+    return this.resume.remove(params.id, user?.id ?? null);
   }
 }

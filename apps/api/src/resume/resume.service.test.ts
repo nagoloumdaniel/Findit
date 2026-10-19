@@ -39,7 +39,7 @@ const createPrisma = () => {
     updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     create: vi.fn().mockResolvedValue({ id: "resume-1" }),
     update: vi.fn().mockResolvedValue({ id: "resume-1" }),
-    findUnique: vi.fn().mockResolvedValue({ id: "resume-1" }),
+    findFirst: vi.fn().mockResolvedValue({ id: "resume-1" }),
     findMany: vi.fn().mockResolvedValue([]),
     delete: vi.fn().mockResolvedValue({ id: "resume-1" }),
     deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -68,7 +68,7 @@ describe("ResumeService - import", () => {
     const service = new ResumeService(prisma as never);
     aiMock.generateStructured.mockResolvedValue(structuredResult());
 
-    const result = await service.import(txtBody("Développeur TypeScript depuis 2025"));
+    const result = await service.import(txtBody("Développeur TypeScript depuis 2025"), null);
 
     expect(result.confidence).toBe(85);
     expect(result.facts.skills).toEqual([{ name: "typescript", category: "programming_language" }]);
@@ -77,7 +77,7 @@ describe("ResumeService - import", () => {
 
     // Le CV est conservé comme version active : les autres sont désactivés.
     expect(prisma.resume.updateMany).toHaveBeenCalledWith({
-      where: { active: true },
+      where: { active: true, ownerId: null },
       data: { active: false },
     });
     expect(prisma.resume.create).toHaveBeenCalledOnce();
@@ -100,7 +100,7 @@ describe("ResumeService - import", () => {
       },
     });
 
-    const result = await service.import(txtBody("Développeur depuis 2025"));
+    const result = await service.import(txtBody("Développeur depuis 2025"), null);
 
     expect(result.facts.experiences[0]?.startDate).toBe("2025");
     expect(result.warnings.length).toBeGreaterThan(0);
@@ -111,7 +111,7 @@ describe("ResumeService - import", () => {
     const service = new ResumeService(prisma as never);
 
     await expect(
-      service.import({ fileName: "photo.png", mimeType: "image/png", contentBase64: "AAAA" }),
+      service.import({ fileName: "photo.png", mimeType: "image/png", contentBase64: "AAAA" }, null),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -119,7 +119,7 @@ describe("ResumeService - import", () => {
     const prisma = createPrisma();
     const service = new ResumeService(prisma as never);
 
-    await expect(service.import(txtBody(""))).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.import(txtBody(""), null)).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 
@@ -138,7 +138,7 @@ describe("ResumeService - versions", () => {
     ]);
     const service = new ResumeService(prisma as never);
 
-    const list = await service.list();
+    const list = await service.list(null);
 
     expect(list).toEqual([
       {
@@ -162,24 +162,24 @@ describe("ResumeService - versions", () => {
     const prisma = createPrisma();
     const service = new ResumeService(prisma as never);
 
-    await service.activate("r-1");
+    await service.activate("r-1", null);
     expect(prisma.resume.update).toHaveBeenCalledWith({
       where: { id: "r-1" },
       data: { active: true },
     });
 
-    prisma.resume.findUnique.mockResolvedValue(null);
-    await expect(service.activate("inconnu")).rejects.toThrow("n'existe pas");
+    prisma.resume.findFirst.mockResolvedValue(null);
+    await expect(service.activate("inconnu", null)).rejects.toThrow("n'existe pas");
   });
 
   it("supprime un CV et signale un identifiant inconnu", async () => {
     const prisma = createPrisma();
     const service = new ResumeService(prisma as never);
 
-    await service.remove("r-1");
-    expect(prisma.resume.delete).toHaveBeenCalledWith({ where: { id: "r-1" } });
+    await service.remove("r-1", null);
+    expect(prisma.resume.delete).toHaveBeenCalledWith({ where: { id: "r-1", ownerId: null } });
 
     prisma.resume.delete.mockRejectedValue(new Error("absent"));
-    await expect(service.remove("inconnu")).rejects.toThrow("n'existe pas");
+    await expect(service.remove("inconnu", null)).rejects.toThrow("n'existe pas");
   });
 });
