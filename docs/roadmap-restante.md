@@ -172,7 +172,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 6 — Sécurité et données personnelles (P1)
 
-### 6.1 Rétention et suppression des CV
+### 6.1 ✅ Rétention et suppression des CV
 
 - **Objectif** : durée de conservation adaptée et suppression des fichiers temporaires après usage (§19, §10.2).
 - **État** : rétention `MatchingRun` (72 h) existe ; pas de rétention sur le CV fichier (dépend 1.4).

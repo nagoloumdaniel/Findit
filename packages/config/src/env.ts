@@ -72,6 +72,9 @@ export const apiEnvSchema = z.object({
    * se fait à chaque nouvelle écriture, sans tâche planifiée à maintenir.
    */
   MATCHING_RETENTION_HOURS: z.coerce.number().int().min(1).max(8760).default(72),
+  /// Durée de conservation des CV importés, en heures (défaut 720 = 30 jours).
+  /// La purge se fait à chaque lecture, sans tâche planifiée.
+  RESUME_RETENTION_HOURS: z.coerce.number().int().min(1).max(8760).default(720),
 });
 
 export const workerEnvSchema = z.object({

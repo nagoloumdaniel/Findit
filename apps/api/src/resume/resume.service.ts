@@ -172,6 +172,7 @@ export class ResumeService {
 
   /** Liste les CV conservés, du plus récent au plus ancien, sans leur contenu. */
   async list(): Promise<ResumeSummary[]> {
+    await this.#purgeExpired();
     const rows = await this.prisma.resume.findMany({
       orderBy: { createdAt: "desc" },
       select: {
@@ -211,6 +212,24 @@ export class ResumeService {
       await this.prisma.resume.delete({ where: { id } });
     } catch {
       throw new NotFoundException("Ce CV n'existe pas.");
+    }
+  }
+
+  /**
+   * Purge les CV dont la rétention est dépassée, à la lecture plutôt que par une
+   * tâche planifiée : un CV est une donnée personnelle, et la lecture est le seul
+   * moment garanti de ne pas la laisser traîner. Un échec est journalisé sans
+   * faire échouer l'appel.
+   */
+  async #purgeExpired(): Promise<void> {
+    const env = parseApiEnv(process.env);
+    const cutoff = new Date(Date.now() - env.RESUME_RETENTION_HOURS * 60 * 60 * 1000);
+    try {
+      await this.prisma.resume.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    } catch (error) {
+      this.#logger.error(
+        `Rétention des CV non appliquée : ${error instanceof Error ? error.message : "inconnu"}.`,
+      );
     }
   }
 

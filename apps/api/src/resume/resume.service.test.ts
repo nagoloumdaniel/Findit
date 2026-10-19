@@ -42,6 +42,7 @@ const createPrisma = () => {
     findUnique: vi.fn().mockResolvedValue({ id: "resume-1" }),
     findMany: vi.fn().mockResolvedValue([]),
     delete: vi.fn().mockResolvedValue({ id: "resume-1" }),
+    deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
   };
   const prisma = {
     modelCall: { create: vi.fn().mockResolvedValue({ id: "call-1" }) },
