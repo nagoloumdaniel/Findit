@@ -67,7 +67,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
          */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body>
+      {/*
+       * `suppressHydrationWarning` sur <body> : certaines extensions de
+       * navigateur injectent des attributs (`bis_register`, `bis_skin_checked`)
+       * avant l'hydratation. Ce sont des attributs que React n'a pas rendus, et
+       * il n'y a rien à corriger dans le HTML de l'application. La liste des
+       * attributs concernés dépend de l'extension installée, pas du code.
+       */}
+      <body suppressHydrationWarning>
         <AppShell user={user}>{children}</AppShell>
       </body>
     </html>
