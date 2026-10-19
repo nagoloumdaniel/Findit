@@ -98,7 +98,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `apps/web/src/app/offres/[slug]/candidature.tsx`, `actions.ts`.
 - **Acceptation** : le PDF téléchargé est identique à l'aperçu.
 
-### 3.2 Prévisualisation et modification de la lettre
+### 3.2 ✅ Prévisualisation et modification de la lettre
 
 - **Objectif** : prévisualiser la lettre, la modifier manuellement, la régénérer, la télécharger (§15).
 - **État** : la lettre est générée et téléchargée directement.

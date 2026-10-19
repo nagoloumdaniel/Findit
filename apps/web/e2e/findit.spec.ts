@@ -100,6 +100,14 @@ test("la fiche d'offre permet de prévisualiser le CV avant téléchargement", a
   await page.getByRole("button", { name: "Prévisualiser le CV" }).click();
 
   // La génération est asynchrone : l'aperçu (iframe) apparaît une fois le PDF prêt.
-  await expect(page.locator('iframe[title="Aperçu du CV"]')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('iframe[title="Aperçu du document"]')).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole("link", { name: "Télécharger cet aperçu" })).toBeVisible();
+});
+
+test("la fiche d'offre permet de prévisualiser la lettre", async ({ page }) => {
+  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+
+  await page.getByRole("button", { name: "Prévisualiser la lettre" }).click();
+
+  await expect(page.locator('iframe[title="Aperçu du document"]')).toBeVisible({ timeout: 20000 });
 });

@@ -198,14 +198,33 @@ export class DocumentsService {
     const usageBefore = model.usage();
 
     try {
-      const letter = await model.generateStructured<GeneratedLetter>({
+      let letter = await model.generateStructured<GeneratedLetter>({
         schema: generatedLetterSchema,
         system: LETTER_SYSTEM,
         prompt: this.#letterPrompt(profile, job),
         temperature: 0.3,
       });
 
-      this.#rejectInventedSkills(letter, profile);
+      /*
+       * Relance ciblée : si le garde-fou écarte une compétence inventée, on
+       * redemande une lettre en interdisant explicitement ces compétences, au
+       * lieu de rendre un échec. Borné à une relance : le modèle ne tourne pas
+       * en boucle, et le second refus rend l'erreur.
+       */
+      try {
+        this.#rejectInventedSkills(letter, profile);
+      } catch (error) {
+        if (!(error instanceof LetterInventsFactsError)) {
+          throw error;
+        }
+        letter = await model.generateStructured<GeneratedLetter>({
+          schema: generatedLetterSchema,
+          system: `${LETTER_SYSTEM} Ne cite en aucun cas ces compétences : ${error.inventedSkills.join(", ")}.`,
+          prompt: this.#letterPrompt(profile, job),
+          temperature: 0.3,
+        });
+        this.#rejectInventedSkills(letter, profile);
+      }
 
       const format = request.format ?? "pdf";
       const data = this.#toLetterData(profile, job, letter);

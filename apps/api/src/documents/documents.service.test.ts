@@ -176,6 +176,30 @@ describe("DocumentsService - génération de lettre", () => {
     expect(renderMock.renderCoverLetterPdf).not.toHaveBeenCalled();
   });
 
+  it("relance une fois quand le modèle invente, puis réussit avec des faits ancrés", async () => {
+    const { service } = createDeps();
+    aiMock.generateStructured
+      .mockResolvedValueOnce({
+        subject: "Candidature",
+        paragraphs: ["Je maîtrise Java."],
+        warnings: [],
+      })
+      .mockResolvedValueOnce({
+        subject: "Candidature au poste de développeur",
+        paragraphs: ["Je maîtrise TypeScript."],
+        warnings: [],
+      });
+    renderMock.renderCoverLetterPdf.mockResolvedValue(Buffer.from("%PDF"));
+
+    const result = await service.generateLetter({ jobSlug: "dev-acme" });
+
+    expect(result.fileName).toBe("lettre-dev-acme.pdf");
+    expect(aiMock.generateStructured).toHaveBeenCalledTimes(2);
+    // La seconde consigne interdit explicitement la compétence inventée.
+    const system = aiMock.generateStructured.mock.calls[1]?.[0] as { system: string };
+    expect(system.system).toContain("Java");
+  });
+
   it("rend la lettre et journalise le coût quand les faits sont ancrés", async () => {
     const { prisma, service } = createDeps();
     aiMock.generateStructured.mockResolvedValue({

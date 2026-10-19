@@ -127,6 +127,23 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
     setBusy(null);
   };
 
+  /** Génère la lettre en PDF et l'affiche en aperçu, sans la télécharger. */
+  const onPreviewLetter = async (): Promise<void> => {
+    setBusy("letter");
+    setError(null);
+    const result = await generateLetterAction({ jobSlug, accentColor, format: "pdf" });
+    if (result.ok) {
+      if (previewUrl !== null) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(toBlobUrl(result.document));
+      setPreviewName(result.document.fileName);
+    } else {
+      setError(result.reason);
+    }
+    setBusy(null);
+  };
+
   const onPhotoChange = (file: File | undefined): void => {
     if (file === undefined) {
       setPhotoDataUrl(null);
@@ -251,6 +268,15 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
         >
           {busy === "letter" ? "Génération…" : "Générer la lettre"}
         </button>
+        <button
+          type="button"
+          className="source-primary"
+          style={buttonStyle}
+          onClick={() => void onPreviewLetter()}
+          disabled={busy !== null}
+        >
+          {busy === "letter" ? "Génération…" : "Prévisualiser la lettre"}
+        </button>
       </div>
 
       {previewUrl !== null ? (
@@ -258,7 +284,7 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
           <iframe
             className="cv-preview-frame"
             src={previewUrl}
-            title="Aperçu du CV"
+            title="Aperçu du document"
             loading="lazy"
           />
           <a className="source-primary" href={previewUrl} download={previewName}>
