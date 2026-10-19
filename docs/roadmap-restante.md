@@ -54,7 +54,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 2 — Matching et scoring (P1)
 
-### 2.1 Score de documents distinct du score profil
+### 2.1 ✅ Score de documents distinct du score profil
 
 - **Objectif** : mesurer la correspondance d'un **CV généré** et d'une **lettre** avec une offre, séparément du score de profil (§16.1, §16.2).
 - **État** : `@findit/matching-engine` fournit le score profil ; aucun score de document n'est calculé ni exposé.
@@ -198,7 +198,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Objectif** : parcours complets dans un navigateur (§22.6, §23) : recherche classique → filtres → détail → profil → import CV → recherche par correspondance → scores → génération CV → génération lettre → téléchargement → lien source.
 - **Travail** : suite Playwright (desktop + mobile), états d'erreur/vide/chargement, erreurs console, captures d'écran.
 
-### 7.2 Tests de non-régression de la règle d'affichage des scores
+### 7.2 ✅ Tests de non-régression de la règle d'affichage des scores
 
 - **Objectif** : verrouiller que la recherche classique n'affiche jamais de score, et que le mode correspondance n'affiche un pourcentage que sur les analyses fiables (§11.4).
 - **État** : tests unitaires du composant `MatchCard` et du contrat API présents ; ajouter un test E2E du parcours complet.
