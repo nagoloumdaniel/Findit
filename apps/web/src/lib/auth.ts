@@ -1,11 +1,13 @@
 import { parseWebEnv } from "@findit/config";
 import { cookies } from "next/headers";
 
+import { fetchProfile } from "./profile-api";
+
 /*
  * Session côté web, serveur uniquement. Le jeton de session est conservé dans
- * un cookie HttpOnly (`findit_session`) ; l'identité d'affichage (email, rôle)
- * dans un cookie lisible par le client (`findit_user`). Aucun secret ne sort
- * côté navigateur au-delà du strict nécessaire à l'affichage.
+ * un cookie HttpOnly (`findit_session`) ; l'identité d'affichage (nom, email,
+ * rôle) dans un cookie lisible par le client (`findit_user`). Aucun secret ne
+ * sort côté navigateur au-delà du strict nécessaire à l'affichage.
  */
 
 const SESSION_COOKIE = "findit_session";
@@ -16,6 +18,8 @@ export type SessionUser = {
   id: string;
   email: string;
   role: string;
+  /** Nom affiché (prénom/nom du profil), absent tant qu'il n'est pas renseigné. */
+  name?: string;
 };
 
 const apiUrl = (): string => parseWebEnv(process.env).NEXT_PUBLIC_API_URL;
@@ -51,10 +55,17 @@ export const login = async (email: string, password: string): Promise<LoginResul
     }
 
     const body = (await response.json()) as { token: string; user: SessionUser };
+    // Le nom affiché vient du profil, pas du compte : on le relit pour que la
+    // barre montre le prénom/nom renseigné plutôt que l'email.
+    const profile = await fetchProfile();
+    const user: SessionUser = {
+      ...body.user,
+      ...(profile.fullName.trim() === "" ? {} : { name: profile.fullName }),
+    };
     const store = await cookies();
     store.set(SESSION_COOKIE, body.token, { httpOnly: true, sameSite: "lax", path: "/" });
-    store.set(USER_COOKIE, JSON.stringify(body.user), { sameSite: "lax", path: "/" });
-    return { ok: true, user: body.user };
+    store.set(USER_COOKIE, JSON.stringify(user), { sameSite: "lax", path: "/" });
+    return { ok: true, user };
   } catch {
     return { ok: false, reason: "L’API est injoignable : connexion impossible." };
   }

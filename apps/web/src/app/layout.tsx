@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AppShell } from "../components/app-shell";
-import { ThemeToggle } from "../components/theme-toggle";
 import { getSessionUser } from "../lib/auth";
 import { THEME_INIT_SCRIPT } from "../lib/theme";
 
@@ -69,7 +68,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        <ThemeToggle />
         <AppShell user={user}>{children}</AppShell>
       </body>
     </html>

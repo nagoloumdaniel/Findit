@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 
 import type { SessionUser } from "../lib/auth";
 import { logoutAction } from "../app/login/actions";
+import { ThemeIconButton } from "./theme-icon-button";
 
 export type AppShellProps = Readonly<{
   user: SessionUser | null;
@@ -18,13 +19,26 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "🧭" },
 ] as const;
 
-/** Première lettre d'un email, pour l'avatar quand aucune photo n'existe. */
-const initialOf = (email: string): string => email.charAt(0).toUpperCase();
+/** Nom affiché : le prénom/nom du profil, sinon l'email. */
+const displayNameOf = (user: SessionUser): string => user.name ?? user.email;
+
+/** Initiales (deux lettres au plus) pour l'avatar, à défaut de photo. */
+const initialsOf = (user: SessionUser): string => {
+  const source = displayNameOf(user).trim();
+  if (source === "") {
+    return "?";
+  }
+  const parts = source.split(/\s+/u).filter((part) => part !== "");
+  const first = parts[0]?.charAt(0) ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.charAt(0) ?? "") : "";
+  return (first + last).toUpperCase();
+};
 
 /*
  * Coquille d'application : barre latérale (repliable), barre supérieure avec la
- * connexion/déconnexion en haut à droite, contenu et pied de page. Tout reste
- * visible sur toutes les pages ; la barre latérale se réduit à ses icônes.
+ * bascule de thème et la connexion/déconnexion en haut à droite, contenu et pied
+ * de page. Tout reste visible sur toutes les pages ; la barre latérale se réduit
+ * à ses icônes.
  */
 export const AppShell = ({ user, children }: AppShellProps) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -62,17 +76,18 @@ export const AppShell = ({ user, children }: AppShellProps) => {
           </button>
 
           <div className="navbar-account">
+            <ThemeIconButton />
             {user === null ? (
               <Link href="/login" className="navbar-connect">
                 Se connecter
               </Link>
             ) : (
               <>
-                <Link href="/moi" className="navbar-profile">
+                <Link href="/moi" className="navbar-profile" title="Mon profil">
                   <span className="navbar-avatar" aria-hidden="true">
-                    {initialOf(user.email)}
+                    {initialsOf(user)}
                   </span>
-                  <span className="navbar-name">{user.email}</span>
+                  <span className="navbar-name">{displayNameOf(user)}</span>
                 </Link>
                 <form action={logoutAction}>
                   <button

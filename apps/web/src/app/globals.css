@@ -1475,87 +1475,6 @@ button.filters-toggle-button {
   white-space: nowrap;
 }
 
-/*
- * Le sélecteur flotte en bas à droite : présent sur toutes les pages sans
- * appartenir à aucune, et hors du flux pour ne pas décaler le contenu.
- */
-.theme-dock {
-  position: fixed;
-  right: max(0.75rem, env(safe-area-inset-right));
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
-  z-index: var(--z-dock);
-}
-
-.theme-toggle {
-  display: inline-flex;
-  gap: 2px;
-  margin: 0;
-  min-inline-size: 0;
-  padding: 2px;
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-}
-
-.theme-toggle-option {
-  position: relative;
-  display: inline-flex;
-}
-
-/*
- * L'entrée radio reste focusable mais invisible : c'est le libellé qui porte le
- * style, anneau de focus compris. `display: none` la retirerait de l'ordre de
- * tabulation et casserait la navigation au clavier, fournie par le navigateur.
- */
-.theme-toggle-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.theme-toggle-label {
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius-pill);
-  color: var(--fg-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  line-height: var(--leading-snug);
-  cursor: pointer;
-  transition:
-    background-color var(--duration-fast) ease,
-    color var(--duration-fast) ease;
-}
-
-/* L'état actif reprend l'inversion noir/blanc de l'identité, pas une couleur. */
-.theme-toggle-input:checked + .theme-toggle-label {
-  background: var(--fg);
-  color: var(--bg);
-}
-
-.theme-toggle-input:focus-visible + .theme-toggle-label {
-  outline: 2px solid var(--accent-ui);
-  outline-offset: 2px;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .theme-toggle-input:not(:checked) + .theme-toggle-label:hover {
-    color: var(--fg);
-  }
-}
-
-/*
- * Mouvement réduit : la bascule de segment devient instantanée. L'état reste
- * parfaitement lisible (fond inversé, libellé), et rien n'aide à comprendre
- * dans un fondu de couleur : c'est le seul effet à retirer ici.
- */
-@media (prefers-reduced-motion: reduce) {
-  .theme-toggle-label {
-    transition: none;
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Coquille d'application : sidebar, navbar, contenu, footer            */
 /* ------------------------------------------------------------------ */
@@ -1749,6 +1668,23 @@ button.filters-toggle-button {
 }
 
 .navbar-logout:hover {
+  color: var(--fg);
+}
+
+.navbar-theme {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.navbar-theme:hover {
   color: var(--fg);
 }
 
