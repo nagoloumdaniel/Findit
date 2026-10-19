@@ -34,6 +34,9 @@ const createPrisma = (over: AnalyticsDouble = {}) => ({
   },
   agentAction: { findMany: vi.fn().mockResolvedValue(over.extractActions ?? []) },
   modelCall: { findMany: vi.fn().mockResolvedValue(over.matchingCalls ?? []) },
+  duplicateDecision: { count: vi.fn().mockResolvedValue(0) },
+  schoolDetectionDecision: { count: vi.fn().mockResolvedValue(0) },
+  fraudDetectionDecision: { count: vi.fn().mockResolvedValue(0) },
 });
 
 describe("AgentService.analytics", () => {
@@ -203,6 +206,18 @@ describe("AgentService.analytics", () => {
       inputTokens: 5000,
       outputTokens: 650,
     });
+  });
+
+  it("compte les offres écartées comme doublons, écoles et fraudes", async () => {
+    const prisma = createPrisma();
+    prisma.duplicateDecision.count.mockResolvedValue(3);
+    prisma.schoolDetectionDecision.count.mockResolvedValue(2);
+    prisma.fraudDetectionDecision.count.mockResolvedValue(1);
+    const service = new AgentService(prisma as never);
+
+    const analytics = await service.analytics(now);
+
+    expect(analytics.rejections).toEqual({ duplicates: 3, schools: 2, fraud: 1 });
   });
 });
 

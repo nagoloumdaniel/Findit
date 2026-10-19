@@ -108,6 +108,16 @@ export type AgentAnalytics = {
   runStatuses: RunStatusBreakdown;
   modelCost: ModelCost;
   matchingCost: MatchingCost;
+  rejections: RejectionBreakdown;
+};
+
+/// Offres écartées sur la fenêtre, par motif. C'est la contrepartie des offres
+/// publiées : ce que le pipeline a collecté puis refusé comme doublon, école ou
+/// fraude, pour lire la santé du filtrage.
+export type RejectionBreakdown = {
+  duplicates: number;
+  schools: number;
+  fraud: number;
 };
 
 /// Coût et tokens d'un jour de la fenêtre. Le jour est la même clé UTC que
@@ -266,6 +276,9 @@ export class AgentService {
       runCosts,
       extractActions,
       matchingCalls,
+      duplicateCount,
+      schoolCount,
+      fraudCount,
     ] = await Promise.all([
       this.prisma.job.findMany({
         where: { status: JobStatus.PUBLISHED, publishedAt: { gte: since } },
@@ -308,6 +321,13 @@ export class AgentService {
           inputTokens: true,
           outputTokens: true,
         },
+      }),
+      this.prisma.duplicateDecision.count({ where: { decidedAt: { gte: since } } }),
+      this.prisma.schoolDetectionDecision.count({
+        where: { excluded: true, decidedAt: { gte: since } },
+      }),
+      this.prisma.fraudDetectionDecision.count({
+        where: { excluded: true, decidedAt: { gte: since } },
       }),
     ]);
 
@@ -404,6 +424,11 @@ export class AgentService {
             outputTokens: dayCalls.reduce((sum, call) => sum + call.outputTokens, 0),
           };
         }),
+      },
+      rejections: {
+        duplicates: duplicateCount,
+        schools: schoolCount,
+        fraud: fraudCount,
       },
     };
   }

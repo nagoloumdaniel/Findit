@@ -162,7 +162,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **État** : déjà noté « reste à faire » dans `roadmap.md` (les connecteurs vivent dans `packages/job-connectors` mais ne sont pas invoqués par `run-agent`).
 - **Fichiers** : `packages/orchestrator`, `packages/job-connectors`.
 
-### 5.2 Indicateurs de santé réels
+### 5.2 ✅ Indicateurs de santé réels
 
 - **Objectif** : métriques issues des données réelles (§25) : offres collectées/valides/doublons/écoles, taux de dates vérifiables, échecs, durée d'analyse, échecs de génération.
 - **État** : `ModelCall`, `ConnectorRun`, logs structurés existent, mais pas de tableau de bord consolidé.
