@@ -238,6 +238,9 @@ interface DepsInput {
   readonly sourceSelector?: SourceSelector;
   readonly resolveUrl?: (url: string) => Promise<string | null>;
   readonly discoverSource?: (url: string) => Promise<string | null>;
+  readonly connectorFallback?: (
+    url: string,
+  ) => Promise<readonly ExtractionResult["offers"][number][] | null>;
 }
 
 /** Assemble les dépendances du run sur le faux Prisma partagé. */
@@ -341,6 +344,42 @@ describe("runAgent", () => {
     // normalisée (hôte sans www, sans requête ni slash final).
     expect(fake.memories.has("VISITED_URL:boards.greenhouse.io/acme/jobs")).toBe(true);
     expect(fake.memories.has("VISITED_URL:example.com/jobs")).toBe(true);
+  });
+
+  it("collecte une source ATS connue via son connecteur, sans la crawler", async () => {
+    const fake = buildFakePrisma();
+    const search = makeSearch([
+      {
+        url: "https://boards.greenhouse.io/acme/jobs",
+        title: "Offres d'alternance développeur",
+        description: "Postes à pourvoir",
+        host: "boards.greenhouse.io",
+      },
+    ]);
+    let crawlCalled = false;
+    const crawl: CrawlSource = () => {
+      crawlCalled = true;
+      return Promise.resolve(successCrawl("https://boards.greenhouse.io/acme/jobs"));
+    };
+    const extract: ExtractJobs = () => Promise.resolve({ offers: [], rejected: [] });
+    let fallbackCalls = 0;
+    const connectorFallback = (url: string): Promise<JobOffer[] | null> => {
+      fallbackCalls += 1;
+      return Promise.resolve(
+        url.includes("greenhouse") ? [makeOffer("Développeur Full Stack", "Acme")] : null,
+      );
+    };
+
+    const deps = buildDeps(fake, { search, crawl, extract, connectorFallback });
+
+    const result = await runAgent("offres d'alternance développeur", deps, { maxQueries: 1 });
+
+    expect(result).toMatchObject({ sourceCount: 1, retainedCount: 1, pageCount: 0 });
+    // Le connecteur a pris le relais : le crawl n'a jamais été invoqué.
+    expect(fallbackCalls).toBe(1);
+    expect(crawlCalled).toBe(false);
+    // La source est mémorisée comme vue, sous sa clé normalisée.
+    expect(fake.memories.has("VISITED_URL:boards.greenhouse.io/acme/jobs")).toBe(true);
   });
 
   it("consigne une source qui échoue sans casser le run", async () => {

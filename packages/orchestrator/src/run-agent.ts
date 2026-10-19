@@ -113,6 +113,18 @@ export interface RunAgentDeps {
    * quand l'URL n'est pas une source enregistrable. Défaut : rien n'est enregistré.
    */
   readonly discoverSource?: (url: string) => Promise<string | null>;
+  /**
+   * Collecte d'une source ATS connue via son connecteur, tentée avant le crawl.
+   * Rend les offres déjà structurées, ou `null` quand l'URL n'est pas une source
+   * ATS connue, que la collecte est refusée, ou qu'elle ne rend rien. L'appelant
+   * branche ici la reconnaissance (`recognizeTarget`), l'exécution
+   * (`runConnector`) et la cartographie des offres brutes ; `runAgent` ne voit
+   * que le résultat. Défaut : aucun connecteur n'est invoqué, la source est
+   * crawlée comme d'habitude.
+   */
+  readonly connectorFallback?: (
+    url: string,
+  ) => Promise<readonly ExtractionResult["offers"][number][] | null>;
   /** Persistance. Défaut : aucune, le compte STORE est simplement consigné. */
   readonly persist?: PersistJobs;
 }
@@ -335,6 +347,22 @@ export async function runAgent(
 
   const seenTitles = new Set<string>();
   const retainedOffers: ExtractionResult["offers"][number][] = [];
+
+  /** Valide puis retient une offre (dédupliquée par titre normalisé). */
+  const retainOffer = async (offer: ExtractionResult["offers"][number]): Promise<void> => {
+    counters.extractedCount += 1;
+    if (!isValidOffer(offer)) {
+      return;
+    }
+    const key = normalizeTitle(offer.title);
+    if (seenTitles.has(key)) {
+      await deps.runStore.recordAction(runId, { kind: ACTION_KIND.DEDUP, detail: offer.title });
+      return;
+    }
+    seenTitles.add(key);
+    counters.retainedCount += 1;
+    retainedOffers.push(offer);
+  };
 
   try {
     /*
@@ -574,6 +602,41 @@ export async function runAgent(
           continue;
         }
 
+        /*
+         * Secours par connecteur (étape 3 de l'extraction) : une source ATS
+         * connue se collecte via son API plutôt que par crawl. Si le connecteur
+         * rend des offres, on les retient et on saute le crawl ; s'il rend
+         * `null` (source inconnue, refusée ou vide), le crawl prend le relais.
+         * Un échec est consigné, jamais silencieux, et le crawl continue.
+         */
+        if (deps.connectorFallback !== undefined) {
+          let connectorOffers: readonly ExtractionResult["offers"][number][] | null = null;
+          try {
+            connectorOffers = await deps.connectorFallback(sourceUrl);
+          } catch (error) {
+            await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+          }
+          if (connectorOffers !== null) {
+            counters.sourceCount += 1;
+            await deps.runStore.recordAction(runId, {
+              kind: ACTION_KIND.CRAWL,
+              detail: `${sourceUrl} · connecteur`,
+              count: connectorOffers.length,
+            });
+            for (const offer of connectorOffers) {
+              await retainOffer(offer);
+            }
+            // La source est marquée comme vue : son connecteur l'a déjà lue.
+            crawledKeys.add(memoryKey);
+            try {
+              await deps.memoryStore.remember(MEMORY_KIND.VISITED_URL, memoryKey);
+            } catch (error) {
+              await recordError(ACTION_KIND.CRAWL, errorMessage(error));
+            }
+            continue;
+          }
+        }
+
         // Crawl borné : un échec de source est consigné, le run continue.
         let crawlResult: CrawlResult;
         try {
@@ -787,21 +850,7 @@ export async function runAgent(
 
           // Validation puis déduplication par titre normalisé, dans ce run.
           for (const offer of result.offers) {
-            counters.extractedCount += 1;
-            if (!isValidOffer(offer)) {
-              continue;
-            }
-            const key = normalizeTitle(offer.title);
-            if (seenTitles.has(key)) {
-              await deps.runStore.recordAction(runId, {
-                kind: ACTION_KIND.DEDUP,
-                detail: offer.title,
-              });
-              continue;
-            }
-            seenTitles.add(key);
-            counters.retainedCount += 1;
-            retainedOffers.push(offer);
+            await retainOffer(offer);
           }
         }
 

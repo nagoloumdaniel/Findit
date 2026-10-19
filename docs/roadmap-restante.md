@@ -156,7 +156,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 5 — Collecte et observabilité (P2)
 
-### 5.1 Connecteurs spécialisés en repli
+### 5.1 ✅ Connecteurs spécialisés en repli
 
 - **Objectif** : invoquer les connecteurs ATS/job boards comme stratégie de secours de l'agent (§4.7 étape 3).
 - **État** : déjà noté « reste à faire » dans `roadmap.md` (les connecteurs vivent dans `packages/job-connectors` mais ne sont pas invoqués par `run-agent`).
