@@ -44,6 +44,8 @@ export type JobDetail = JobListItem & {
   responsibilities: string[];
   requirements: string[];
   benefits: string[];
+  /// Libellé brut de contrat de la source, conservé pour audit.
+  contractTypeRaw: string | null;
   postalCode: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
@@ -223,6 +225,7 @@ export class JobsService {
       departmentCode: row.departmentCode,
       postalCode: row.postalCode,
       contractType: row.contractType,
+      contractTypeRaw: row.contractTypeRaw,
       workMode: row.workMode,
       publishedAt: row.publishedAt,
       expiresAt: row.expiresAt,

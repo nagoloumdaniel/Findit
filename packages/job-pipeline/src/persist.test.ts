@@ -13,6 +13,7 @@ const draft = (over: Partial<JobDraft> = {}): JobDraft => ({
   normalizedTitle: "developpeur front end react",
   roleCategory: "FRONTEND",
   contractType: "ALTERNANCE",
+  contractTypeRaw: "Alternance",
   workMode: "HYBRID",
   description: "Développer des interfaces React et TypeScript au sein de l'équipe produit.",
   responsibilities: [],

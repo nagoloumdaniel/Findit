@@ -49,6 +49,8 @@ export interface JobDraft {
   readonly normalizedTitle: string;
   readonly roleCategory: JobRoleCategory;
   readonly contractType: JobContract;
+  /// Libellé brut de contrat fourni par la source, conservé pour audit.
+  readonly contractTypeRaw: string | null;
   readonly workMode: JobWorkMode;
   readonly description: string;
   readonly responsibilities: readonly string[];
@@ -218,6 +220,7 @@ export const decideIngestion = (offer: CollectedOffer, now: Date): IngestionDeci
     normalizedTitle: normalizeTitle(offer.title),
     roleCategory: classification.roleCategory,
     contractType: classification.contractType,
+    contractTypeRaw: offer.commitmentLabel?.trim() || null,
     workMode: location.workMode ?? DEFAULT_WORK_MODE,
     description,
     responsibilities: sections.responsibilities,

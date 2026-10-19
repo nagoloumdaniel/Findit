@@ -135,6 +135,10 @@ model Job {
   benefits         String[]
 
   contractType ContractType
+  /// Libellé brut de contrat tel que la source l'a écrit (« CDI », « Apprenticeship »),
+  /// conservé pour audit : une classification ambiguë reste relisible sans être
+  /// transformée en certitude. Diffère de `contractType`, qui est normalisé.
+  contractTypeRaw String?
   workMode     WorkMode
 
   city           String

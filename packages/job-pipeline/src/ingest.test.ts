@@ -50,6 +50,16 @@ describe("decideIngestion", () => {
     expect(decision.draft.requirements).toEqual(["React"]);
   });
 
+  it("conserve le libellé brut de contrat pour audit", () => {
+    const decision = decideIngestion(offer({ commitmentLabel: "Apprenticeship" }), NOW);
+
+    expect(decision.outcome).toBe("ACCEPTED");
+    if (decision.outcome === "REJECTED") throw new Error("attendu accepté");
+    // Le type est normalisé en ALTERNANCE, le libellé brut reste lisible.
+    expect(decision.draft.contractType).toBe("ALTERNANCE");
+    expect(decision.draft.contractTypeRaw).toBe("Apprenticeship");
+  });
+
   it("sets expiry 120 hours after publication, never after collection", () => {
     const decision = decideIngestion(offer(), NOW);
     if (decision.outcome === "REJECTED") throw new Error("attendu accepté");

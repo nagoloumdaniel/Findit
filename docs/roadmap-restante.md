@@ -18,7 +18,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 1 — Fondations de données (P0)
 
-### 1.1 Valeur brute de contrat conservée pour audit
+### 1.1 ✅ Valeur brute de contrat conservée pour audit
 
 - **Objectif** : chaque offre porte son type normalisé ET le libellé brut de la source, pour auditer les classifications ambiguës sans les transformer en certitudes (§7.1).
 - **État** : le libellé brut (`commitmentLabel`) est cité dans `JobClassificationDecision.reasons`, mais pas stocké dans un champ dédié.

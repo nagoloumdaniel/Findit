@@ -311,6 +311,7 @@ const writeJob = async (
     normalizedTitle: draft.normalizedTitle,
     roleCategory: draft.roleCategory,
     contractType: draft.contractType,
+    contractTypeRaw: draft.contractTypeRaw,
     workMode: draft.workMode,
     description: draft.description,
     responsibilities: [...draft.responsibilities],

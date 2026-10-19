@@ -45,6 +45,8 @@ interface JobDraft {
   readonly normalizedTitle: string;
   readonly roleCategory: JobRoleCategory;
   readonly contractType: JobContract;
+  /// Libellé brut de contrat fourni par la source, conservé pour audit.
+  readonly contractTypeRaw: string | null;
   readonly workMode: JobWorkMode;
   readonly description: string;
   readonly city: string;
@@ -241,6 +243,7 @@ const prepareOffer = (offer: JobOffer, now: Date): PreparedOffer => {
     normalizedTitle,
     roleCategory: classification.roleCategory,
     contractType: classification.contractType,
+    contractTypeRaw: offer.contractType?.trim() || null,
     workMode: location.workMode ?? DEFAULT_WORK_MODE,
     description: offer.description ?? "",
     city: location.city,
@@ -371,6 +374,7 @@ export const persistOffers = async (
         requirements: [],
         benefits: [],
         contractType: draft.contractType,
+        contractTypeRaw: draft.contractTypeRaw,
         workMode: draft.workMode,
         city: draft.city,
         departmentCode: draft.departmentCode,
