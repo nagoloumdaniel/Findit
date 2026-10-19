@@ -1120,4 +1120,37 @@ model Favorite {
   @@index([createdAt])
 }
 
+/// Rôle d'un compte. Le dashboard d'administration exige `OPERATOR` ; l'espace
+/// personnel `CANDIDATE`.
+enum UserRole {
+  CANDIDATE
+  OPERATOR
+}
+
+/// Un compte d'utilisateur. Le mot de passe n'est jamais stocké en clair : seul
+/// son hachage scrypt (sel + empreinte) est conservé.
+model User {
+  id           String   @id @default(uuid(7))
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CANDIDATE)
+  createdAt    DateTime @default(now())
+
+  sessions Session[]
+}
+
+/// Une session serveur : le jeton remis au client n'est jamais stocké, seul son
+/// hachage l'est. La révocation est une simple suppression de ligne.
+model Session {
+  id        String   @id @default(uuid(7))
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 

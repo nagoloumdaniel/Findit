@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AgentModule } from "./agent/agent.module.js";
+import { AuthModule } from "./auth/auth.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { FavoritesModule } from "./favorites/favorites.module.js";
 import { HealthModule } from "./health/health.module.js";
@@ -21,6 +22,7 @@ import { ResumeModule } from "./resume/resume.module.js";
     ResumeModule,
     DocumentsModule,
     FavoritesModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
