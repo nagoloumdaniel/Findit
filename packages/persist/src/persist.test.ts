@@ -157,14 +157,16 @@ describe("persistOffers - rejets", () => {
     expect(prisma.job.create).not.toHaveBeenCalled();
   });
 
-  it("rejette une offre hors Île-de-France", async () => {
+  it("rejette une commune dont le département ne peut pas être établi", async () => {
     const prisma = createPrisma();
 
+    // « Lyon » seul, sans code postal : la ville n'est pas dans la table des
+    // communes connues, donc aucun département n'en découle.
     const result = await persistOffers([offer({ location: "Lyon" })], depsFor(prisma));
 
     expect(result.inserted).toBe(0);
     expect(result.rejected).toHaveLength(1);
-    expect(result.rejected[0]?.reason).toContain("Île-de-France");
+    expect(result.rejected[0]?.reason).toContain("France");
     expect(prisma.job.create).not.toHaveBeenCalled();
   });
 

@@ -43,9 +43,6 @@ const TOKEN_SCOPE = "api_offresdemploiv2 o2dsoffre";
  */
 export const FRANCE_TRAVAIL_ANONYMOUS_EMPLOYER = "Inconnu";
 
-/** Code région officiel de l'Île-de-France dans le référentiel de l'API. */
-const REGION_CODES: ReadonlyMap<string, string> = new Map([["Île-de-France, France", "11"]]);
-
 /**
  * `publieeDepuis` n'accepte que 1, 3, 7, 14 ou 31 jours. Sept jours englobent
  * la fenêtre de fraîcheur du projet (120 h) sans demander plus que nécessaire.
@@ -71,7 +68,12 @@ const offreSchema = z.object({
   dateCreation: z.string().nullish(),
   /** Nature du contrat côté France Travail (« CDI », « CDD », « MIS », « E2 »…). */
   natureContrat: z.string().nullish(),
-  lieuTravail: z.object({ libelle: z.string().nullish() }).nullish(),
+  lieuTravail: z
+    .object({
+      libelle: z.string().nullish(),
+      codePostal: z.string().nullish(),
+    })
+    .nullish(),
   entreprise: z.object({ nom: z.string().nullish() }).nullish(),
   origineOffre: z.object({ urlOrigine: z.string().nullish() }).nullish(),
 });
@@ -98,15 +100,29 @@ const issuesOf = (error: z.ZodError): string =>
  * une conversion de forme, pas une invention : le libellé d'origine reste dans
  * `rawContent`.
  */
-const locationLabel = (libelle: string | null | undefined): string | null => {
-  if (libelle === null || libelle === undefined || libelle.trim() === "") {
-    return null;
-  }
+const locationLabel = (
+  libelle: string | null | undefined,
+  codePostal: string | null | undefined,
+): string | null => {
+  const city =
+    libelle === null || libelle === undefined || libelle.trim() === ""
+      ? ""
+      : (() => {
+          const withoutDepartment = libelle.trim().replace(/^\d{2,3}\s*-\s*/u, "");
+          const arrondissement = /^(?<city>Paris|Lyon|Marseille)\s+\d{1,2}$/iu.exec(
+            withoutDepartment,
+          );
+          return arrondissement?.groups?.["city"] ?? withoutDepartment;
+        })();
 
-  const withoutDepartment = libelle.trim().replace(/^\d{2,3}\s*-\s*/u, "");
-  const arrondissement = /^(?<city>Paris|Lyon|Marseille)\s+\d{1,2}$/iu.exec(withoutDepartment);
-
-  return arrondissement?.groups?.["city"] ?? withoutDepartment;
+  // Le code postal porte le département, partout en France : il est conservé en
+  // tête du libellé pour que la classification le lise sans deviner.
+  const postal = codePostal?.trim() ?? "";
+  const label = [postal, city]
+    .filter((part) => part !== "")
+    .join(" ")
+    .trim();
+  return label === "" ? null : label;
 };
 
 const parsePublishedAt = (dateCreation: string | null | undefined): Date | null => {
@@ -163,7 +179,7 @@ const toRawJob = (raw: unknown, position: number): RawJob => {
       offre.origineOffre?.urlOrigine ??
       `https://candidat.francetravail.fr/offres/recherche/detail/${offre.id}`,
     title: offre.intitule,
-    locationLabel: locationLabel(offre.lieuTravail?.libelle),
+    locationLabel: locationLabel(offre.lieuTravail?.libelle, offre.lieuTravail?.codePostal),
     descriptionHtml: offre.description ?? null,
     publishedAt: parsePublishedAt(offre.dateCreation),
     // L'API traverse toutes les entreprises : l'employeur est celui que
@@ -177,13 +193,11 @@ const toRawJob = (raw: unknown, position: number): RawJob => {
   };
 };
 
-const searchUrl = (target: SearchTarget, region: string, page: number): string => {
+const searchUrl = (target: SearchTarget, page: number): string => {
   const url = new URL(SEARCH_URL);
   url.searchParams.set("motsCles", target.query);
-  url.searchParams.set("region", region);
-  // Pas de filtre `natureContrat` : la plateforme couvre tous les contrats
-  // (CDI, CDD, intérim, stage, alternance). Le contrat de chaque offre est lu
-  // dans sa nature et transmis à la classification.
+  // Toute la France : pas de filtre de région ni de contrat. Le lieu et le type
+  // de contrat sont lus offre par offre, puis passés à la classification.
   url.searchParams.set("publieeDepuis", String(PUBLIEE_DEPUIS_DAYS));
   url.searchParams.set(
     "range",
@@ -205,13 +219,6 @@ export const createFranceTravailConnector = (
     target: SearchTarget,
     context: CollectionContext,
   ): Promise<readonly RawJob[]> => {
-    const region = REGION_CODES.get(target.location);
-    if (region === undefined) {
-      throw new FranceTravailShapeError(
-        `la zone « ${target.location} » n'a pas de code région connu : le périmètre du projet est l'Île-de-France.`,
-      );
-    }
-
     // Le jeton est demandé à chaque collecte : il vit ~25 minutes, un cycle
     // aussi. Le garder plus longtemps serait un état de plus pour rien.
     const tokenPayload = await context.fetchJson(TOKEN_URL, {
@@ -236,7 +243,7 @@ export const createFranceTravailConnector = (
     const jobs: RawJob[] = [];
 
     for (let page = 0; page < MAX_PAGES; page += 1) {
-      const payload = await context.fetchJson(searchUrl(target, region, page), {
+      const payload = await context.fetchJson(searchUrl(target, page), {
         headers: authorization,
       });
 

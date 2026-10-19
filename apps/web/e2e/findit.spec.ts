@@ -42,7 +42,7 @@ test("l'accueil affiche les offres publiées", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: /Toutes les offres d'emploi en Île-de-France/ }),
+    page.getByRole("heading", { name: /Toutes les offres d'emploi en France/ }),
   ).toBeVisible();
   // Au moins une carte d'offre est rendue.
   await expect(page.locator(".job-card").first()).toBeVisible();

@@ -22,9 +22,11 @@ describe("jobQuerySchema", () => {
     expect(() => jobQuerySchema.parse({ freshness: "168h" })).toThrow();
   });
 
-  it("rejects a department outside Île-de-France", () => {
-    expect(() => jobQuerySchema.parse({ department: "69" })).toThrow();
+  it("accepts a department anywhere in France, rejects a malformed one", () => {
+    // Toute la France est couverte.
+    expect(jobQuerySchema.parse({ department: "69" }).department).toBe("69");
     expect(jobQuerySchema.parse({ department: "93" }).department).toBe("93");
+    expect(() => jobQuerySchema.parse({ department: "Paris" })).toThrow();
   });
 
   it("rejects a role outside the validated scope", () => {

@@ -32,7 +32,7 @@ const mono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Findit",
   description:
-    "Toutes les offres d'emploi récentes en Île-de-France : CDI, CDD, intérim, stage et alternance, tous domaines confondus.",
+    "Toutes les offres d'emploi récentes en France : CDI, CDD, intérim, stage et alternance, tous domaines confondus.",
   icons: {
     icon: [
       { url: "/logonoir.png", media: "(prefers-color-scheme: light)" },

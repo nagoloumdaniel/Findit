@@ -6,12 +6,7 @@ import {
   normalizeTitle,
   resolveLocation,
 } from "@findit/job-normalization";
-import type {
-  IleDeFranceDepartment,
-  JobContract,
-  JobRoleCategory,
-  JobWorkMode,
-} from "@findit/shared";
+import type { JobContract, JobRoleCategory, JobWorkMode } from "@findit/shared";
 import { EXTENDED_MAX_AGE_HOURS, endOfDayIfDateOnly } from "@findit/shared";
 
 /**
@@ -57,7 +52,7 @@ export interface JobDraft {
   readonly requirements: readonly string[];
   readonly benefits: readonly string[];
   readonly city: string;
-  readonly departmentCode: IleDeFranceDepartment;
+  readonly departmentCode: string;
   readonly publishedAt: Date;
   readonly expiresAt: Date;
   readonly canonicalUrl: string;

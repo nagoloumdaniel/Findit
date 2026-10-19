@@ -125,7 +125,7 @@ describe("createFranceTravailConnector", () => {
       "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?",
     );
     expect(url).toContain("motsCles=d%C3%A9veloppeur");
-    expect(url).toContain("region=11");
+    expect(url).not.toContain("region=");
     // Plus de filtre de contrat : la plateforme couvre tous les contrats.
     expect(url).not.toContain("natureContrat=");
     expect(url).toContain("publieeDepuis=7");
@@ -147,7 +147,7 @@ describe("createFranceTravailConnector", () => {
       // « 75 - PARIS 14 » devient « PARIS » : le préfixe département et
       // l'arrondissement sont retirés, la casse de la source est gardée - le
       // libellé d'origine reste dans rawContent.
-      locationLabel: "PARIS",
+      locationLabel: "75014 PARIS",
       descriptionHtml: "Au sein d'une équipe de 4 personnes, vous participerez au développement.",
       publishedAt: new Date("2026-07-25T09:12:44.000Z"),
       companyName: "SARL ATELIER NUMERIQUE",
@@ -191,14 +191,20 @@ describe("createFranceTravailConnector", () => {
     expect(fetchStub).toHaveBeenCalledTimes(2);
   });
 
-  it("refuses a zone outside the project scope rather than guessing a region code", async () => {
-    const fetchStub = respondWith([{ status: 204 }]);
+  it("collects from any French zone, without a region filter", async () => {
+    const fetchStub = respondWith([{ status: 200, payload: { resultats: [realOffre] } }]);
 
-    await expect(
-      runConnector(connector, registration, { ...target, location: "Bretagne" }, deps(fetchStub)),
-    ).rejects.toBeInstanceOf(FranceTravailShapeError);
+    const outcome = await runConnector(
+      connector,
+      registration,
+      { ...target, location: "Bretagne" },
+      deps(fetchStub),
+    );
 
-    expect(fetchStub).not.toHaveBeenCalled();
+    expect(outcome.jobs).toHaveLength(1);
+    // Aucun filtre de région : la collecte couvre toute la France.
+    const { url } = requestOf(fetchStub.mock.calls[1]);
+    expect(url).not.toContain("region=");
   });
 
   it("raises when the envelope changed shape instead of reporting an empty search", async () => {

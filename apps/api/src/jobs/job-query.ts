@@ -1,9 +1,4 @@
-import {
-  ILE_DE_FRANCE_DEPARTMENTS,
-  JOB_CONTRACTS,
-  JOB_ROLE_CATEGORIES,
-  JOB_WORK_MODES,
-} from "@findit/shared";
+import { JOB_CONTRACTS, JOB_ROLE_CATEGORIES, JOB_WORK_MODES } from "@findit/shared";
 import { z } from "zod";
 
 /*
@@ -24,7 +19,10 @@ export const jobQuerySchema = z.object({
    */
   role: z.enum(JOB_ROLE_CATEGORIES).optional(),
   contract: z.enum(JOB_CONTRACTS).optional(),
-  department: z.enum(ILE_DE_FRANCE_DEPARTMENTS).optional(),
+  department: z
+    .string()
+    .regex(/^(\d{2,3}|2[AB])$/u, "Code département français attendu")
+    .optional(),
   workMode: z.enum(JOB_WORK_MODES).optional(),
   city: z.string().trim().min(1).max(80).optional(),
   /// Niveau d'études demandé, tel que la source l'a écrit (ex. « Bac+5 »).

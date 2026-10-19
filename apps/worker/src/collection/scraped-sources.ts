@@ -11,18 +11,16 @@ import {
 import type { CollectionJob } from "./run-collection.js";
 
 /*
- * Ce que le cycle quotidien lit sur chaque job board. Le périmètre produit est
- * l'Île-de-France ; la nature du contrat et le métier sont des filtres de
- * l'acteur quand il les sait faire, sinon des mots-clés relus par la
- * classification Findit (Indeed et LinkedIn n'ont pas de filtre de contrat).
+ * Ce que le cycle quotidien lit sur chaque job board. La plateforme couvre toute
+ * la France et tous les domaines : les requêtes visent plusieurs métiers. La
+ * nature du contrat et le métier sont des filtres de l'acteur quand il les sait
+ * faire, sinon des mots-clés relus par la classification Findit (Indeed et
+ * LinkedIn n'ont pas de filtre de contrat).
  */
-const WTTJ_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France, France" };
-const HELLOWORK_SEARCH: SearchTarget = { query: "développeur", location: "Île-de-France" };
-const INDEED_SEARCH: SearchTarget = { query: "alternance développeur", location: "Île-de-France" };
-const LINKEDIN_SEARCH: SearchTarget = {
-  query: "alternance développeur",
-  location: "Île-de-France, France",
-};
+const WTTJ_SEARCH: SearchTarget = { query: "développeur", location: "France" };
+const HELLOWORK_SEARCH: SearchTarget = { query: "développeur", location: "France" };
+const INDEED_SEARCH: SearchTarget = { query: "développeur", location: "France" };
+const LINKEDIN_SEARCH: SearchTarget = { query: "développeur", location: "France" };
 
 /*
  * Plafond LinkedIn en attendant un réglage d'environnement : c'est la ligne

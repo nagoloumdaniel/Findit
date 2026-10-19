@@ -3,12 +3,7 @@ import type { JobOffer } from "@findit/extract";
 import { looksLikeSchool } from "@findit/extract";
 import { classifyJob, detectSchoolRisk } from "@findit/job-classification";
 import { normalizeTitle, resolveLocation } from "@findit/job-normalization";
-import type {
-  IleDeFranceDepartment,
-  JobContract,
-  JobRoleCategory,
-  JobWorkMode,
-} from "@findit/shared";
+import type { JobContract, JobRoleCategory, JobWorkMode } from "@findit/shared";
 import { EXTENDED_MAX_AGE_HOURS } from "@findit/shared";
 
 import { jobSlug, slugify } from "./slug.js";
@@ -50,7 +45,7 @@ interface JobDraft {
   readonly workMode: JobWorkMode;
   readonly description: string;
   readonly city: string;
-  readonly departmentCode: IleDeFranceDepartment;
+  readonly departmentCode: string;
   readonly publishedAt: Date;
   readonly expiresAt: Date;
   readonly canonicalUrl: string;

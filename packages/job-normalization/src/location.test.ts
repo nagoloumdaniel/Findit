@@ -80,7 +80,7 @@ describe("resolveLocation", () => {
   it("keeps the work mode even when the place is out of scope", () => {
     expect(resolveLocation("Remote - United States")).toMatchObject({
       inScope: false,
-      reason: "OUTSIDE_ILE_DE_FRANCE",
+      reason: "OUTSIDE_FRANCE",
       workMode: "REMOTE",
     });
   });
@@ -105,7 +105,7 @@ describe("resolveLocation", () => {
     ]) {
       expect(resolveLocation(label)).toMatchObject({
         inScope: false,
-        reason: "OUTSIDE_ILE_DE_FRANCE",
+        reason: "OUTSIDE_FRANCE",
       });
     }
   });
@@ -114,7 +114,7 @@ describe("resolveLocation", () => {
     for (const label of ["Nantes", "Orléans", "Strasbourg", "Biarritz", "Lyon"]) {
       expect(resolveLocation(label)).toMatchObject({
         inScope: false,
-        reason: "OUTSIDE_ILE_DE_FRANCE",
+        reason: "OUTSIDE_FRANCE",
       });
     }
   });
@@ -124,7 +124,7 @@ describe("resolveLocation", () => {
     // allemande ne devient pas francilienne parce qu'un mot coïncide.
     expect(resolveLocation("Paris, Texas, United States")).toMatchObject({
       inScope: false,
-      reason: "OUTSIDE_ILE_DE_FRANCE",
+      reason: "OUTSIDE_FRANCE",
     });
   });
 
@@ -175,15 +175,15 @@ describe("resolveLocation", () => {
     });
   });
 
-  it("prend un code postal hors zone pour une preuve, pas pour un flou", () => {
+  it("prend un code postal hors Île-de-France pour un lieu valide, toute la France", () => {
     // « France » seul serait TOO_VAGUE ; le code postal, lui, dit où.
     expect(resolveLocation("69000 Lyon, France")).toMatchObject({
-      inScope: false,
-      reason: "OUTSIDE_ILE_DE_FRANCE",
+      inScope: true,
+      departmentCode: "69",
     });
     expect(resolveLocation("69000 Lyon")).toMatchObject({
-      inScope: false,
-      reason: "OUTSIDE_ILE_DE_FRANCE",
+      inScope: true,
+      departmentCode: "69",
     });
   });
 

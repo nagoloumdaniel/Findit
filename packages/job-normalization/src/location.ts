@@ -1,16 +1,16 @@
-import type { IleDeFranceDepartment, JobWorkMode } from "@findit/shared";
+import type { JobWorkMode } from "@findit/shared";
 
 import { ILE_DE_FRANCE_COMMUNES } from "./ile-de-france-communes.js";
 
-export type LocationRefusal =
-  "NO_LOCATION" | "OUTSIDE_ILE_DE_FRANCE" | "AMBIGUOUS_COMMUNE" | "TOO_VAGUE";
+export type LocationRefusal = "NO_LOCATION" | "OUTSIDE_FRANCE" | "AMBIGUOUS_COMMUNE" | "TOO_VAGUE";
 
 export type LocationResolution =
   | {
       readonly inScope: true;
       /** La ville telle que la source l'a écrite, jamais réécrite. */
       readonly city: string;
-      readonly departmentCode: IleDeFranceDepartment;
+      /** Code département français (2 chiffres, 2A/2B ou 97x). */
+      readonly departmentCode: string;
       readonly workMode: JobWorkMode | null;
       /** Le fragment du libellé qui a emporté la décision. */
       readonly evidence: string;
@@ -131,20 +131,27 @@ const VAGUE_FRENCH = new Set([
 ]);
 
 /**
- * Département déduit d'un code postal français, par ses deux premiers chiffres.
- * Les huit départements d'Île-de-France y sont, et eux seuls : un code postal
- * hors zone prouve que l'offre est ailleurs, ce qui vaut mieux que « France ».
+ * Département déduit d'un code postal français, sur toute la France. Les deux
+ * premiers chiffres suffisent sauf pour la Corse (2A/2B, départagés par le
+ * numéro complet) et l'outre-mer (971-976, trois chiffres).
  */
-const DEPARTMENT_BY_POSTAL_PREFIX: ReadonlyMap<string, IleDeFranceDepartment> = new Map([
-  ["75", "75"],
-  ["77", "77"],
-  ["78", "78"],
-  ["91", "91"],
-  ["92", "92"],
-  ["93", "93"],
-  ["94", "94"],
-  ["95", "95"],
-]);
+const FRENCH_OVERSEAS = new Set(["971", "972", "973", "974", "976"]);
+
+const departmentFromPostalCode = (postal: string): string | null => {
+  const prefix = postal.slice(0, 2);
+  if (!/^\d{2}$/u.test(prefix)) {
+    return null;
+  }
+  if (prefix === "20") {
+    return Number(postal) < 20200 ? "2A" : "2B";
+  }
+  if (prefix === "97") {
+    const overseas = postal.slice(0, 3);
+    return FRENCH_OVERSEAS.has(overseas) ? overseas : null;
+  }
+  const numeric = Number(prefix);
+  return numeric >= 1 && numeric <= 95 ? prefix : null;
+};
 
 /** Un code postal français, isolé : cinq chiffres, rien de collé. */
 const POSTAL_CODE = /\b\d{5}\b/u;
@@ -216,8 +223,8 @@ export const resolveLocation = (label: string | null): LocationResolution => {
        */
       const postalCode = POSTAL_CODE.exec(part)?.[0] ?? null;
       if (postalCode !== null) {
-        const department = DEPARTMENT_BY_POSTAL_PREFIX.get(postalCode.slice(0, 2));
-        if (department !== undefined) {
+        const department = departmentFromPostalCode(postalCode);
+        if (department !== null) {
           const city = withoutPostalCode(part);
           return {
             inScope: true,
@@ -229,8 +236,7 @@ export const resolveLocation = (label: string | null): LocationResolution => {
             evidence: segment.trim(),
           };
         }
-        // Un code postal français hors des huit départements : la preuve que
-        // l'offre est ailleurs, plus forte que le mot « France ».
+        // Code postal français illisible (outre-mer non couvert) : on continue.
         sawOutsideDepartment = true;
         continue;
       }
@@ -274,8 +280,8 @@ export const resolveLocation = (label: string | null): LocationResolution => {
   if (sawOutsideDepartment) {
     return {
       inScope: false,
-      reason: "OUTSIDE_ILE_DE_FRANCE",
-      detail: `« ${label} » porte un code postal hors Île-de-France.`,
+      reason: "OUTSIDE_FRANCE",
+      detail: `« ${label} » porte un code postal dont le département n'est pas reconnu.`,
       workMode,
     };
   }
@@ -291,8 +297,8 @@ export const resolveLocation = (label: string | null): LocationResolution => {
 
   return {
     inScope: false,
-    reason: "OUTSIDE_ILE_DE_FRANCE",
-    detail: `« ${label} » ne désigne aucune commune d'Île-de-France.`,
+    reason: "OUTSIDE_FRANCE",
+    detail: `« ${label} » ne désigne aucune commune connue de France.`,
     workMode,
   };
 };

@@ -100,8 +100,8 @@ export const AppShell = ({ user, children }: AppShellProps) => {
   return (
     <div className={`app-shell${collapsed ? " app-shell-collapsed" : ""}`}>
       <aside className="sidebar" aria-label="Navigation principale">
-        <Link href="/" className="sidebar-brand">
-          <span className="sidebar-brand-mark">F</span>
+        <Link href="/" className="sidebar-brand" aria-label="Findit, accueil">
+          <span className="logo sidebar-logo" aria-hidden="true" />
           {collapsed ? null : <span className="sidebar-brand-name">Findit</span>}
         </Link>
 
@@ -174,7 +174,7 @@ export const AppShell = ({ user, children }: AppShellProps) => {
         <main className="app-content">{children}</main>
 
         <footer className="app-footer">
-          <span>Findit - toutes les offres d'emploi en Île-de-France</span>
+          <span>Findit - toutes les offres d'emploi en France</span>
         </footer>
       </div>
     </div>

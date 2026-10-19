@@ -1524,6 +1524,13 @@ button.filters-toggle-button {
   font-weight: var(--weight-semibold);
 }
 
+/* Le glyphe « f » du logo, à la taille de la barre latérale. */
+.sidebar-logo {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.57rem;
+}
+
 .sidebar-brand-name {
   font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-caps);
