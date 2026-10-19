@@ -106,6 +106,21 @@ describe("DocumentsService - génération de CV", () => {
     expect(data.skills).toEqual([]);
   });
 
+  it("réordonne les compétences pour mettre en tête celles que l'offre nomme", async () => {
+    const { profileService, service } = createDeps();
+    profileService.get.mockResolvedValue({
+      ...profile(),
+      skills: ["css", "typescript", "react"],
+    });
+    renderMock.renderCvPdf.mockResolvedValue(Buffer.from("%PDF"));
+
+    await service.generateCv({ jobSlug: "dev-acme" });
+
+    const data = renderMock.renderCvPdf.mock.calls[0]?.[0] as { skills: { name: string }[] };
+    // « typescript » est nommé par l'offre : il passe en tête, sans rien ajouter.
+    expect(data.skills.map((skill) => skill.name)).toEqual(["typescript", "css", "react"]);
+  });
+
   it("rend un DOCX quand le format le demande", async () => {
     const { service } = createDeps();
     renderMock.renderCvDocx.mockResolvedValue(Buffer.from("PK"));

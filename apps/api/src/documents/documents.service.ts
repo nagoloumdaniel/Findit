@@ -132,7 +132,7 @@ export class DocumentsService {
     const job = await this.#findJob(request.jobSlug);
 
     const summary = await this.#buildSummary(profile, job, env);
-    const data = this.#toCvData(profile, summary);
+    const data = this.#toCvData(profile, summary, this.#orderSkills(profile.skills, job));
 
     const options: CvRenderOptions = {
       ...(request.template !== undefined ? { template: request.template } : {}),
@@ -167,7 +167,8 @@ export class DocumentsService {
     const profile = await this.profile.get();
     const job = await this.#findJob(jobSlug);
     // Le résumé n'entre pas dans le score : seuls les faits structurés comptent.
-    const data = this.#toCvData(profile, undefined);
+    // L'ordre des compétences n'influe pas sur le score non plus.
+    const data = this.#toCvData(profile, undefined, profile.skills);
     return scoreCvDocument(data, this.#toScoredJob(job));
   }
 
@@ -386,11 +387,42 @@ export class DocumentsService {
   }
 
   /**
+   * Réordonne les compétences du profil pour mettre en tête celles que l'offre
+   * nomme réellement, sans rien ajouter ni retirer.
+   *
+   * Le POURQUOI : un CV adapté présente d'abord ce qui correspond à l'offre.
+   * Le réordonnancement est déterministe (même dictionnaire que le score) : il
+   * ne coûte rien, ne peut pas inventer, et garde l'ordre d'origine pour les
+   * compétences non concernées.
+   */
+  #orderSkills(skills: string[], job: JobView): string[] {
+    if (skills.length === 0) {
+      return [];
+    }
+    const offerText = [
+      job.title,
+      ...job.requirements,
+      ...job.responsibilities,
+      job.description,
+    ].join("\n");
+    const offerIds = new Set(detectSkillsInText(offerText).map((entry) => entry.id));
+    const relevant = (skill: string): boolean => {
+      const entry = canonicalizeSkill(skill);
+      return entry !== null && offerIds.has(entry.id);
+    };
+    return [...skills.filter(relevant), ...skills.filter((skill) => !relevant(skill))];
+  }
+
+  /**
    * Construit les données du CV depuis les faits réels du profil. Les périodes
    * libres des expériences sont recopiées telles quelles, jamais découpées en
    * dates qui n'ont pas été saisies.
    */
-  #toCvData(profile: ProfileView, summary: string | undefined): CvDocumentData {
+  #toCvData(
+    profile: ProfileView,
+    summary: string | undefined,
+    orderedSkills: string[],
+  ): CvDocumentData {
     return {
       identity: {
         fullName: profile.fullName === "" ? undefined : profile.fullName,
@@ -425,7 +457,7 @@ export class DocumentsService {
         endDate: education.endDate,
         description: education.description,
       })),
-      skills: profile.skills.map((skill) => ({ name: skill })),
+      skills: orderedSkills.map((skill) => ({ name: skill })),
       languages: profile.languages.map((language) => ({
         name: language.name,
         level: language.level,
