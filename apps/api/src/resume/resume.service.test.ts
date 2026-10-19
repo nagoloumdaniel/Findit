@@ -34,9 +34,22 @@ const structuredResult = () => ({
   confidence: 85,
 });
 
-const createPrisma = () => ({
-  modelCall: { create: vi.fn().mockResolvedValue({ id: "call-1" }) },
-});
+const createPrisma = () => {
+  const resume = {
+    updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    create: vi.fn().mockResolvedValue({ id: "resume-1" }),
+    update: vi.fn().mockResolvedValue({ id: "resume-1" }),
+    findUnique: vi.fn().mockResolvedValue({ id: "resume-1" }),
+    findMany: vi.fn().mockResolvedValue([]),
+    delete: vi.fn().mockResolvedValue({ id: "resume-1" }),
+  };
+  const prisma = {
+    modelCall: { create: vi.fn().mockResolvedValue({ id: "call-1" }) },
+    resume,
+    $transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
+  };
+  return prisma;
+};
 
 const txtBody = (text: string): { fileName: string; mimeType: string; contentBase64: string } => ({
   fileName: "cv.txt",
@@ -49,7 +62,7 @@ beforeEach(() => {
 });
 
 describe("ResumeService - import", () => {
-  it("structure un TXT et journalise le coût sans écrire de profil", async () => {
+  it("structure un TXT, le conserve et journalise le coût", async () => {
     const prisma = createPrisma();
     const service = new ResumeService(prisma as never);
     aiMock.generateStructured.mockResolvedValue(structuredResult());
@@ -58,7 +71,15 @@ describe("ResumeService - import", () => {
 
     expect(result.confidence).toBe(85);
     expect(result.facts.skills).toEqual([{ name: "typescript", category: "programming_language" }]);
+    expect(result.resumeId).toBe("resume-1");
     expect(aiMock.generateStructured).toHaveBeenCalledOnce();
+
+    // Le CV est conservé comme version active : les autres sont désactivés.
+    expect(prisma.resume.updateMany).toHaveBeenCalledWith({
+      where: { active: true },
+      data: { active: false },
+    });
+    expect(prisma.resume.create).toHaveBeenCalledOnce();
 
     expect(prisma.modelCall.create).toHaveBeenCalledOnce();
     const call = prisma.modelCall.create.mock.calls[0]?.[0] as {
@@ -98,5 +119,66 @@ describe("ResumeService - import", () => {
     const service = new ResumeService(prisma as never);
 
     await expect(service.import(txtBody(""))).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe("ResumeService - versions", () => {
+  it("liste les CV conservés sans leur contenu", async () => {
+    const prisma = createPrisma();
+    prisma.resume.findMany.mockResolvedValue([
+      {
+        id: "r-1",
+        fileName: "cv.pdf",
+        fileType: "pdf",
+        confidence: 80,
+        active: true,
+        createdAt: new Date("2026-10-19T00:00:00.000Z"),
+      },
+    ]);
+    const service = new ResumeService(prisma as never);
+
+    const list = await service.list();
+
+    expect(list).toEqual([
+      {
+        id: "r-1",
+        fileName: "cv.pdf",
+        fileType: "pdf",
+        confidence: 80,
+        active: true,
+        createdAt: "2026-10-19T00:00:00.000Z",
+      },
+    ]);
+    expect(prisma.resume.findMany).toHaveBeenCalled();
+    // La liste ne charge jamais le texte extrait : minimisation de la donnée.
+    const call = prisma.resume.findMany.mock.calls[0]?.[0] as {
+      select: Record<string, boolean>;
+    };
+    expect(call.select.extractedText).toBeUndefined();
+  });
+
+  it("active un CV et signale un identifiant inconnu", async () => {
+    const prisma = createPrisma();
+    const service = new ResumeService(prisma as never);
+
+    await service.activate("r-1");
+    expect(prisma.resume.update).toHaveBeenCalledWith({
+      where: { id: "r-1" },
+      data: { active: true },
+    });
+
+    prisma.resume.findUnique.mockResolvedValue(null);
+    await expect(service.activate("inconnu")).rejects.toThrow("n'existe pas");
+  });
+
+  it("supprime un CV et signale un identifiant inconnu", async () => {
+    const prisma = createPrisma();
+    const service = new ResumeService(prisma as never);
+
+    await service.remove("r-1");
+    expect(prisma.resume.delete).toHaveBeenCalledWith({ where: { id: "r-1" } });
+
+    prisma.resume.delete.mockRejectedValue(new Error("absent"));
+    await expect(service.remove("inconnu")).rejects.toThrow("n'existe pas");
   });
 });

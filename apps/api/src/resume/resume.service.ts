@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
+
 import { computeCostMicroUsd, createDeepSeekModel } from "@findit/ai";
 import { parseApiEnv } from "@findit/config";
 import type { PrismaClient } from "@findit/database";
-import { BadRequestException, Inject, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
 import { extractResumeText, resumeFileType, ResumeExtractionError } from "./extract-text.js";
@@ -25,13 +27,24 @@ export type ResumeImportInput = {
 };
 
 /**
- * Faits structurés d'un CV, rendus à l'appelant sans rien écrire en base.
- * L'utilisateur relit puis valide via le `PUT` du profil.
+ * Faits structurés d'un CV, rendus à l'appelant avec l'identifiant du CV
+ * conservé. L'utilisateur relit puis valide via le `PUT` du profil.
  */
 export type ResumeImportResult = {
+  resumeId: string;
   facts: ResumeFacts;
   confidence: number;
   warnings: string[];
+};
+
+/** Vue d'un CV conservé, sans le texte ni les faits complets. */
+export type ResumeSummary = {
+  id: string;
+  fileName: string;
+  fileType: string;
+  confidence: number;
+  active: boolean;
+  createdAt: string;
 };
 
 /*
@@ -53,7 +66,8 @@ export class ResumeService {
 
   /**
    * Importe un CV (PDF/DOCX/TXT) : extrait le texte, le structure en faits, et
-   * rend ces faits avec un score de confiance, sans écrire en base.
+   * le conserve comme version active. Il rend les faits avec un score de
+   * confiance et l'identifiant de la version conservée.
    *
    * Le garde-fou anti-invention opère deux fois : la consigne interdit
    * d'inventer, puis `sanitizeDatesAgainstSource` retire ou réduit toute date
@@ -98,14 +112,105 @@ export class ResumeService {
       });
 
       const sanitized = sanitizeDatesAgainstSource(structured.facts, text);
+      const warnings = [...structured.warnings, ...sanitized.warnings];
+
+      const resumeId = await this.#persist(
+        input,
+        fileType,
+        buffer,
+        text,
+        sanitized.facts,
+        structured.confidence,
+        warnings,
+      );
 
       return {
+        resumeId,
         facts: sanitized.facts,
         confidence: structured.confidence,
-        warnings: [...structured.warnings, ...sanitized.warnings],
+        warnings,
       };
     } finally {
       await this.#recordModelCall(model, usageBefore, env);
+    }
+  }
+
+  /**
+   * Conserve le CV importé comme version active, en désactivant les autres : un
+   * seul CV de référence à la fois. Une réimportation du même fichier ne crée
+   * pas de doublon détecté ici — le hash est conservé pour audit, pas dédupliqué.
+   */
+  async #persist(
+    input: ResumeImportInput,
+    fileType: string,
+    buffer: Buffer,
+    text: string,
+    facts: ResumeFacts,
+    confidence: number,
+    warnings: string[],
+  ): Promise<string> {
+    const contentHash = createHash("sha256").update(buffer).digest("hex");
+    return this.prisma.$transaction(async (tx) => {
+      await tx.resume.updateMany({ where: { active: true }, data: { active: false } });
+      const created = await tx.resume.create({
+        data: {
+          fileName: input.fileName,
+          fileType,
+          fileSize: buffer.length,
+          contentHash,
+          extractedText: text,
+          structuredFacts: facts,
+          confidence,
+          warnings,
+          active: true,
+        },
+        select: { id: true },
+      });
+      return created.id;
+    });
+  }
+
+  /** Liste les CV conservés, du plus récent au plus ancien, sans leur contenu. */
+  async list(): Promise<ResumeSummary[]> {
+    const rows = await this.prisma.resume.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fileName: true,
+        fileType: true,
+        confidence: true,
+        active: true,
+        createdAt: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      fileName: row.fileName,
+      fileType: row.fileType,
+      confidence: row.confidence,
+      active: row.active,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
+
+  /** Fait d'un CV la version de référence : il devient le seul actif. */
+  async activate(id: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const found = await tx.resume.findUnique({ where: { id }, select: { id: true } });
+      if (found === null) {
+        throw new NotFoundException("Ce CV n'existe pas.");
+      }
+      await tx.resume.updateMany({ where: { active: true }, data: { active: false } });
+      await tx.resume.update({ where: { id }, data: { active: true } });
+    });
+  }
+
+  /** Supprime un CV conservé. Un CV inconnu est signalé, pas inventé. */
+  async remove(id: string): Promise<void> {
+    try {
+      await this.prisma.resume.delete({ where: { id } });
+    } catch {
+      throw new NotFoundException("Ce CV n'existe pas.");
     }
   }
 

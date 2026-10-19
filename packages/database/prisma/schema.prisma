@@ -1071,3 +1071,35 @@ model Profile {
   updatedAt DateTime @updatedAt
 }
 
+/// Un CV importé, conservé pour être relu et choisi comme référence.
+///
+/// Le POURQUOI : l'import structure un CV en faits, mais tant qu'il n'est pas
+/// conservé, l'utilisateur ne peut ni le relire, ni garder plusieurs versions,
+/// ni en choisir un comme référence. Le texte extrait et les faits structurés
+/// sont stockés, pas le binaire : c'est ce dont la génération et le matching ont
+/// besoin, et cela minimise la donnée personnelle conservée.
+model Resume {
+  id       String @id @default(uuid(7))
+  fileName String
+  /// PDF, DOCX ou TXT, tel que détecté à l'import.
+  fileType String
+  fileSize Int
+  /// Empreinte du contenu, pour repérer une réimportation du même fichier.
+  contentHash String
+  /// Texte extrait du document.
+  extractedText String
+  /// Faits structurés (`structured-resume`), validés par Zod à l'écriture.
+  structuredFacts Json
+  /// Confiance de l'extraction, sur 100.
+  confidence Int
+  /// Avertissements de structuration (champs incertains).
+  warnings String[]
+  /// Vrai pour le CV de référence : un seul à la fois.
+  active Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([active])
+  @@index([createdAt])
+}
+
+

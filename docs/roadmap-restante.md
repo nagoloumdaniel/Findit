@@ -42,7 +42,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `packages/database/prisma/schema.prisma`, `apps/api/src/profile`, `apps/web/src/lib/profile-api.ts`, `apps/web/src/app/moi`.
 - **Acceptation** : un profil renseigné fournit une source unique pour recherche, filtres, matching et génération.
 
-### 1.4 Stockage du CV fichier et versions multiples
+### 1.4 ✅ Stockage du CV fichier et versions multiples
 
 - **Objectif** : importer le CV comme **fichier**, le conserver, le remplacer/supprimer, garder plusieurs versions, choisir le CV de référence (§10.2, §10.4).
 - **État** : `POST /api/resume/import` extrait et structure mais **n'écrit rien en base** ; le profil ne garde que `cvText`.
