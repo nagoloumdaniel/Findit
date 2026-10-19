@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { AppShell } from "../components/app-shell";
 import { ThemeToggle } from "../components/theme-toggle";
+import { getSessionUser } from "../lib/auth";
 import { THEME_INIT_SCRIPT } from "../lib/theme";
 
 import "./globals.css";
@@ -48,7 +50,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const user = await getSessionUser();
+
   return (
     /*
      * `suppressHydrationWarning` est nécessaire ici : le script du `<head>`
@@ -66,7 +70,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body>
         <ThemeToggle />
-        {children}
+        <AppShell user={user}>{children}</AppShell>
       </body>
     </html>
   );
