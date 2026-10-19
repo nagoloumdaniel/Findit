@@ -68,6 +68,12 @@ describe("jobQuerySchema", () => {
     expect(() => jobQuerySchema.parse({ q: "a" })).toThrow();
     expect(jobQuerySchema.parse({ q: "  react  " }).q).toBe("react");
   });
+
+  it("accepte une recherche ciblée sur le titre ou l'entreprise", () => {
+    expect(jobQuerySchema.parse({ title: "développeur" }).title).toBe("développeur");
+    expect(jobQuerySchema.parse({ company: "Acme" }).company).toBe("Acme");
+    expect(() => jobQuerySchema.parse({ title: "a" })).toThrow();
+  });
 });
 
 describe("freshnessQuerySchema", () => {

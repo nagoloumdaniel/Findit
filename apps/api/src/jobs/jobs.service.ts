@@ -125,6 +125,10 @@ export class JobsService {
             ],
           }
         : {}),
+      ...(query.title ? { title: { contains: query.title, mode: "insensitive" as const } } : {}),
+      ...(query.company
+        ? { company: { name: { contains: query.company, mode: "insensitive" as const } } }
+        : {}),
     };
   }
 

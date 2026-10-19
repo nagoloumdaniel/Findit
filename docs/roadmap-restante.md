@@ -133,7 +133,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Travail** : ajouter `sort=RELEVANCE` et `sort=SALARY` à `jobQuerySchema`/`JobsService` ; le tri par correspondance reste réservé au mode `rank`.
 - **Acceptation** : le tri par score n'est actif que dans le mode correspondance.
 
-### 4.3 Recherche textuelle par champs
+### 4.3 ✅ Recherche textuelle par champs
 
 - **Objectif** : chercher sur l'intitulé, les compétences/technologies, l'entreprise, la localisation, séparément du texte libre (§8.1).
 - **État** : un seul paramètre `q` (titre + description + entreprise).

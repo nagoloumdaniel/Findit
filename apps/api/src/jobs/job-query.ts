@@ -31,6 +31,10 @@ export const jobQuerySchema = z.object({
   studyLevel: z.string().trim().min(1).max(80).optional(),
   /// Recherche plein texte sur le titre, l'entreprise et la description.
   q: z.string().trim().min(2).max(120).optional(),
+  /// Recherche sur le seul titre de l'offre.
+  title: z.string().trim().min(2).max(120).optional(),
+  /// Recherche sur le seul nom de l'entreprise.
+  company: z.string().trim().min(2).max(120).optional(),
   /// N'expose que les offres dont la source privilégiée est l'entreprise.
   officialOnly: z
     .enum(["true", "false"])
