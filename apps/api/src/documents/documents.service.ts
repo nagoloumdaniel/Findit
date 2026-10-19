@@ -20,6 +20,8 @@ import { z } from "zod";
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
 import { ProfileService } from "../profile/profile.service.js";
 import type { ProfileView } from "../profile/profile.service.js";
+import { scoreCvDocument } from "./document-scoring.js";
+import type { ScoredJob } from "./document-scoring.js";
 
 /** Ce que les appels de modèle de chaque document écrivent dans `ModelCall`. */
 const CV_PURPOSE = "document-cv";
@@ -89,10 +91,12 @@ const LETTER_SYSTEM = [
   "Si un point est fragile ou manque, signale-le dans warnings au lieu de broder.",
 ].join(" ");
 
-/** Vue minimale d'une offre, pour la construction des documents. */
+/** Vue minimale d'une offre, pour la construction et le scoring des documents. */
 interface JobView {
   slug: string;
   title: string;
+  normalizedTitle: string;
+  roleCategory: string;
   description: string;
   requirements: string[];
   responsibilities: string[];
@@ -151,6 +155,35 @@ export class DocumentsService {
   }
 
   /**
+   * Score le CV du profil contre une offre, déterministe et explicable.
+   *
+   * Le POURQUOI : le score de document mesure la couverture des exigences de
+   * l'offre par le CV généré, distinct du score du profil. Il ne fait aucun
+   * appel IA : il évalue les faits réellement présents dans le CV (compétences,
+   * expériences, projets, langues) contre l'offre, et rend le détail de chaque
+   * point.
+   */
+  async scoreCv(jobSlug: string): Promise<ReturnType<typeof scoreCvDocument>> {
+    const profile = await this.profile.get();
+    const job = await this.#findJob(jobSlug);
+    // Le résumé n'entre pas dans le score : seuls les faits structurés comptent.
+    const data = this.#toCvData(profile, undefined);
+    return scoreCvDocument(data, this.#toScoredJob(job));
+  }
+
+  /** Projette la vue d'offre vers la forme attendue par le moteur de scoring. */
+  #toScoredJob(job: JobView): ScoredJob {
+    return {
+      title: job.title,
+      normalizedTitle: job.normalizedTitle,
+      roleCategory: job.roleCategory,
+      requirements: job.requirements,
+      responsibilities: job.responsibilities,
+      description: job.description,
+    };
+  }
+
+  /**
    * Génère et rend une lettre factuelle pour une offre, anti-invention : toute
    * compétence citée comme acquise doit exister dans le profil, sinon la sortie
    * est refusée. Le coût du modèle est journalisé dans `ModelCall`.
@@ -202,6 +235,8 @@ export class DocumentsService {
       select: {
         slug: true,
         title: true,
+        normalizedTitle: true,
+        roleCategory: true,
         description: true,
         requirements: true,
         responsibilities: true,
@@ -217,6 +252,8 @@ export class DocumentsService {
     return {
       slug: job.slug,
       title: job.title,
+      normalizedTitle: job.normalizedTitle,
+      roleCategory: job.roleCategory,
       description: job.description,
       requirements: job.requirements,
       responsibilities: job.responsibilities,

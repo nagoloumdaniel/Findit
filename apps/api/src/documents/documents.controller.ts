@@ -39,8 +39,11 @@ const letterBodySchema = z.object({
   format: z.enum(["pdf", "docx"]).optional(),
 });
 
+const scoreBodySchema = z.object({ jobSlug: jobSlugSchema });
+
 type CvBody = z.infer<typeof cvBodySchema>;
 type LetterBody = z.infer<typeof letterBodySchema>;
+type ScoreBody = z.infer<typeof scoreBodySchema>;
 
 /**
  * Envoie un fichier en pièce jointe : l'en-tête `Content-Disposition` porte le
@@ -80,5 +83,17 @@ export class DocumentsController {
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<Buffer> {
     return sendFile(reply, await this.documents.generateLetter(body));
+  }
+
+  /**
+   * Score du CV du profil contre une offre, déterministe et explicable. Rend le
+   * détail (compétences couvertes/manquantes, points forts, recommandations),
+   * pas un fichier : le score accompagne la génération sans la remplacer.
+   */
+  @Post("cv/score")
+  @HttpCode(200)
+  @UsePipes(new ZodValidationPipe(scoreBodySchema))
+  scoreCv(@Body() body: ScoreBody): ReturnType<DocumentsService["scoreCv"]> {
+    return this.documents.scoreCv(body.jobSlug);
   }
 }

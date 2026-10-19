@@ -53,6 +53,8 @@ const profile = () => ({
 const job = {
   slug: "dev-acme",
   title: "Développeur",
+  normalizedTitle: "developpeur",
+  roleCategory: "FRONTEND",
   description: "desc",
   requirements: ["typescript"],
   responsibilities: [],
@@ -120,6 +122,27 @@ describe("DocumentsService - génération de CV", () => {
     prisma.job.findFirst.mockResolvedValue(null);
 
     await expect(service.generateCv({ jobSlug: "inconnu" })).rejects.toThrow("n'existe pas");
+  });
+});
+
+describe("DocumentsService - score du CV", () => {
+  it("score le CV du profil contre l'offre, sans appel IA", async () => {
+    const { service } = createDeps();
+
+    const result = await service.scoreCv("dev-acme");
+
+    expect(result.score).toBeGreaterThanOrEqual(0);
+    expect(result.matchedSkills).toContain("TypeScript");
+    // Aucun appel de modèle : le score est purement déterministe.
+    expect(aiMock.generateStructured).not.toHaveBeenCalled();
+    expect(aiMock.generateText).not.toHaveBeenCalled();
+  });
+
+  it("lève 404 pour une offre introuvable", async () => {
+    const { prisma, service } = createDeps();
+    prisma.job.findFirst.mockResolvedValue(null);
+
+    await expect(service.scoreCv("inconnu")).rejects.toThrow("n'existe pas");
   });
 });
 
