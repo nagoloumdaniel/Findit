@@ -7,8 +7,10 @@ import { JobFilters } from "../components/job-filters";
 import { JobPagination } from "../components/job-pagination";
 import { JobSearch } from "../components/job-search";
 import { Logo } from "../components/logo";
+import { MatchCard } from "../components/match-card";
 import { fetchFilterOptions, fetchJobs, fetchStats } from "../lib/api";
 import { exactDateTime } from "../lib/labels";
+import { fetchRanked, isMatchConfigured } from "../lib/matching-api";
 
 /// Les offres changent d'heure en heure : la page est rendue à chaque requête.
 export const dynamic = "force-dynamic";
@@ -34,19 +36,44 @@ const toSearchParams = (params: Record<string, string | string[] | undefined>): 
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
+/*
+ * Lien qui active ou désactive le mode correspondance en conservant les autres
+ * paramètres. `match` ne fait pas partie de `ALLOWED` : il est lu à part, jamais
+ * transmis à l'API des offres.
+ */
+const modeLink = (current: URLSearchParams, match: boolean): string => {
+  const next = new URLSearchParams(current);
+  if (match) {
+    next.set("match", "1");
+  } else {
+    next.delete("match");
+  }
+  const query = next.toString();
+  return query === "" ? "/" : `/?${query}`;
+};
+
 export default async function HomePage({ searchParams }: PageProps) {
   const params = await searchParams;
   const search = toSearchParams(params);
   const now = new Date();
 
-  const [jobs, options, stats] = await Promise.all([
-    fetchJobs(search),
+  /*
+   * Mode « correspondance avec mon profil » : activé uniquement quand
+   * `match=1` est demandé ET que l'espace personnel est configuré. La
+   * recherche classique (défaut) n'affiche jamais de score sur les cartes.
+   */
+  const matchMode = params["match"] === "1" && isMatchConfigured();
+  const freshness = search.get("freshness") ?? "LAST_5D";
+
+  const [jobs, options, stats, ranked] = await Promise.all([
+    matchMode ? Promise.resolve(null) : fetchJobs(search),
     fetchFilterOptions(
       new URLSearchParams(
         search.get("freshness") ? { freshness: search.get("freshness") as string } : {},
       ),
     ),
     fetchStats(),
+    matchMode ? fetchRanked(freshness) : Promise.resolve([]),
   ]);
 
   return (
@@ -79,7 +106,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               « 12 offres publiées » au-dessus de « 3 offres » se lit comme une
               erreur — constat du 2026-10-07, corrigé ici.
             */}
-            {jobs.ok && jobs.data.total < stats.data.publishedLast5d
+            {jobs !== null && jobs.ok && jobs.data.total < stats.data.publishedLast5d
               ? ` ${String(jobs.data.total)} ${jobs.data.total > 1 ? "correspondent" : "correspond"} au périmètre affiché ci-dessous.`
               : null}
             {stats.data.lastPublishedAt
@@ -125,8 +152,50 @@ export default async function HomePage({ searchParams }: PageProps) {
         ) : null}
       </div>
 
+      {/*
+        Mode de recherche : la correspondance au profil est un choix explicite.
+        La recherche classique n'affiche jamais de score ; le mode correspondance
+        en affiche un sur chaque offre dont l'analyse est fiable. Le mode actif
+        reste visible ici, et identifiable dans l'URL (`match=1`).
+      */}
+      {isMatchConfigured() ? (
+        <p className="match-toggle">
+          {matchMode ? (
+            <>
+              Mode « correspondance avec mon profil » actif.{" "}
+              <Link href={modeLink(search, false)}>Revenir à la recherche classique</Link>
+            </>
+          ) : (
+            <Link href={modeLink(search, true)}>Correspondance avec mon profil</Link>
+          )}
+        </p>
+      ) : null}
+
       <section className="results" aria-label="Offres">
-        {!jobs.ok ? (
+        {matchMode ? (
+          ranked.length === 0 ? (
+            <div className="state-panel" role="status">
+              <h2>Aucune offre à classer.</h2>
+              <p>
+                Le profil est renseigné mais aucune offre publiée ne peut être notée, ou le
+                classement n’est pas disponible. La recherche classique reste accessible.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="results-count">
+                {`${ranked.length} offre${ranked.length > 1 ? "s" : ""} classée${ranked.length > 1 ? "s" : ""} par correspondance`}
+              </p>
+              <ul className="job-grid">
+                {ranked.map((item) => (
+                  <li key={item.jobSlug}>
+                    <MatchCard item={item} now={now} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )
+        ) : !jobs!.ok ? (
           <div className="state-panel" role="status">
             <h2>Les offres ne sont pas disponibles.</h2>
             <p>
@@ -134,7 +203,7 @@ export default async function HomePage({ searchParams }: PageProps) {
               liste ne peut pas être vérifiée : mieux vaut ne rien montrer qu’une liste incomplète.
             </p>
           </div>
-        ) : jobs.data.total === 0 ? (
+        ) : jobs!.data.total === 0 ? (
           <div className="state-panel" role="status">
             <h2>Aucune offre ne correspond.</h2>
             <p>
@@ -146,10 +215,10 @@ export default async function HomePage({ searchParams }: PageProps) {
         ) : (
           <>
             <p className="results-count">
-              {`${jobs.data.total} offre${jobs.data.total > 1 ? "s" : ""}`}
+              {`${jobs!.data.total} offre${jobs!.data.total > 1 ? "s" : ""}`}
             </p>
             <ul className="job-grid">
-              {jobs.data.items.map((job) => (
+              {jobs!.data.items.map((job) => (
                 <li key={job.slug}>
                   <JobCard job={job} now={now} />
                 </li>
@@ -157,9 +226,9 @@ export default async function HomePage({ searchParams }: PageProps) {
             </ul>
             <JobPagination
               current={search}
-              page={jobs.data.page}
-              pageSize={jobs.data.pageSize}
-              total={jobs.data.total}
+              page={jobs!.data.page}
+              pageSize={jobs!.data.pageSize}
+              total={jobs!.data.total}
             />
           </>
         )}

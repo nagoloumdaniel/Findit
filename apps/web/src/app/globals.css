@@ -1278,6 +1278,48 @@ button.filters-toggle-button {
   cursor: not-allowed;
 }
 
+/* Mode « correspondance avec mon profil » : le score s'affiche sur la carte,
+   en or, uniquement dans ce mode. La recherche classique n'affiche jamais de
+   pourcentage. Un score trop fragile est dit, pas maquillé. */
+.match-score {
+  margin: 0.5rem 0 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.match-score-value {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.match-score-label {
+  font-size: var(--text-2xs);
+}
+
+.match-score-unreliable {
+  color: var(--fg-subtle);
+  font-style: italic;
+}
+
+/* Lien d'activation du mode correspondance, visible mais discret. */
+.match-toggle {
+  margin: 1rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.match-toggle a {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* Espace personnel : les compétences se lisent comme des étiquettes, le CV comme
    un texte qu'on relit — pas comme un formulaire. */
 .skill-list {
