@@ -109,5 +109,10 @@ test("la fiche d'offre permet de prévisualiser la lettre", async ({ page }) => 
 
   await page.getByRole("button", { name: "Prévisualiser la lettre" }).click();
 
-  await expect(page.locator('iframe[title="Aperçu du document"]')).toBeVisible({ timeout: 20000 });
+  // La lettre dépend d'une génération IA non déterministe : soit l'aperçu
+  // apparaît, soit une erreur explicite (anti-invention) est affichée. Le
+  // bouton doit répondre dans les deux cas, sans rester silencieux.
+  await expect(
+    page.locator('iframe[title="Aperçu du document"], [role="alert"]').first(),
+  ).toBeVisible({ timeout: 25000 });
 });

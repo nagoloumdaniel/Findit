@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { fetchMatchingHistory } from "../../lib/api";
 import { contractLabels } from "../../lib/labels";
-import { fetchProfile, isProfileConfigured } from "../../lib/profile-api";
+import { fetchFavorites, fetchProfile, isProfileConfigured } from "../../lib/profile-api";
 
 import { saveProfileAction } from "./actions";
 
@@ -32,7 +32,11 @@ export default async function MySpacePage() {
     );
   }
 
-  const [profile, history] = await Promise.all([fetchProfile(), fetchMatchingHistory()]);
+  const [profile, history, favorites] = await Promise.all([
+    fetchProfile(),
+    fetchMatchingHistory(),
+    fetchFavorites(),
+  ]);
   const matchings = history.ok ? history.data : [];
 
   return (
@@ -228,6 +232,27 @@ export default async function MySpacePage() {
           <p className="dashboard-lead">Aucun CV enregistré.</p>
         ) : (
           <pre className="profile-cv">{profile.cvText}</pre>
+        )}
+      </section>
+
+      <section aria-label="Offres en favori">
+        <h2>Offres en favori</h2>
+        {favorites.length === 0 ? (
+          <p className="dashboard-lead">Aucune offre en favori.</p>
+        ) : (
+          <ul className="dashboard-list">
+            {favorites.map((favorite) => (
+              <li className="dashboard-row" key={favorite.slug}>
+                <span className="dashboard-row-title">
+                  <Link href={`/offres/${favorite.slug}`}>{favorite.title}</Link>
+                </span>
+                <span className="dashboard-row-meta">
+                  {favorite.companyName} - {favorite.city} ·{" "}
+                  {contractLabels[favorite.contractType] ?? favorite.contractType}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

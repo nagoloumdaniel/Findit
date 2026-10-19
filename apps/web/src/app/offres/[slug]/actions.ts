@@ -4,13 +4,14 @@ import {
   generateCvDocument,
   generateLetterDocument,
   scoreCvDocument,
+  toggleFavorite,
 } from "../../../lib/profile-api";
 import type {
   CvDocumentRequest,
   GeneratedDocument,
   LetterDocumentRequest,
 } from "../../../lib/profile-api";
-import type { ScoreResult } from "../../../lib/profile-api";
+import type { FavoriteToggleResult, ScoreResult } from "../../../lib/profile-api";
 
 /*
  * Génération de CV et de lettre depuis la page d'une offre.
@@ -42,4 +43,9 @@ export const generateLetterAction = async (
 /** Lit le score du CV du profil contre l'offre, sans générer de document. */
 export async function scoreCvAction(jobSlug: string): Promise<ScoreResult> {
   return scoreCvDocument(jobSlug);
+}
+
+/** Ajoute ou retire l'offre des favoris. */
+export async function toggleFavoriteAction(jobSlug: string): Promise<FavoriteToggleResult> {
+  return toggleFavorite(jobSlug);
 }

@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import { generateCvAction, generateLetterAction, scoreCvAction } from "./actions";
+import {
+  generateCvAction,
+  generateLetterAction,
+  scoreCvAction,
+  toggleFavoriteAction,
+} from "./actions";
 import type { CvTemplate } from "../../../lib/profile-api";
 import type { CvScore } from "../../../lib/profile-api";
 
@@ -52,6 +57,17 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
   const [scoreError, setScoreError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState("cv.pdf");
+  const [favorited, setFavorited] = useState<boolean | null>(null);
+  const [favBusy, setFavBusy] = useState(false);
+
+  const onToggleFavorite = async (): Promise<void> => {
+    setFavBusy(true);
+    const result = await toggleFavoriteAction(jobSlug);
+    if (result.ok) {
+      setFavorited(result.favorited);
+    }
+    setFavBusy(false);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -161,6 +177,21 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
         Les documents sont générés à partir des seuls faits de votre profil, jamais complétés
         d’office.
       </p>
+
+      <button
+        type="button"
+        className="source-primary"
+        style={buttonStyle}
+        onClick={() => void onToggleFavorite()}
+        disabled={favBusy}
+        aria-pressed={favorited ?? false}
+      >
+        {favorited === null
+          ? "Ajouter aux favoris"
+          : favorited
+            ? "Retirer des favoris"
+            : "Ajouter aux favoris"}
+      </button>
 
       {score !== null && score.insufficientDataWarning === null ? (
         <div className="match-score-block">

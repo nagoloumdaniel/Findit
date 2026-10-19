@@ -286,3 +286,58 @@ export const scoreCvDocument = async (jobSlug: string): Promise<ScoreResult> => 
     return { ok: false, reason: "L’API est injoignable : le score n’est pas disponible." };
   }
 };
+
+/** Une offre en favori, telle que l'API la rend. */
+export type FavoriteItem = {
+  slug: string;
+  title: string;
+  companyName: string;
+  city: string;
+  contractType: string;
+  favoritedAt: string;
+};
+
+/** Liste les favoris, ou une liste vide quand l'espace personnel n'est pas configuré. */
+export const fetchFavorites = async (): Promise<FavoriteItem[]> => {
+  const key = internalKey();
+  if (key === undefined) {
+    return [];
+  }
+  try {
+    const response = await fetch(new URL("/api/favorites", apiUrl()), {
+      cache: "no-store",
+      headers: { accept: "application/json", "x-internal-key": key },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return (await response.json()) as FavoriteItem[];
+  } catch {
+    return [];
+  }
+};
+
+export type FavoriteToggleResult = { ok: true; favorited: boolean } | { ok: false; reason: string };
+
+/** Ajoute ou retire une offre des favoris, et dit l'état résultant. */
+export const toggleFavorite = async (slug: string): Promise<FavoriteToggleResult> => {
+  const key = internalKey();
+  if (key === undefined) {
+    return { ok: false, reason: "Espace personnel non configuré : INTERNAL_API_KEY manquante." };
+  }
+  try {
+    const response = await fetch(new URL(`/api/favorites/${slug}/toggle`, apiUrl()), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-internal-key": key },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      return { ok: false, reason: `L’API a refusé le favori (${String(response.status)}).` };
+    }
+    const body = (await response.json()) as { favorited: boolean };
+    return { ok: true, favorited: body.favorited };
+  } catch {
+    return { ok: false, reason: "L’API est injoignable : le favori n’a pas été modifié." };
+  }
+};
