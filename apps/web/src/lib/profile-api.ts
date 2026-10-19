@@ -76,6 +76,7 @@ export type Profile = {
   targetRoles: string[];
   targetSectors: string[];
   cvText: string | null;
+  photoUrl: string | null;
   updatedAt: string | null;
 };
 
@@ -97,6 +98,7 @@ export const EMPTY_PROFILE: Profile = {
   targetRoles: [],
   targetSectors: [],
   cvText: null,
+  photoUrl: null,
   updatedAt: null,
 };
 

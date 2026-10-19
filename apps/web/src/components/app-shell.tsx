@@ -85,7 +85,11 @@ export const AppShell = ({ user, children }: AppShellProps) => {
               <>
                 <Link href="/moi" className="navbar-profile" title="Mon profil">
                   <span className="navbar-avatar" aria-hidden="true">
-                    {initialsOf(user)}
+                    {user.photoUrl !== undefined && user.photoUrl !== "" ? (
+                      <img src={user.photoUrl} alt="" className="navbar-avatar-img" />
+                    ) : (
+                      initialsOf(user)
+                    )}
                   </span>
                   <span className="navbar-name">{displayNameOf(user)}</span>
                 </Link>

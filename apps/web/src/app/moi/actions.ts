@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { saveProfile } from "../../lib/profile-api";
+import { fetchProfile, saveProfile } from "../../lib/profile-api";
 import type {
   ProfileCertification,
   ProfileContractPreference,
@@ -155,6 +155,8 @@ const text = (form: FormData, key: string): string => {
 /** Enregistre le profil, puis redemande la page. */
 export const saveProfileAction = async (form: FormData): Promise<void> => {
   const optional = (value: string): string | null => (value === "" ? null : value);
+  // La photo se téléverse séparément : on la préserve à l'enregistrement.
+  const current = await fetchProfile();
 
   await saveProfile({
     fullName: text(form, "fullName"),
@@ -173,7 +175,15 @@ export const saveProfileAction = async (form: FormData): Promise<void> => {
     targetRoles: splitList(text(form, "targetRoles")),
     targetSectors: splitList(text(form, "targetSectors")),
     cvText: optional(text(form, "cvText")),
+    photoUrl: current.photoUrl,
   });
 
+  revalidatePath("/moi");
+};
+
+/** Enregistre la photo de profil seule, sans toucher au reste. */
+export const savePhotoAction = async (photoUrl: string): Promise<void> => {
+  const current = await fetchProfile();
+  await saveProfile({ ...current, photoUrl: photoUrl === "" ? null : photoUrl });
   revalidatePath("/moi");
 };

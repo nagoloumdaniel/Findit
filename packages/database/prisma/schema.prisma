@@ -1072,6 +1072,10 @@ model Profile {
   targetSectors String[] @default([])
   cvText      String?
 
+  /// Photo de profil, en data URL (base64) : petite, elle évite un stockage de
+  /// fichier séparé. Absente tant que la personne n'en a pas téléversé une.
+  photoUrl String?
+
   /// Propriétaire du profil ; nul pour le singleton historique.
   ownerId String? @unique
   owner   User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade)

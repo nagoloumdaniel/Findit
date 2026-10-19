@@ -86,6 +86,7 @@ describe("ProfileController — garde et non-divulgation", () => {
       projects: [],
       preferredContracts: [],
       cvText: null,
+      photoUrl: null,
       updatedAt: new Date("2026-10-07T04:00:00.000Z"),
     });
 
@@ -160,6 +161,7 @@ describe("ProfileController — garde et non-divulgation", () => {
       projects: [],
       preferredContracts: [],
       cvText: null,
+      photoUrl: null,
       updatedAt: "2026-10-07T04:00:00.000Z",
     });
     // La clé primaire de la ligne est un détail interne, pas un contrat public.

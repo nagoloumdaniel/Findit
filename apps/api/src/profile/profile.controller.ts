@@ -137,6 +137,7 @@ export const profileInputSchema = z.object({
   targetRoles: z.array(z.string().trim().min(1).max(80)).optional(),
   targetSectors: z.array(z.string().trim().min(1).max(80)).optional(),
   cvText: z.string().nullable().optional(),
+  photoUrl: z.string().nullable().optional(),
 });
 
 type ProfileInputBody = z.infer<typeof profileInputSchema>;

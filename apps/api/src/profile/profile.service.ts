@@ -89,6 +89,7 @@ export type ProfileView = {
   /// Secteurs cibles, libres.
   targetSectors: string[];
   cvText: string | null;
+  photoUrl: string | null;
   updatedAt: string | null;
 };
 
@@ -114,6 +115,7 @@ export type ProfileInput = {
   targetRoles?: string[] | undefined;
   targetSectors?: string[] | undefined;
   cvText?: string | null | undefined;
+  photoUrl?: string | null | undefined;
 };
 
 /** Ligne telle que Prisma la rend, sans dépendre du type généré. */
@@ -134,6 +136,7 @@ interface ProfileRow {
   readonly targetRoles: string[];
   readonly targetSectors: string[];
   readonly cvText: string | null;
+  readonly photoUrl: string | null;
   readonly updatedAt: Date;
 }
 
@@ -155,6 +158,7 @@ interface ProfileWrite {
   targetRoles?: string[];
   targetSectors?: string[];
   cvText?: string | null;
+  photoUrl?: string | null;
 }
 
 /** Profil vide, rendu neuf à chaque appel pour qu'aucun appelant ne le mute. */
@@ -175,6 +179,7 @@ const emptyProfile = (): ProfileView => ({
   targetRoles: [],
   targetSectors: [],
   cvText: null,
+  photoUrl: null,
   updatedAt: null,
 });
 
@@ -200,6 +205,7 @@ const toView = (row: ProfileRow): ProfileView => ({
   targetRoles: row.targetRoles,
   targetSectors: row.targetSectors,
   cvText: row.cvText,
+  photoUrl: row.photoUrl,
   updatedAt: row.updatedAt.toISOString(),
 });
 
@@ -246,6 +252,7 @@ export class ProfileService {
     if (input.targetRoles !== undefined) write.targetRoles = [...input.targetRoles];
     if (input.targetSectors !== undefined) write.targetSectors = [...input.targetSectors];
     if (input.cvText !== undefined) write.cvText = input.cvText;
+    if (input.photoUrl !== undefined) write.photoUrl = input.photoUrl;
 
     const row = await this.prisma.profile.upsert({
       where: { id: PROFILE_SINGLETON_ID },

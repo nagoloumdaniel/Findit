@@ -2,6 +2,7 @@ import { PageShell } from "@findit/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { PhotoUpload } from "../../components/photo-upload";
 import { fetchMatchingHistory } from "../../lib/api";
 import { contractLabels } from "../../lib/labels";
 import { fetchFavorites, fetchProfile, isProfileConfigured } from "../../lib/profile-api";
@@ -55,6 +56,7 @@ export default async function MySpacePage() {
             ? null
             : ` — dernière mise à jour le ${dateTime(profile.updatedAt)}.`}
         </p>
+        <PhotoUpload photoUrl={profile.photoUrl} />
       </header>
 
       <section aria-label="Compétences">

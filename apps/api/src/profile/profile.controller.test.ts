@@ -26,6 +26,7 @@ const emptyProfile: ProfileView = {
   targetRoles: [],
   targetSectors: [],
   cvText: null,
+  photoUrl: null,
   updatedAt: null,
 };
 

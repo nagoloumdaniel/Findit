@@ -20,6 +20,8 @@ export type SessionUser = {
   role: string;
   /** Nom affiché (prénom/nom du profil), absent tant qu'il n'est pas renseigné. */
   name?: string;
+  /** Photo de profil en data URL, absente tant qu'aucune n'a été téléversée. */
+  photoUrl?: string;
 };
 
 const apiUrl = (): string => parseWebEnv(process.env).NEXT_PUBLIC_API_URL;
@@ -61,6 +63,7 @@ export const login = async (email: string, password: string): Promise<LoginResul
     const user: SessionUser = {
       ...body.user,
       ...(profile.fullName.trim() === "" ? {} : { name: profile.fullName }),
+      ...(profile.photoUrl === null ? {} : { photoUrl: profile.photoUrl }),
     };
     const store = await cookies();
     store.set(SESSION_COOKIE, body.token, { httpOnly: true, sameSite: "lax", path: "/" });
