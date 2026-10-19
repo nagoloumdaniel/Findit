@@ -106,7 +106,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `apps/web/src/app/offres/[slug]/candidature.tsx`, `actions.ts`, `apps/api/src/documents`.
 - **Acceptation** : la lettre correspond à l'offre et ne contient aucune expérience/motivation inventée.
 
-### 3.3 Vérification finale du document
+### 3.3 ✅ Vérification finale du document
 
 - **Objectif** : avant de rendre un document disponible, vérifier la validité technique, l'extraction du texte, l'absence de texte coupé, les dates/noms/coordonnées, la cohérence CV/lettre/annonce, et le score de la version téléchargée (§16.4).
 - **État** : `@findit/documents` garantit une page A4 ; la vérification de contenu n'est pas automatisée.

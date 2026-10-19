@@ -148,6 +148,7 @@ export class DocumentsService {
     const format = request.format ?? "pdf";
     const buffer =
       format === "docx" ? await renderCvDocx(data, options) : await renderCvPdf(data, options);
+    this.#assertValidDocument(buffer, format);
 
     return {
       buffer,
@@ -239,6 +240,7 @@ export class DocumentsService {
         format === "docx"
           ? await renderCoverLetterDocx(data, accent)
           : await renderCoverLetterPdf(data, accent);
+      this.#assertValidDocument(buffer, format);
 
       return {
         buffer,
@@ -463,6 +465,21 @@ export class DocumentsService {
       ...experiences.filter(relevant),
       ...experiences.filter((experience) => !relevant(experience)),
     ];
+  }
+
+  /**
+   * Vérifie la validité technique du fichier rendu : non vide et en-tête attendu
+   * (`%PDF` pour un PDF, `PK` pour un DOCX). Un document corrompu n'est jamais
+   * renvoyé : l'erreur remonte plutôt qu'un fichier illisible.
+   */
+  #assertValidDocument(buffer: Buffer, format: "pdf" | "docx"): void {
+    if (buffer.length === 0) {
+      throw new Error("Le document généré est vide.");
+    }
+    const magic = format === "pdf" ? "%PDF" : "PK";
+    if (!buffer.subarray(0, magic.length).toString("latin1").startsWith(magic)) {
+      throw new Error(`Le document ${format.toUpperCase()} généré est invalide.`);
+    }
   }
 
   /**

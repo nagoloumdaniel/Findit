@@ -169,6 +169,13 @@ describe("DocumentsService - génération de CV", () => {
 
     await expect(service.generateCv({ jobSlug: "inconnu" })).rejects.toThrow("n'existe pas");
   });
+
+  it("refuse un document généré vide plutôt que de le renvoyer", async () => {
+    const { service } = createDeps();
+    renderMock.renderCvPdf.mockResolvedValue(Buffer.from(""));
+
+    await expect(service.generateCv({ jobSlug: "dev-acme" })).rejects.toThrow("vide");
+  });
 });
 
 describe("DocumentsService - score du CV", () => {
