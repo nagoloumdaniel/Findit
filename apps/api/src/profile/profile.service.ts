@@ -84,6 +84,10 @@ export type ProfileView = {
   certifications: ProfileCertification[];
   projects: ProfileProject[];
   preferredContracts: ProfileContractPreference[];
+  /// Intitulés de poste cibles, libres.
+  targetRoles: string[];
+  /// Secteurs cibles, libres.
+  targetSectors: string[];
   cvText: string | null;
   updatedAt: string | null;
 };
@@ -107,6 +111,8 @@ export type ProfileInput = {
   certifications?: ProfileCertification[] | undefined;
   projects?: ProfileProject[] | undefined;
   preferredContracts?: ProfileContractPreference[] | undefined;
+  targetRoles?: string[] | undefined;
+  targetSectors?: string[] | undefined;
   cvText?: string | null | undefined;
 };
 
@@ -125,6 +131,8 @@ interface ProfileRow {
   readonly certifications: unknown;
   readonly projects: unknown;
   readonly preferredContracts: string[];
+  readonly targetRoles: string[];
+  readonly targetSectors: string[];
   readonly cvText: string | null;
   readonly updatedAt: Date;
 }
@@ -144,6 +152,8 @@ interface ProfileWrite {
   certifications?: ProfileCertification[];
   projects?: ProfileProject[];
   preferredContracts?: ProfileContractPreference[];
+  targetRoles?: string[];
+  targetSectors?: string[];
   cvText?: string | null;
 }
 
@@ -162,6 +172,8 @@ const emptyProfile = (): ProfileView => ({
   certifications: [],
   projects: [],
   preferredContracts: [],
+  targetRoles: [],
+  targetSectors: [],
   cvText: null,
   updatedAt: null,
 });
@@ -185,6 +197,8 @@ const toView = (row: ProfileRow): ProfileView => ({
   certifications: row.certifications as ProfileCertification[],
   projects: row.projects as ProfileProject[],
   preferredContracts: row.preferredContracts as ProfileContractPreference[],
+  targetRoles: row.targetRoles,
+  targetSectors: row.targetSectors,
   cvText: row.cvText,
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -229,6 +243,8 @@ export class ProfileService {
     if (input.projects !== undefined) write.projects = input.projects;
     if (input.preferredContracts !== undefined)
       write.preferredContracts = [...input.preferredContracts];
+    if (input.targetRoles !== undefined) write.targetRoles = [...input.targetRoles];
+    if (input.targetSectors !== undefined) write.targetSectors = [...input.targetSectors];
     if (input.cvText !== undefined) write.cvText = input.cvText;
 
     const row = await this.prisma.profile.upsert({

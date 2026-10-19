@@ -73,6 +73,8 @@ export type Profile = {
   certifications: ProfileCertification[];
   projects: ProfileProject[];
   preferredContracts: ProfileContractPreference[];
+  targetRoles: string[];
+  targetSectors: string[];
   cvText: string | null;
   updatedAt: string | null;
 };
@@ -92,6 +94,8 @@ export const EMPTY_PROFILE: Profile = {
   certifications: [],
   projects: [],
   preferredContracts: [],
+  targetRoles: [],
+  targetSectors: [],
   cvText: null,
   updatedAt: null,
 };

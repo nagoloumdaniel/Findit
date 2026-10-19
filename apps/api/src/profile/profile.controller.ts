@@ -134,6 +134,8 @@ export const profileInputSchema = z.object({
   certifications: z.array(profileCertificationSchema).optional(),
   projects: z.array(profileProjectSchema).optional(),
   preferredContracts: z.array(profileContractPreferenceSchema).optional(),
+  targetRoles: z.array(z.string().trim().min(1).max(80)).optional(),
+  targetSectors: z.array(z.string().trim().min(1).max(80)).optional(),
   cvText: z.string().nullable().optional(),
 });
 

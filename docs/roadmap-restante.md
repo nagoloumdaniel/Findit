@@ -34,7 +34,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `packages/shared/src/job-scope.ts`, `packages/persist`, `packages/job-pipeline`, `apps/api/src/jobs`.
 - **Acceptation** : une offre « date non vérifiée » n'apparaît jamais dans les résultats garantis récents.
 
-### 1.3 Profil candidat — préférences de recherche structurées
+### 1.3 ✅ Profil candidat — préférences de recherche structurées
 
 - **Objectif** : rendre le profil exploitable pour le filtrage et le matching (§10.1, §10.4) : secteurs cibles, intitulés de poste cibles, rémunération souhaitée, mobilité géographique, disponibilité/date de début.
 - **État** : `preferredContracts` est fait ; manquent les autres préférences.

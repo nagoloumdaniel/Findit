@@ -182,6 +182,30 @@ export default async function MySpacePage() {
         )}
       </section>
 
+      <section aria-label="Postes et secteurs cibles">
+        <h2>Postes et secteurs cibles</h2>
+        {profile.targetRoles.length === 0 && profile.targetSectors.length === 0 ? (
+          <p className="dashboard-lead">Aucun poste ni secteur cible enregistré.</p>
+        ) : (
+          <>
+            {profile.targetRoles.length > 0 ? (
+              <ul className="tag-list" aria-label="Postes cibles">
+                {profile.targetRoles.map((role) => (
+                  <li key={role}>{role}</li>
+                ))}
+              </ul>
+            ) : null}
+            {profile.targetSectors.length > 0 ? (
+              <ul className="tag-list" aria-label="Secteurs cibles">
+                {profile.targetSectors.map((sector) => (
+                  <li key={sector}>{sector}</li>
+                ))}
+              </ul>
+            ) : null}
+          </>
+        )}
+      </section>
+
       {profile.links.length === 0 ? null : (
         <section aria-label="Liens">
           <h2>Liens</h2>
@@ -349,6 +373,14 @@ export default async function MySpacePage() {
             Contrats recherchés (séparés par des virgules : ALTERNANCE, INTERNSHIP, CDI, CDD,
             INTERIM, STUDENT_JOB)
             <input name="preferredContracts" defaultValue={profile.preferredContracts.join(", ")} />
+          </label>
+          <label>
+            Postes cibles (séparés par des virgules)
+            <input name="targetRoles" defaultValue={profile.targetRoles.join(", ")} />
+          </label>
+          <label>
+            Secteurs cibles (séparés par des virgules)
+            <input name="targetSectors" defaultValue={profile.targetSectors.join(", ")} />
           </label>
           <label>
             CV (texte collé)

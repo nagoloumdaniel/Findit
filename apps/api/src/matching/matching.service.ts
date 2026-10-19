@@ -221,6 +221,9 @@ export class MatchingService {
       titles: [
         profile?.headline ?? "",
         ...experiences.map((experience) => experience.title),
+        // Les intitulés cibles déclarent ce que la personne cherche : ils
+        // nourrissent l'alignement du titre, au même titre que l'expérience.
+        ...(profile?.targetRoles ?? []),
       ].filter((title) => title.trim() !== ""),
       languages,
     };

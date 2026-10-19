@@ -1059,6 +1059,12 @@ model Profile {
   projects        Json       @default("[]")
   /// Contrats recherchés, sous-ensemble de l'enum `ContractType`.
   preferredContracts String[] @default([])
+  /// Intitulés de poste cibles, libres (ex. « Développeur front-end »). Ils
+  /// nourrissent l'alignement du titre dans le matching.
+  targetRoles String[] @default([])
+  /// Secteurs cibles, libres (ex. « finance », « santé »). Réservés aux filtres
+  /// et au matching de secteur.
+  targetSectors String[] @default([])
   cvText      String?
 
   createdAt DateTime @default(now())

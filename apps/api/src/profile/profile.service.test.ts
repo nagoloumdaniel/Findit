@@ -17,6 +17,8 @@ const storedRow = () => ({
   certifications: [{ name: "Certification" }],
   projects: [{ name: "Portfolio", skills: ["react"] }],
   preferredContracts: ["ALTERNANCE"],
+  targetRoles: ["Développeur front-end"],
+  targetSectors: ["tech"],
   cvText: "un CV",
   updatedAt: new Date("2026-10-07T04:00:00.000Z"),
 });
@@ -53,6 +55,8 @@ describe("ProfileService - lecture", () => {
       certifications: [],
       projects: [],
       preferredContracts: [],
+      targetRoles: [],
+      targetSectors: [],
       cvText: null,
       updatedAt: null,
     });

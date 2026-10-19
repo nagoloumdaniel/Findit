@@ -23,6 +23,8 @@ const emptyProfile: ProfileView = {
   certifications: [],
   projects: [],
   preferredContracts: [],
+  targetRoles: [],
+  targetSectors: [],
   cvText: null,
   updatedAt: null,
 };

@@ -170,6 +170,8 @@ export const saveProfileAction = async (form: FormData): Promise<void> => {
     certifications: parseCertifications(text(form, "certifications")),
     projects: parseProjects(text(form, "projects")),
     preferredContracts: parseContractPreferences(text(form, "preferredContracts")),
+    targetRoles: splitList(text(form, "targetRoles")),
+    targetSectors: splitList(text(form, "targetSectors")),
     cvText: optional(text(form, "cvText")),
   });
 
