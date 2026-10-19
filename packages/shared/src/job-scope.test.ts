@@ -31,6 +31,7 @@ describe("job scope", () => {
       "MOBILE",
       "DATA_ANALYST",
       "DATA_ENGINEER",
+      "OTHER",
     ]);
     expect(JOB_WORK_MODES).toEqual(["ONSITE", "HYBRID", "REMOTE"]);
   });
@@ -68,30 +69,29 @@ describe("publishedAfterFor", () => {
 });
 
 describe("default flux", () => {
-  it("shows only alternance by default, without dropping the other contracts from the scope", () => {
-    expect(DEFAULT_CONTRACTS).toEqual(["ALTERNANCE"]);
-    expect(JOB_CONTRACTS).toContain("INTERNSHIP");
-    expect(JOB_CONTRACTS).toContain("CDI");
-    expect(JOB_CONTRACTS).toContain("CDD");
-    expect(JOB_CONTRACTS).toContain("INTERIM");
-    expect(JOB_CONTRACTS).toContain("STUDENT_JOB");
+  it("shows all contracts by default", () => {
+    expect(DEFAULT_CONTRACTS).toEqual([
+      "ALTERNANCE",
+      "INTERNSHIP",
+      "CDI",
+      "CDD",
+      "INTERIM",
+      "STUDENT_JOB",
+    ]);
   });
 
-  it("shows only the development roles by default", () => {
+  it("shows all roles by default, all domains included", () => {
     expect(DEFAULT_ROLE_CATEGORIES).toEqual([
       "FRONTEND",
       "BACKEND",
       "FULLSTACK",
       "SOFTWARE_ENGINEERING",
       "OTHER_DEVELOPER",
+      "MOBILE",
+      "DATA_ANALYST",
+      "DATA_ENGINEER",
+      "OTHER",
     ]);
-  });
-
-  it("keeps data and mobile storable, because a filter reaches them", () => {
-    for (const role of ["MOBILE", "DATA_ANALYST", "DATA_ENGINEER"] as const) {
-      expect(JOB_ROLE_CATEGORIES).toContain(role);
-      expect(DEFAULT_ROLE_CATEGORIES).not.toContain(role);
-    }
   });
 
   it("never defaults to something the scope does not allow", () => {

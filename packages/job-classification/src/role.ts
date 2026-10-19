@@ -142,7 +142,9 @@ export const readRole = (title: string): RoleSignal => {
 
   const commercial = COMMERCIAL_PHRASES.some((phrase) => mentions(normalized, phrase));
   if (commercial && !ENGINEERING_MARKERS.some((marker) => mentions(normalized, marker))) {
-    return { role: null, reason: null };
+    // Un poste commercial n'est pas un poste de développement : il n'est plus
+    // rejeté pour autant, il rejoint la catégorie générale.
+    return { role: "OTHER", reason: null };
   }
 
   for (const [role, tokens] of ROLE_TOKENS) {
@@ -152,5 +154,7 @@ export const readRole = (title: string): RoleSignal => {
     }
   }
 
-  return { role: null, reason: null };
+  // Aucune spécialité technique nommée : la plateforme couvre tous les métiers,
+  // l'offre est donc classée dans la catégorie générale plutôt que rejetée.
+  return { role: "OTHER", reason: null };
 };

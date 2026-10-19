@@ -77,12 +77,19 @@ const workableSearchJobs = (sourcePriority: number): CollectionJob<unknown>[] =>
 
 /*
  * Requêtes France Travail exécutées à chaque cycle, quand les identifiants
- * partenaires existent. Une seule suffit : l'API filtre déjà l'alternance
- * (natureContrat) et l'Île-de-France (region) côté serveur - « développeur »
- * ratisse le métier, le tri fin appartient à l'ingestion.
+ * partenaires existent. La plateforme couvre tous les domaines : plusieurs
+ * requêtes ratissent des métiers différents, l'API filtrant déjà l'Île-de-France
+ * (region) côté serveur. Le tri fin (contrat, commune) appartient à l'ingestion.
  */
 const FRANCE_TRAVAIL_SEARCHES: readonly SearchTarget[] = [
   { query: "développeur", location: "Île-de-France, France" },
+  { query: "commercial", location: "Île-de-France, France" },
+  { query: "comptable", location: "Île-de-France, France" },
+  { query: "marketing", location: "Île-de-France, France" },
+  { query: "assistant administratif", location: "Île-de-France, France" },
+  { query: "infirmier", location: "Île-de-France, France" },
+  { query: "logistique", location: "Île-de-France, France" },
+  { query: "ressources humaines", location: "Île-de-France, France" },
 ];
 
 const franceTravailSearchJobs = (

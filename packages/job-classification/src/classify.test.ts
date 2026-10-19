@@ -61,10 +61,10 @@ describe("classifyJob", () => {
     });
   });
 
-  it("still rejects a permanent role that is not a developer job", () => {
+  it("accepts a permanent role outside development and files it as general", () => {
     expect(
       classifyJob({ title: "Account Executive, Majors", commitmentLabel: "Permanent" }),
-    ).toMatchObject({ outcome: "REJECTED", roleCategory: null });
+    ).toMatchObject({ outcome: "ACCEPTED", roleCategory: "OTHER" });
   });
 
   it("reads CDD, intérim and job étudiant as in-scope contracts", () => {
@@ -81,9 +81,9 @@ describe("classifyJob", () => {
     });
   });
 
-  it("rejects a real alternance that is not a developer job", () => {
-    // Les dix alternances réelles relevées sont dans ce cas : aucune n'est un
-    // poste de développement.
+  it("accepts a real alternance outside development and files it as general", () => {
+    // La plateforme couvre tous les domaines : ces alternances non techniques
+    // sont désormais acceptées dans la catégorie générale.
     for (const title of [
       "Comptable - Alternance",
       "Events & Customer Loyalty Apprentice",
@@ -94,9 +94,12 @@ describe("classifyJob", () => {
     ]) {
       const decision = classifyJob({ title, commitmentLabel: "FR Apprentice" });
 
-      expect(decision).toMatchObject({ outcome: "REJECTED", roleCategory: null });
-      expect(decision.contractType).not.toBeNull();
-      expect(decision.reasons.join(" ")).toContain("ne nomme aucun métier du périmètre");
+      // Plus rejetées : ces offres sont acceptées ou mises en quarantaine
+      // (contrat contradictoire comme « Stage » + « Apprentice »), mais toutes
+      // entrent dans la catégorie générale.
+      expect(decision.outcome, title).not.toBe("REJECTED");
+      expect(decision.roleCategory, title).toBe("OTHER");
+      expect(decision.contractType, title).not.toBeNull();
     }
   });
 
@@ -114,9 +117,9 @@ describe("classifyJob", () => {
     ]) {
       const decision = classifyJob({ title });
 
-      expect(decision, title).toMatchObject({ outcome: "REJECTED", roleCategory: null });
+      // Commercial, pas développeur : classé dans la catégorie générale.
+      expect(decision, title).toMatchObject({ outcome: "ACCEPTED", roleCategory: "OTHER" });
       expect(decision.contractType, title).not.toBeNull();
-      expect(decision.reasons.join(" "), title).toContain("ne nomme aucun métier du périmètre");
     }
   });
 
@@ -158,11 +161,11 @@ describe("classifyJob", () => {
     });
   });
 
-  it("does not take an analyst for a data analyst", () => {
+  it("does not take an analyst for a data analyst, but keeps it as general", () => {
     // Titre réel : « Carpool Pricing Analyst Apprentice 1 year ».
     expect(classifyJob({ title: "Carpool Pricing Analyst Apprentice 1 year" })).toMatchObject({
-      outcome: "REJECTED",
-      roleCategory: null,
+      outcome: "ACCEPTED",
+      roleCategory: "OTHER",
     });
   });
 
@@ -220,10 +223,11 @@ describe("classifyJob", () => {
 
   it("does not let a token match inside a longer word", () => {
     // « net » ne doit pas se trouver dans « network », ni « java » dans
-    // « javascript » au point d'en changer le sens du titre.
+    // « javascript » au point d'en changer le sens du titre. Un administrateur
+    // réseau n'est pas un développeur : il rejoint la catégorie générale.
     expect(classifyJob({ title: "Alternance Network Administrator" })).toMatchObject({
-      outcome: "REJECTED",
-      roleCategory: null,
+      outcome: "ACCEPTED",
+      roleCategory: "OTHER",
     });
   });
 

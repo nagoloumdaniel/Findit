@@ -101,11 +101,14 @@ export const classifyJob = (input: ClassificationInput): JobClassification => {
     return { outcome: "REJECTED", contractType, roleCategory: null, confidence: 0, reasons };
   }
 
-  const roleConfidence = role.role === "OTHER_DEVELOPER" ? ROLE_GENERIC : ROLE_NAMED;
+  const roleConfidence =
+    role.role === "OTHER_DEVELOPER" || role.role === "OTHER" ? ROLE_GENERIC : ROLE_NAMED;
   reasons.push(
     role.role === "OTHER_DEVELOPER"
       ? `Le titre dit « ${role.reason} » sans dire quelle spécialité.`
-      : `Le titre dit « ${role.reason} » : ${role.role}.`,
+      : role.role === "OTHER"
+        ? "Aucune spécialité technique nommée : l'offre est classée dans la catégorie générale."
+        : `Le titre dit « ${role.reason} » : ${role.role}.`,
   );
 
   /*

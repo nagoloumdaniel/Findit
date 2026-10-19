@@ -135,7 +135,7 @@ export const runCollection = async (
         descriptionHtml: raw.descriptionHtml,
         publishedAt: raw.publishedAt,
         companyName: (raw.companyName ?? job.companyName).trim(),
-        commitmentLabel: null,
+        commitmentLabel: raw.commitmentLabel ?? null,
         sourceName: job.connector.name,
         applyUrl: raw.applyUrl ?? null,
       }));

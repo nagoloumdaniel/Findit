@@ -115,7 +115,7 @@ describe("createFranceTravailConnector", () => {
     expect(body).toContain("scope=api_offresdemploiv2");
   });
 
-  it("searches alternance in Île-de-France with the bearer it obtained", async () => {
+  it("searches every contract in Île-de-France with the bearer it obtained", async () => {
     const fetchStub = respondWith([{ status: 200, payload: { resultats: [realOffre] } }]);
 
     await runConnector(connector, registration, target, deps(fetchStub));
@@ -126,7 +126,8 @@ describe("createFranceTravailConnector", () => {
     );
     expect(url).toContain("motsCles=d%C3%A9veloppeur");
     expect(url).toContain("region=11");
-    expect(url).toContain("natureContrat=E2%2CFS");
+    // Plus de filtre de contrat : la plateforme couvre tous les contrats.
+    expect(url).not.toContain("natureContrat=");
     expect(url).toContain("publieeDepuis=7");
     expect(url).toContain("range=0-149");
 
@@ -150,6 +151,7 @@ describe("createFranceTravailConnector", () => {
       descriptionHtml: "Au sein d'une équipe de 4 personnes, vous participerez au développement.",
       publishedAt: new Date("2026-07-25T09:12:44.000Z"),
       companyName: "SARL ATELIER NUMERIQUE",
+      commitmentLabel: "Contrat apprentissage",
       rawContent: JSON.stringify(realOffre),
       contentType: "application/json",
     });

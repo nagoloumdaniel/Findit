@@ -22,6 +22,7 @@ export const JOB_ROLE_CATEGORIES = [
   "MOBILE",
   "DATA_ANALYST",
   "DATA_ENGINEER",
+  "OTHER",
 ] as const;
 export type JobRoleCategory = (typeof JOB_ROLE_CATEGORIES)[number];
 
@@ -33,16 +34,14 @@ export type JobRoleCategory = (typeof JOB_ROLE_CATEGORIES)[number];
  * Une offre hors de ce défaut reste collectée, stockée et atteignable par un
  * filtre - changer d'avis est alors un réglage, jamais une migration.
  */
-export const DEFAULT_CONTRACTS: readonly JobContract[] = ["ALTERNANCE"];
+export const DEFAULT_CONTRACTS: readonly JobContract[] = [...JOB_CONTRACTS];
 
-/** Les métiers du développement. La data et le mobile restent à un filtre près. */
-export const DEFAULT_ROLE_CATEGORIES: readonly JobRoleCategory[] = [
-  "FRONTEND",
-  "BACKEND",
-  "FULLSTACK",
-  "SOFTWARE_ENGINEERING",
-  "OTHER_DEVELOPER",
-];
+/**
+ * Tous les métiers, tous domaines confondus. Le classifieur range dans `OTHER`
+ * ce qui ne relève pas d'une spécialité technique nommée : la plateforme ne se
+ * limite plus au développement.
+ */
+export const DEFAULT_ROLE_CATEGORIES: readonly JobRoleCategory[] = [...JOB_ROLE_CATEGORIES];
 
 export const JOB_WORK_MODES = ["ONSITE", "HYBRID", "REMOTE"] as const;
 export type JobWorkMode = (typeof JOB_WORK_MODES)[number];

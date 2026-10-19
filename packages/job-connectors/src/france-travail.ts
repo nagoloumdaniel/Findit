@@ -43,14 +43,6 @@ const TOKEN_SCOPE = "api_offresdemploiv2 o2dsoffre";
  */
 export const FRANCE_TRAVAIL_ANONYMOUS_EMPLOYER = "Inconnu";
 
-/**
- * Codes du référentiel `naturesContrats` de l'API : E2 = contrat
- * d'apprentissage, FS = contrat de professionnalisation. Ensemble, ils
- * couvrent l'alternance ; le stage n'existe pas comme offre chez France
- * Travail.
- */
-const NATURE_CONTRAT_ALTERNANCE = "E2,FS";
-
 /** Code région officiel de l'Île-de-France dans le référentiel de l'API. */
 const REGION_CODES: ReadonlyMap<string, string> = new Map([["Île-de-France, France", "11"]]);
 
@@ -77,6 +69,8 @@ const offreSchema = z.object({
   description: z.string().nullish(),
   /** Date de première publication, en ISO. L'API la rend toujours. */
   dateCreation: z.string().nullish(),
+  /** Nature du contrat côté France Travail (« CDI », « CDD », « MIS », « E2 »…). */
+  natureContrat: z.string().nullish(),
   lieuTravail: z.object({ libelle: z.string().nullish() }).nullish(),
   entreprise: z.object({ nom: z.string().nullish() }).nullish(),
   origineOffre: z.object({ urlOrigine: z.string().nullish() }).nullish(),
@@ -124,6 +118,33 @@ const parsePublishedAt = (dateCreation: string | null | undefined): Date | null 
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+/*
+ * Traduit le code de contrat France Travail en libellé que la classification
+ * reconnaît. « MIS » (mission), « E2 » (apprentissage) et « FS »
+ * (professionnalisation) sont des codes, pas des mots : sans cette table, le
+ * contrat resterait illisible et l'offre serait rejetée.
+ */
+const CONTRACT_LABELS: Readonly<Record<string, string>> = {
+  CDI: "CDI",
+  CDD: "CDD",
+  MIS: "Intérim",
+  E2: "Apprentissage",
+  FS: "Professionnalisation",
+  SAI: "Saisonnier",
+  LIB: "Libéral",
+  FRA: "Franchise",
+};
+
+const commitmentLabelOf = (natureContrat: string | null | undefined): string | null => {
+  if (natureContrat === null || natureContrat === undefined || natureContrat.trim() === "") {
+    return null;
+  }
+  const raw = natureContrat.trim();
+  // Un code connu est traduit ; un libellé déjà lisible (« Contrat apprentissage »)
+  // passe tel quel, la classification sachant le lire.
+  return CONTRACT_LABELS[raw.toUpperCase()] ?? raw;
+};
+
 const toRawJob = (raw: unknown, position: number): RawJob => {
   const parsed = offreSchema.safeParse(raw);
   if (!parsed.success) {
@@ -150,6 +171,7 @@ const toRawJob = (raw: unknown, position: number): RawJob => {
     // communique pas, le libellé le dit - sans lui, l'orchestrateur
     // rejetterait plus de la moitié d'un flux déjà maigre.
     companyName: offre.entreprise?.nom ?? FRANCE_TRAVAIL_ANONYMOUS_EMPLOYER,
+    commitmentLabel: commitmentLabelOf(offre.natureContrat),
     rawContent: JSON.stringify(raw),
     contentType: "application/json",
   };
@@ -159,7 +181,9 @@ const searchUrl = (target: SearchTarget, region: string, page: number): string =
   const url = new URL(SEARCH_URL);
   url.searchParams.set("motsCles", target.query);
   url.searchParams.set("region", region);
-  url.searchParams.set("natureContrat", NATURE_CONTRAT_ALTERNANCE);
+  // Pas de filtre `natureContrat` : la plateforme couvre tous les contrats
+  // (CDI, CDD, intérim, stage, alternance). Le contrat de chaque offre est lu
+  // dans sa nature et transmis à la classification.
   url.searchParams.set("publieeDepuis", String(PUBLIEE_DEPUIS_DAYS));
   url.searchParams.set(
     "range",

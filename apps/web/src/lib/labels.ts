@@ -11,6 +11,7 @@ export const roleLabels: Record<string, string> = {
   MOBILE: "Mobile",
   DATA_ANALYST: "Data Analyst",
   DATA_ENGINEER: "Data Engineer",
+  OTHER: "Tous domaines",
 };
 
 export const contractLabels: Record<string, string> = {

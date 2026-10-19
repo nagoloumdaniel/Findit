@@ -24,6 +24,12 @@ export interface RawJob {
    */
   readonly companyName?: string | null;
   /**
+   * Libellé de contrat que la source annonce pour cette offre (« CDI », « Intérim »,
+   * « Apprentissage »). Il sert de seconde voix à la classification, à côté du
+   * titre. Absent quand la source ne le donne pas.
+   */
+  readonly commitmentLabel?: string | null;
+  /**
    * Lien de candidature quand la source le donne : souvent la page de l'ATS de
    * l'employeur, derrière une offre de job board. Les connecteurs natifs ne le
    * renseignent pas - leur `url` est déjà celle de l'ATS. Il n'est pas encore

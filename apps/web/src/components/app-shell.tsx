@@ -174,7 +174,7 @@ export const AppShell = ({ user, children }: AppShellProps) => {
         <main className="app-content">{children}</main>
 
         <footer className="app-footer">
-          <span>Findit - recherche d'alternance et de stage en Île-de-France</span>
+          <span>Findit - toutes les offres d'emploi en Île-de-France</span>
         </footer>
       </div>
     </div>

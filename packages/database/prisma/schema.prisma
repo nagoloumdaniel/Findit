@@ -47,6 +47,9 @@ enum RoleCategory {
   MOBILE
   DATA_ANALYST
   DATA_ENGINEER
+  /// Tout domaine hors développement nommé : la plateforme n'est plus limitée
+  /// aux métiers techniques.
+  OTHER
 }
 
 enum WorkMode {

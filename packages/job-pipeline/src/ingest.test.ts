@@ -67,10 +67,14 @@ describe("decideIngestion", () => {
     expect(decision.draft.expiresAt.toISOString()).toBe("2026-07-22T09:00:00.000Z");
   });
 
-  it("rejects a job that is not development, and names the stage", () => {
+  it("accepts a job outside development as general, not rejects it", () => {
+    // La plateforme couvre tous les domaines : un poste non technique est
+    // accepté dans la catégorie générale.
     const decision = decideIngestion(offer({ title: "Alternance - Chargé de recrutement" }), NOW);
 
-    expect(decision).toMatchObject({ outcome: "REJECTED", stage: "classification" });
+    expect(decision.outcome).not.toBe("REJECTED");
+    if (decision.outcome === "REJECTED") throw new Error("attendu accepté");
+    expect(decision.draft.roleCategory).toBe("OTHER");
   });
 
   it("rejects an offer outside Île-de-France before looking at anything else", () => {

@@ -87,11 +87,11 @@ export default async function HomePage({ searchParams }: PageProps) {
           <Link href="/moi">Mon espace</Link>
           <Link href="/dashboard">Exploitation</Link>
         </nav>
-        <h1>Alternances développeur en Île-de-France</h1>
+        <h1>Toutes les offres d'emploi en Île-de-France</h1>
         <p className="intro">
-          Offres Front-end, Back-end, Full-stack et Software Engineering publiées au cours des 5
-          derniers jours, de la plus récente à la plus ancienne. Les stages, le mobile et les
-          métiers de la data restent à un filtre près.
+          Toutes les offres récentes, tous contrats confondus (CDI, CDD, intérim, stage, alternance)
+          et tous domaines : développement, data, design, marketing, vente, support… De la plus
+          récente à la plus ancienne.
         </p>
 
         {stats.ok ? (
