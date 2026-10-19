@@ -5,9 +5,10 @@
   "scripts": {
     "build": "node run-next.mjs build",
     "dev": "node run-next.mjs dev",
-    "lint": "eslint src --max-warnings=0",
+    "lint": "eslint src e2e playwright.config.ts --max-warnings=0",
     "start": "node run-next.mjs start",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "24.13.3",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",

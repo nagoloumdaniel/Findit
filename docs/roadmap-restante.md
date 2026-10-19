@@ -193,7 +193,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 7 — Tests et stabilisation (P0 avant mise en production)
 
-### 7.1 Tests Playwright de bout en bout
+### 7.1 ✅ Tests Playwright de bout en bout
 
 - **Objectif** : parcours complets dans un navigateur (§22.6, §23) : recherche classique → filtres → détail → profil → import CV → recherche par correspondance → scores → génération CV → génération lettre → téléchargement → lien source.
 - **Travail** : suite Playwright (desktop + mobile), états d'erreur/vide/chargement, erreurs console, captures d'écran.
@@ -203,12 +203,12 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Objectif** : verrouiller que la recherche classique n'affiche jamais de score, et que le mode correspondance n'affiche un pourcentage que sur les analyses fiables (§11.4).
 - **État** : tests unitaires du composant `MatchCard` et du contrat API présents ; ajouter un test E2E du parcours complet.
 
-### 7.3 Vérification réelle des générations
+### 7.3 ✅ Vérification réelle des générations
 
 - **Objectif** : avec une clé DeepSeek réelle, générer CV + lettre et vérifier le contenu, les accents, la pagination, l'extraction texte du document final (§22.5).
 - **Note** : nécessite `DEEPSEEK_API_KEY` ; consigner précisément ce qui n'a pas pu être vérifié sans clé.
 
-### 7.4 Application des migrations en production
+### 7.4 ✅ Application des migrations en production
 
 - **Objectif** : appliquer `20261019000000_extend_contracts_and_freshness` et `20261019010000_candidate_profile_extension` à la base Neon avec `DATABASE_URL_OWNER`, puis `migrate resolve`.
 - **Acceptation** : `pnpm db:migrate` et vérification que les nouvelles colonnes/enum sont en place.

@@ -21,3 +21,7 @@ Thumbs.db
 /.claude/
 skills-lock.json
 /agent/
+
+# Playwright : artefacts de test, pas du code source.
+apps/web/playwright-report/
+apps/web/test-results/
