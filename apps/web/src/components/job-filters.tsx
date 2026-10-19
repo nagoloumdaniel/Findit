@@ -178,6 +178,17 @@ export const JobFilters = ({ options, current }: JobFiltersProps) => {
           labels={workModeLabels}
         />
       ) : null}
+
+      {options.studyLevels.length > 0 ? (
+        <FilterGroup
+          title="Niveau d’études"
+          paramKey="studyLevel"
+          current={current}
+          allLabel="Tous"
+          options={options.studyLevels}
+          labels={{}}
+        />
+      ) : null}
     </section>
   );
 };

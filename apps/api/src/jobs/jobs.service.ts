@@ -79,6 +79,7 @@ export type JobFilters = {
   contracts: { value: string; count: number }[];
   departments: { value: string; count: number }[];
   workModes: { value: string; count: number }[];
+  studyLevels: { value: string; count: number }[];
 };
 
 @Injectable()
@@ -110,6 +111,9 @@ export class JobsService {
       ...(query.department ? { departmentCode: query.department } : {}),
       ...(query.workMode ? { workMode: query.workMode } : {}),
       ...(query.city ? { city: { equals: query.city, mode: "insensitive" as const } } : {}),
+      ...(query.studyLevel
+        ? { studyLevel: { equals: query.studyLevel, mode: "insensitive" as const } }
+        : {}),
       ...(query.salaryMin ? { salaryMin: { gte: query.salaryMin } } : {}),
       ...(query.salaryMax ? { salaryMin: { lte: query.salaryMax } } : {}),
       ...(query.q
@@ -287,11 +291,16 @@ export class JobsService {
       expiresAt: { gt: now },
     };
 
-    const [roles, contracts, departments, workModes] = await Promise.all([
+    const [roles, contracts, departments, workModes, studyLevels] = await Promise.all([
       this.prisma.job.groupBy({ by: ["roleCategory"], where, _count: { _all: true } }),
       this.prisma.job.groupBy({ by: ["contractType"], where, _count: { _all: true } }),
       this.prisma.job.groupBy({ by: ["departmentCode"], where, _count: { _all: true } }),
       this.prisma.job.groupBy({ by: ["workMode"], where, _count: { _all: true } }),
+      this.prisma.job.groupBy({
+        by: ["studyLevel"],
+        where: { ...where, studyLevel: { not: null } },
+        _count: { _all: true },
+      }),
     ]);
 
     return {
@@ -301,6 +310,9 @@ export class JobsService {
         .map((row) => ({ value: row.departmentCode, count: row._count._all }))
         .sort((a, b) => a.value.localeCompare(b.value)),
       workModes: workModes.map((row) => ({ value: row.workMode, count: row._count._all })),
+      studyLevels: studyLevels
+        .map((row) => ({ value: row.studyLevel ?? "", count: row._count._all }))
+        .filter((row) => row.value !== ""),
     };
   }
 }

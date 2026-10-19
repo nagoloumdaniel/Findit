@@ -199,7 +199,8 @@ describe("JobsService.filters", () => {
         { departmentCode: "92", _count: { _all: 1 } },
         { departmentCode: "75", _count: { _all: 3 } },
       ])
-      .mockResolvedValueOnce([{ workMode: "REMOTE", _count: { _all: 1 } }]);
+      .mockResolvedValueOnce([{ workMode: "REMOTE", _count: { _all: 1 } }])
+      .mockResolvedValueOnce([{ studyLevel: "Bac+5", _count: { _all: 1 } }]);
     const service = new JobsService(prisma as never);
 
     const filters = await service.filters("LAST_5D", now);
@@ -212,5 +213,6 @@ describe("JobsService.filters", () => {
       { value: "92", count: 1 },
     ]);
     expect(filters.workModes).toEqual([{ value: "REMOTE", count: 1 }]);
+    expect(filters.studyLevels).toEqual([{ value: "Bac+5", count: 1 }]);
   });
 });

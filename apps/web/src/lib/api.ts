@@ -54,6 +54,7 @@ export type JobFilterOptions = {
   contracts: { value: string; count: number }[];
   departments: { value: string; count: number }[];
   workModes: { value: string; count: number }[];
+  studyLevels: { value: string; count: number }[];
 };
 
 export type JobStats = {

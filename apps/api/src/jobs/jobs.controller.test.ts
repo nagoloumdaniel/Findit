@@ -16,7 +16,13 @@ const jobList: JobList = { items: [], total: 0, page: 1, pageSize: 20 };
 
 const jobStats: JobStats = { publishedLast24h: 2, publishedLast5d: 5, lastPublishedAt: null };
 
-const jobFilters: JobFilters = { roles: [], contracts: [], departments: [], workModes: [] };
+const jobFilters: JobFilters = {
+  roles: [],
+  contracts: [],
+  departments: [],
+  workModes: [],
+  studyLevels: [],
+};
 
 /*
  * Forme réduite mais suffisante pour prouver que le contrôleur rend ce que le

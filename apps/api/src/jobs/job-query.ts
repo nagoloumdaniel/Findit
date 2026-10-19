@@ -27,6 +27,8 @@ export const jobQuerySchema = z.object({
   department: z.enum(ILE_DE_FRANCE_DEPARTMENTS).optional(),
   workMode: z.enum(JOB_WORK_MODES).optional(),
   city: z.string().trim().min(1).max(80).optional(),
+  /// Niveau d'études demandé, tel que la source l'a écrit (ex. « Bac+5 »).
+  studyLevel: z.string().trim().min(1).max(80).optional(),
   /// Recherche plein texte sur le titre, l'entreprise et la description.
   q: z.string().trim().min(2).max(120).optional(),
   /// N'expose que les offres dont la source privilégiée est l'entreprise.
