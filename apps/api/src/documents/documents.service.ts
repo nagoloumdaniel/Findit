@@ -26,6 +26,7 @@ import type { ScoredJob } from "./document-scoring.js";
 /** Ce que les appels de modèle de chaque document écrivent dans `ModelCall`. */
 const CV_PURPOSE = "document-cv";
 const LETTER_PURPOSE = "document-letter";
+const REFORMULATION_PURPOSE = "document-cv-reformulation";
 
 /** Corps attendu de `POST /api/documents/cv`. */
 export type CvRequest = {
@@ -76,6 +77,31 @@ const generatedLetterSchema = z.object({
 });
 
 type GeneratedLetter = z.infer<typeof generatedLetterSchema>;
+
+/** Sortie attendue du modèle pour la reformulation des réalisations. */
+const reformulatedExperiencesSchema = z.object({
+  experiences: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(200),
+        achievements: z.array(z.string().trim().min(1).max(300)).min(1).max(4),
+      }),
+    )
+    .min(1),
+});
+
+/*
+ * Consigne de reformulation : uniquement des faits de la description fournie.
+ * Aucune technologie, compétence, chiffre ou date n'est inventé ; une
+ * technologie ne se cite que si elle figure dans le profil ou dans la
+ * description d'origine.
+ */
+const REFORMULATION_SYSTEM = [
+  "Tu reformules les réalisations d'expériences en puces professionnelles et concrètes, en français.",
+  "Tu repars uniquement des faits de la description fournie : n'invente aucune technologie, compétence, chiffre, entreprise, date ou résultat.",
+  "Ne cite une technologie que si elle figure dans les compétences du profil ou dans la description d'origine.",
+  "Chaque puce commence par un verbe d'action au participe passé (Développé, Conçu, Mené...), sans pronom personnel ni sujet.",
+].join(" ");
 
 /*
  * Consigne de la lettre : uniquement des faits du profil et de l'offre. Aucune
@@ -132,11 +158,14 @@ export class DocumentsService {
     const job = await this.#findJob(request.jobSlug);
 
     const summary = await this.#buildSummary(profile, job, env);
+    const orderedExperiences = this.#orderExperiences(profile.experiences, job);
+    const achievements = await this.#reformulateAchievements(orderedExperiences, profile, env);
     const data = this.#toCvData(
       profile,
       summary,
       this.#orderSkills(profile.skills, job),
-      this.#orderExperiences(profile.experiences, job),
+      orderedExperiences,
+      achievements,
     );
 
     const options: CvRenderOptions = {
@@ -174,7 +203,7 @@ export class DocumentsService {
     const job = await this.#findJob(jobSlug);
     // Le résumé n'entre pas dans le score : seuls les faits structurés comptent.
     // L'ordre des compétences et des expériences n'influe pas sur le score non plus.
-    const data = this.#toCvData(profile, undefined, profile.skills, profile.experiences);
+    const data = this.#toCvData(profile, undefined, profile.skills, profile.experiences, []);
     return scoreCvDocument(data, this.#toScoredJob(job));
   }
 
@@ -476,6 +505,100 @@ export class DocumentsService {
   }
 
   /**
+   * Reformule les descriptions d'expérience en puces professionnelles, en un
+   * seul appel, puis les aligne sur l'ordre des expériences d'entrée.
+   *
+   * Le POURQUOI : le CV brut recopie la description libre ; la reformulation la
+   * transforme en réalisations concrètes et lisibles. Chaque puce est ensuite
+   * filtrée par `#sanitizeAchievements` : une technologie inconnue du profil et
+   * de la description d'origine est écartée, jamais conservée. Aucune expérience
+   * sans description n'appelle le modèle, et un échec rend des listes vides :
+   * le CV reste généré, simplement sans reformulation.
+   */
+  async #reformulateAchievements(
+    experiences: ProfileView["experiences"],
+    profile: ProfileView,
+    env: ReturnType<typeof parseApiEnv>,
+  ): Promise<string[][]> {
+    const withDescription = experiences
+      .map((experience, index) => ({ experience, index }))
+      .filter(({ experience }) => experience.description.trim() !== "");
+    if (withDescription.length === 0) {
+      return experiences.map(() => []);
+    }
+
+    const model = createDeepSeekModel({
+      apiKey: env.DEEPSEEK_API_KEY,
+      model: env.DEEPSEEK_MODEL,
+    });
+    const usageBefore = model.usage();
+    try {
+      const structured = await model.generateStructured({
+        schema: reformulatedExperiencesSchema,
+        system: REFORMULATION_SYSTEM,
+        prompt: [
+          "Reformule les réalisations de ces expériences.",
+          "Compétences du profil (seules technologies citables) :",
+          JSON.stringify([...profile.skills, ...profile.projects.flatMap((p) => p.skills)]),
+          "Expériences (titre et description) :",
+          JSON.stringify(
+            withDescription.map(({ experience }) => ({
+              title: experience.title,
+              description: experience.description,
+            })),
+          ),
+        ].join("\n"),
+        temperature: 0.3,
+      });
+
+      const byTitle = new Map(
+        structured.experiences.map((item) => [item.title, item.achievements]),
+      );
+      const result: string[][] = experiences.map(() => []);
+      for (const { experience, index } of withDescription) {
+        const achievements = byTitle.get(experience.title);
+        if (achievements === undefined) {
+          continue;
+        }
+        result[index] = this.#sanitizeAchievements(achievements, experience.description, profile);
+      }
+      return result;
+    } catch (error) {
+      this.#logger.warn(
+        `Reformulation non appliquée : ${error instanceof Error ? error.message : "inconnu"}.`,
+      );
+      return experiences.map(() => []);
+    } finally {
+      await this.#recordModelCall(model, usageBefore, env, REFORMULATION_PURPOSE);
+    }
+  }
+
+  /**
+   * Écarte les puces qui citent une technologie absente du profil ET de la
+   * description d'origine. La règle est celle du garde-fou de la lettre : la
+   * description d'origine est une source légitime, le reste est une invention.
+   */
+  #sanitizeAchievements(
+    achievements: string[],
+    sourceDescription: string,
+    profile: ProfileView,
+  ): string[] {
+    const knownIds = new Set(
+      [
+        ...profile.skills,
+        ...profile.projects.flatMap((project) => project.skills),
+        ...detectSkillsInText(sourceDescription).map((entry) => entry.label),
+      ]
+        .map((name) => canonicalizeSkill(name))
+        .filter((entry) => entry !== null)
+        .map((entry) => entry.id),
+    );
+    return achievements.filter((achievement) =>
+      detectSkillsInText(achievement).every((entry) => knownIds.has(entry.id)),
+    );
+  }
+
+  /**
    * Vérifie la validité technique du fichier rendu : non vide et en-tête attendu
    * (`%PDF` pour un PDF, `PK` pour un DOCX). Un document corrompu n'est jamais
    * renvoyé : l'erreur remonte plutôt qu'un fichier illisible.
@@ -500,6 +623,7 @@ export class DocumentsService {
     summary: string | undefined,
     orderedSkills: string[],
     orderedExperiences: ProfileView["experiences"],
+    achievements: string[][],
   ): CvDocumentData {
     return {
       identity: {
@@ -510,12 +634,12 @@ export class DocumentsService {
         title: profile.headline ?? undefined,
       },
       summary,
-      experiences: orderedExperiences.map((experience) => ({
+      experiences: orderedExperiences.map((experience, index) => ({
         title: experience.title,
         company: experience.company,
         startDate: experience.period === "" ? undefined : experience.period,
         description: experience.description === "" ? undefined : experience.description,
-        achievements: [],
+        achievements: achievements[index] ?? [],
         skills: [],
       })),
       projects: profile.projects.map((project) => ({

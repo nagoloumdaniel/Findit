@@ -152,6 +152,41 @@ describe("DocumentsService - génération de CV", () => {
     ]);
   });
 
+  it("reformule les réalisations et les attache aux expériences", async () => {
+    const { service } = createDeps();
+    aiMock.generateStructured.mockResolvedValue({
+      experiences: [{ title: "Dev", achievements: ["Développé une application TypeScript."] }],
+    });
+    renderMock.renderCvPdf.mockResolvedValue(Buffer.from("%PDF"));
+
+    await service.generateCv({ jobSlug: "dev-acme" });
+
+    const data = renderMock.renderCvPdf.mock.calls[0]?.[0] as {
+      experiences: { title: string; achievements: string[] }[];
+    };
+    expect(data.experiences[0]?.achievements).toEqual(["Développé une application TypeScript."]);
+  });
+
+  it("écarte une réalisation qui cite une technologie inconnue du profil", async () => {
+    const { service } = createDeps();
+    aiMock.generateStructured.mockResolvedValue({
+      experiences: [
+        {
+          title: "Dev",
+          achievements: ["Développé en Java.", "Développé une application TypeScript."],
+        },
+      ],
+    });
+    renderMock.renderCvPdf.mockResolvedValue(Buffer.from("%PDF"));
+
+    await service.generateCv({ jobSlug: "dev-acme" });
+
+    const data = renderMock.renderCvPdf.mock.calls[0]?.[0] as {
+      experiences: { achievements: string[] }[];
+    };
+    expect(data.experiences[0]?.achievements).toEqual(["Développé une application TypeScript."]);
+  });
+
   it("rend un DOCX quand le format le demande", async () => {
     const { service } = createDeps();
     renderMock.renderCvDocx.mockResolvedValue(Buffer.from("PK"));
