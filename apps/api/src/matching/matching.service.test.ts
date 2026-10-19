@@ -52,6 +52,7 @@ const job = {
 
 const createPrisma = () => ({
   job: { findMany: vi.fn().mockResolvedValue([job]) },
+  profile: { findUnique: vi.fn().mockResolvedValue(null) },
   matchingRun: {
     create: vi.fn().mockResolvedValue({ id: "run-1" }),
     deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
@@ -135,5 +136,58 @@ describe("MatchingService - historique", () => {
     const service = new MatchingService(prisma as never);
 
     await expect(service.historyDetail("inconnu")).resolves.toBeNull();
+  });
+});
+
+describe("MatchingService - rankByProfile", () => {
+  const rankedJob = {
+    slug: "dev-acme",
+    title: "Alternance Développeur Front-End H/F",
+    normalizedTitle: "developpeur front end",
+    roleCategory: "FRONTEND",
+    description: "Équipe produit web. Stack React.",
+    requirements: ["Maîtrise de TypeScript."],
+    responsibilities: ["Développer des interfaces."],
+    city: "Paris",
+    contractType: "ALTERNANCE",
+    publishedAt: new Date("2026-10-19T00:00:00.000Z"),
+    company: { name: "Acme" },
+  };
+
+  it("classe les offres par score décroissant, sans appeler le modèle", async () => {
+    const prisma = createPrisma();
+    prisma.profile.findUnique.mockResolvedValue({
+      skills: ["TypeScript", "React"],
+      headline: "Développeur Front-end",
+      languages: [{ name: "Anglais", level: "B2" }],
+      experiences: [{ title: "Développeur Front-end" }],
+    });
+    prisma.job.findMany.mockResolvedValue([
+      { ...rankedJob, slug: "offre-a" },
+      { ...rankedJob, slug: "offre-b", requirements: ["Maîtrise de Java."] },
+    ]);
+    const service = new MatchingService(prisma as never);
+
+    const items = await service.rankByProfile("LAST_5D", new Date("2026-10-19T12:00:00.000Z"));
+
+    expect(items).toHaveLength(2);
+    // L'offre qui exige TypeScript (couverte) devance celle qui exige Java.
+    expect(items[0]?.jobSlug).toBe("offre-a");
+    expect(items[0]?.score).toBeGreaterThan(items[1]?.score ?? 0);
+    expect(items[0]?.matchedSkills).toContain("TypeScript");
+    expect(items[1]?.missingSkills).toContain("Java");
+  });
+
+  it("signale un profil sans matière au lieu d'inventer un score fiable", async () => {
+    const prisma = createPrisma();
+    prisma.profile.findUnique.mockResolvedValue(null);
+    prisma.job.findMany.mockResolvedValue([rankedJob]);
+    const service = new MatchingService(prisma as never);
+
+    const items = await service.rankByProfile("LAST_5D", new Date("2026-10-19T12:00:00.000Z"));
+
+    // Un profil vide ne fournit pas de compétence : le score est fragile, et
+    // l'avertissement le dit au lieu de le maquiller.
+    expect(items[0]?.insufficientDataWarning).not.toBeNull();
   });
 });

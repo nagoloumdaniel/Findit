@@ -1,8 +1,10 @@
 import { parseApiEnv } from "@findit/config";
 import { computeCostMicroUsd, createDeepSeekModel } from "@findit/ai";
 import { type PrismaClient, JobStatus } from "@findit/database";
+import { computeMatch as scoreDeterministically, type ResumeMatchInput } from "@findit/matching-engine";
 import { computeMatch, structureCv } from "@findit/matching";
 import type { JobOfferLite } from "@findit/matching";
+import { publishedAfterFor, type FreshnessWindow } from "@findit/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
@@ -35,6 +37,24 @@ export type MatchingRunSummary = {
 export type MatchingRunDetail = MatchingRunSummary & {
   cvText: string;
   items: MatchItem[];
+};
+
+/// Une offre classée par correspondance au profil, score déterministe compris.
+export type RankedItem = {
+  jobSlug: string;
+  jobTitle: string;
+  companyName: string;
+  city: string;
+  contractType: string;
+  publishedAt: string;
+  /// Score de correspondance déterministe, entre 0 et 100. Indicatif.
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  /// Confiance de l'analyse, entre 0 et 100.
+  confidence: number;
+  /// Non nul quand le score est trop fragile pour être affiché tel quel.
+  insufficientDataWarning: string | null;
 };
 
 @Injectable()
@@ -144,6 +164,85 @@ export class MatchingService {
       cvText: run.cvText,
       items: run.items as unknown as MatchItem[],
     };
+  }
+
+  /**
+   * Classe les offres publiées par correspondance au profil, sans appeler le
+   * modèle.
+   *
+   * Le POURQUOI : la recherche « correspondance avec mon profil » doit pouvoir
+   * scorer toute la liste sans coût ni latence d'IA. Le score est celui de
+   * `@findit/matching-engine`, déterministe et explicable : les compétences
+   * exigées dominent, l'intitulé et les langues nuancent. Le profil est un
+   * singleton, lu ici par Prisma ; aucune offre n'est scorée sans que le profil
+   * fournisse au moins des compétences ou un intitulé.
+   */
+  async rankByProfile(freshness: FreshnessWindow, now: Date = new Date()): Promise<RankedItem[]> {
+    const profile = await this.prisma.profile.findUnique({ where: { id: "default" } });
+
+    const jobs = await this.prisma.job.findMany({
+      where: {
+        status: JobStatus.PUBLISHED,
+        publishedAt: { gte: publishedAfterFor(freshness, now) },
+        expiresAt: { gt: now },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 100,
+      select: {
+        slug: true,
+        title: true,
+        normalizedTitle: true,
+        roleCategory: true,
+        description: true,
+        requirements: true,
+        responsibilities: true,
+        city: true,
+        contractType: true,
+        publishedAt: true,
+        company: { select: { name: true } },
+      },
+    });
+
+    const languages = (profile?.languages ?? []) as { name: string; level?: string }[];
+    const experiences = (profile?.experiences ?? []) as { title: string }[];
+    const resume: ResumeMatchInput = {
+      sectionSkills: profile?.skills ?? [],
+      // Le profil ne rattache pas encore de compétences par expérience : aucune
+      // compétence « prouvée par l'usage » n'est donc déclarée, plutôt qu'une
+      // liste inventée.
+      evidenceSkills: [],
+      titles: [profile?.headline ?? "", ...experiences.map((experience) => experience.title)].filter(
+        (title) => title.trim() !== "",
+      ),
+      languages,
+    };
+
+    const items = jobs.map((job) => {
+      const result = scoreDeterministically(resume, {
+        title: job.title,
+        normalizedTitle: job.normalizedTitle,
+        roleCategory: job.roleCategory,
+        requirements: job.requirements,
+        responsibilities: job.responsibilities,
+        description: job.description,
+      });
+
+      return {
+        jobSlug: job.slug,
+        jobTitle: job.title,
+        companyName: job.company.name,
+        city: job.city,
+        contractType: job.contractType,
+        publishedAt: job.publishedAt.toISOString(),
+        score: result.score,
+        matchedSkills: result.matchedSkills,
+        missingSkills: result.missingSkills,
+        confidence: result.confidence,
+        insufficientDataWarning: result.insufficientDataWarning,
+      };
+    });
+
+    return items.sort((a, b) => b.score - a.score);
   }
 
   /**

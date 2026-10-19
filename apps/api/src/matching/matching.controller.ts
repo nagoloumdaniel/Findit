@@ -7,13 +7,18 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
+  UseGuards,
   UsePipes,
 } from "@nestjs/common";
 import { z } from "zod";
 
+import { freshnessQuerySchema } from "../jobs/job-query.js";
+import type { FreshnessQuery } from "../jobs/job-query.js";
+import { ProfileKeyGuard } from "../profile/profile.controller.js";
 import { ZodValidationPipe } from "../validation/zod-validation.pipe.js";
 import { MatchingService } from "./matching.service.js";
-import type { MatchItem, MatchingRunDetail, MatchingRunSummary } from "./matching.service.js";
+import type { MatchItem, MatchingRunDetail, MatchingRunSummary, RankedItem } from "./matching.service.js";
 
 const scoreBodySchema = z.object({ cvText: z.string().min(1) });
 
@@ -57,6 +62,21 @@ export class MatchingController {
   @Get("history")
   history(): Promise<MatchingRunSummary[]> {
     return this.matching.history();
+  }
+
+  /**
+   * Classement des offres par correspondance au profil, score déterministe.
+   *
+   * Gardé par `ProfileKeyGuard` : le score s'appuie sur les compétences du
+   * profil, qui sont des données personnelles. La recherche classique
+   * (`GET /api/jobs`) n'expose, elle, aucun score sur ses cartes.
+   */
+  @Get("rank")
+  @UseGuards(ProfileKeyGuard)
+  rank(
+    @Query(new ZodValidationPipe(freshnessQuerySchema)) query: FreshnessQuery,
+  ): Promise<RankedItem[]> {
+    return this.matching.rankByProfile(query.freshness);
   }
 
   /**

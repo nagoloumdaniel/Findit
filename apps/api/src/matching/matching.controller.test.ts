@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createFastifyAdapter } from "../fastify-adapter.js";
 import { PRISMA_CLIENT } from "../prisma/prisma.module.js";
+import { PROFILE_INTERNAL_KEY, ProfileKeyGuard } from "../profile/profile.controller.js";
 import { MatchingController } from "./matching.controller.js";
 import { MatchingService } from "./matching.service.js";
 import type { MatchItem } from "./matching.service.js";
@@ -46,7 +47,12 @@ describe("MatchingController", () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [MatchingController],
-      providers: [MatchingService, { provide: PRISMA_CLIENT, useValue: prisma }],
+      providers: [
+        MatchingService,
+        { provide: PRISMA_CLIENT, useValue: prisma },
+        ProfileKeyGuard,
+        { provide: PROFILE_INTERNAL_KEY, useValue: "test-internal-key" },
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(createFastifyAdapter());
@@ -179,5 +185,21 @@ describe("MatchingController", () => {
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ message: "Paramètres de requête invalides" });
     expect(prisma.matchingRun.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("protège le classement par profil derrière la clé interne", async () => {
+    const rank = vi.spyOn(app!.get(MatchingService), "rankByProfile").mockResolvedValue([]);
+
+    const denied = await app!.inject({ method: "GET", url: "/api/matching/rank" });
+    expect(denied.statusCode).toBe(401);
+    expect(rank).not.toHaveBeenCalled();
+
+    const granted = await app!.inject({
+      method: "GET",
+      url: "/api/matching/rank",
+      headers: { "x-internal-key": "test-internal-key" },
+    });
+    expect(granted.statusCode).toBe(200);
+    expect(rank).toHaveBeenCalledWith("LAST_5D");
   });
 });
