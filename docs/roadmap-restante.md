@@ -186,8 +186,8 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 ### 6.3 Authentification multi-utilisateurs (différé, Q-2)
 
 - **Objectif** : comptes et rôles distincts, contrôle d'accès par document (§18, §19).
-- **État** : mono-utilisateur (mot de passe unique + `x-internal-key`), question ouverte Q-2 dans `roadmap.md`.
-- **Note** : décision d'architecture à trancher avant toute implémentation ; ne pas bricoler. La décision proposée est documentée dans `docs/adr-auth-multi-utilisateurs.md` (session serveur + rôles `candidate`/`operator`), à valider par le propriétaire.
+- **État** : socle d'authentification livré (tables `User` + `Session`, service `AuthService` : inscription/connexion/déconnexion, hachage scrypt, gardes `SessionGuard`/`OperatorGuard`, migration, tests). Reste l'isolation des données (`ownerId` sur `Profile`/`Favorite`/`Resume`), l'écran de connexion du web et le garde du dashboard.
+- **Note** : la décision proposée est documentée dans `docs/adr-auth-multi-utilisateurs.md` (session serveur + rôles `candidate`/`operator`). L'isolation par document et l'interface sont le suivi restant.
 
 ---
 
