@@ -1,8 +1,8 @@
-import { writeFileSync } from "node:fs";
+﻿import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /*
- * Génère la table des communes d'Île-de-France à partir de l'API officielle du
+ * Génère la table des communes de France à partir de l'API officielle du
  * gouvernement français.
  *
  * La table est générée puis commitée plutôt qu'interrogée à l'exécution : la
@@ -10,9 +10,117 @@ import { fileURLToPath } from "node:url";
  * moment de classer une offre serait un point de panne pour rien. À rejouer
  * quand le découpage communal change.
  *
+ * Deux communes peuvent porter le même nom (il y en a des milliers en France).
+ * Un nom unique vaut son département ; un nom porté par plusieurs communes vaut
+ * AMBIGUOUS, sauf s'il n'est ambigu qu'hors Île-de-France : il garde alors son
+ * département francilien, qui est l'usage historique de la plateforme.
+ *
  *   node generate-communes.mjs
  */
-const DEPARTMENTS = ["75", "77", "78", "91", "92", "93", "94", "95"];
+const DEPARTMENTS = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "2A",
+  "2B",
+  "21",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
+  "27",
+  "28",
+  "29",
+  "30",
+  "31",
+  "32",
+  "33",
+  "34",
+  "35",
+  "36",
+  "37",
+  "38",
+  "39",
+  "40",
+  "41",
+  "42",
+  "43",
+  "44",
+  "45",
+  "46",
+  "47",
+  "48",
+  "49",
+  "50",
+  "51",
+  "52",
+  "53",
+  "54",
+  "55",
+  "56",
+  "57",
+  "58",
+  "59",
+  "60",
+  "61",
+  "62",
+  "63",
+  "64",
+  "65",
+  "66",
+  "67",
+  "68",
+  "69",
+  "70",
+  "71",
+  "72",
+  "73",
+  "74",
+  "75",
+  "76",
+  "77",
+  "78",
+  "79",
+  "80",
+  "81",
+  "82",
+  "83",
+  "84",
+  "85",
+  "86",
+  "87",
+  "88",
+  "89",
+  "90",
+  "91",
+  "92",
+  "93",
+  "94",
+  "95",
+  "971",
+  "972",
+  "973",
+  "974",
+  "976",
+];
+const ILE_DE_FRANCE = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
 const USER_AGENT = "FinditBot/0.1 (+https://github.com/Nagoloum/Findit)";
 
 /** Doit rester identique à `normalizeCommune` dans location.ts. */
@@ -45,50 +153,61 @@ for (const department of DEPARTMENTS) {
     const existing = byName.get(key);
 
     if (existing === undefined) {
-      byName.set(key, { department, name: commune.nom });
-      continue;
+      byName.set(key, { departments: new Set([department]), name: commune.nom });
+    } else {
+      existing.departments.add(department);
     }
-
-    // Deux communes d'Île-de-France portant le même nom : le libellé seul ne
-    // permet pas de trancher. Marqué ambigu plutôt que résolu au hasard.
-    existing.department = "AMBIGUOUS";
   }
+
+  process.stdout.write(`\r${department} (${byName.size} communes)`);
 }
 
-const entries = [...byName.entries()].sort(([a], [b]) => a.localeCompare(b));
-const ambiguous = entries.filter(([, value]) => value.department === "AMBIGUOUS");
+process.stdout.write("\n");
 
-const lines = entries.map(
-  ([key, value]) => `  ["${key}", "${value.department}"], // ${value.name}`,
-);
+/** Résout un nom vers un département, ou AMBIGUOUS. */
+const resolveDepartment = ({ departments }) => {
+  const list = [...departments];
+  if (list.length === 1) {
+    return list[0];
+  }
 
-const file = `import type { IleDeFranceDepartment } from "@findit/shared";
+  // Un nom unique en Île-de-France garde son département francilien, même s'il
+  // existe ailleurs en France : c'est l'usage historique de la plateforme.
+  const idf = list.filter((department) => ILE_DE_FRANCE.has(department));
+  return idf.length === 1 ? idf[0] : "AMBIGUOUS";
+};
 
-/*
+const entries = [...byName.entries()]
+  .map(([key, value]) => [key, resolveDepartment(value), value.name])
+  .sort(([a], [b]) => a.localeCompare(b));
+const ambiguous = entries.filter(([, department]) => department === "AMBIGUOUS");
+
+const lines = entries.map(([key, department, name]) => `  ["${key}", "${department}"], // ${name}`);
+
+const file = `/*
  * Table générée par \`generate-communes.mjs\` le ${new Date().toISOString().slice(0, 10)},
  * depuis geo.api.gouv.fr - l'API officielle du découpage administratif français.
  * Ne pas modifier à la main : rejouer le script.
  *
- * ${entries.length} communes, dont ${ambiguous.length} dont le nom est porté par
- * deux départements d'Île-de-France. Celles-là valent \`AMBIGUOUS\` : le libellé
- * d'une offre ne suffit pas à les départager, et deviner le département
- * reviendrait à inventer la localisation.
+ * ${entries.length} communes de France, dont ${ambiguous.length} dont le nom est porté par
+ * plusieurs départements hors Île-de-France. Celles-là valent \`AMBIGUOUS\` : le
+ * libellé d'une offre ne suffit pas à les départager, et deviner le département
+ * reviendrait à inventer la localisation. Un nom ambigu en France mais unique
+ * en Île-de-France garde son département francilien.
  *
  * La clé est le nom normalisé - sans accent, sans apostrophe, sans tiret - parce
  * que les offres écrivent « Boulogne-Billancourt », « Boulogne Billancourt » et
  * « boulogne billancourt » pour la même ville.
  */
-export type CommuneDepartment = IleDeFranceDepartment | "AMBIGUOUS";
+export type CommuneDepartment = string;
 
-export const ILE_DE_FRANCE_COMMUNES: ReadonlyMap<string, CommuneDepartment> = new Map([
+export const FRANCE_COMMUNES: ReadonlyMap<string, CommuneDepartment> = new Map([
 ${lines.join("\n")}
 ]);
 `;
 
-const target = fileURLToPath(new URL("src/ile-de-france-communes.ts", import.meta.url));
+const target = fileURLToPath(new URL("src/france-communes.ts", import.meta.url));
 writeFileSync(target, file, "utf8");
 
-console.log(`${entries.length} communes écrites dans src/ile-de-france-communes.ts`);
-console.log(
-  `dont ambiguës : ${ambiguous.length}${ambiguous.length > 0 ? " - " + ambiguous.map(([k]) => k).join(", ") : ""}`,
-);
+console.log(`${entries.length} communes écrites dans src/france-communes.ts`);
+console.log(`dont ambiguës : ${ambiguous.length}`);

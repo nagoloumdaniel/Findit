@@ -160,13 +160,13 @@ describe("persistOffers - rejets", () => {
   it("rejette une commune dont le département ne peut pas être établi", async () => {
     const prisma = createPrisma();
 
-    // « Lyon » seul, sans code postal : la ville n'est pas dans la table des
-    // communes connues, donc aucun département n'en découle.
-    const result = await persistOffers([offer({ location: "Lyon" })], depsFor(prisma));
+    // « Blandy » existe dans deux départements : aucun département n'en découle
+    // sans plus de précision, et deviner reviendrait à inventer la localisation.
+    const result = await persistOffers([offer({ location: "Blandy" })], depsFor(prisma));
 
     expect(result.inserted).toBe(0);
     expect(result.rejected).toHaveLength(1);
-    expect(result.rejected[0]?.reason).toContain("France");
+    expect(result.rejected[0]?.reason).toContain("communes");
     expect(prisma.job.create).not.toHaveBeenCalled();
   });
 

@@ -110,23 +110,20 @@ export const CONNECTOR_REGISTRY_ENTRIES: readonly ConnectorRegistryEntry[] = [
     atsKind: AtsKind.JOB_BOARD,
     accessStatus: SourceAccessStatus.OWNER_ACCEPTED_SCRAPING,
     /*
-     * DÉSACTIVÉ après mesure, décision du propriétaire le 2026-10-07.
+     * RÉACTIVÉ le 2026-10-19, sur demande explicite du propriétaire.
      *
-     * Le POURQUOI : deux runs réels bornés ont coûté 0,02810 $ pour **zéro offre
-     * francilienne d'alternance**. L'acteur ignore la zone demandée — son `inputUrl`
-     * portait bien `location=Île-de-France, France` et les 14/14 offres rendues
-     * étaient en Bretagne (Brest, Guipavas, Plouzané) — et ne respecte pas non plus
-     * le contrat. Le connecteur reste écrit et testé ; c'est son statut qui change.
-     *
-     * Le POURQUOI de le poser ICI et pas seulement en base : le report du registre
-     * réécrit le statut depuis ce fichier, donc une simple resynchronisation
-     * rallumerait la source et le cycle repartirait à 0,04 $/jour. Le verrou doit
-     * vivre dans le code pour survivre à un `pnpm registry:sync`.
+     * Historique : la source avait été désactivée le 2026-10-07 après deux runs
+     * bornés qui avaient coûté 0,02810 $ pour zéro offre francilienne. L'acteur
+     * ignore la zone demandée (14/14 offres rendues en Bretagne pour une requête
+     * Île-de-France). Ce motif perd l'essentiel de son poids depuis que la
+     * plateforme couvre toute la France : une offre bretonne est désormais dans
+     * le périmètre. Le rendement reste faible et le coût réel, le budget de
+     * cycle demeure plafonné par `SCRAPING_BUDGET_CYCLE_USD`.
      */
-    status: ConnectorStatus.DISABLED,
+    status: ConnectorStatus.ACTIVE,
     termsCheckedAt: VERIFIED_2026_10_06,
     notes:
-      "Acces TOLERE, non autorise : les conditions de LinkedIn interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify curious_coder/linkedin-jobs-scraper, page publique sans compte ni cookie (l'acteur avec compte est exclu), mots-cles alternance developpeur, splitByLocation desactive comme le registre l'impose, aucune donnee de recruteur stockee (jobPoster* ignores). LinkedIn ne filtre que 24 h / 7 jours / 30 jours : l'acteur est lance sur pastWeek, la fenetre de 3 jours est retablie par le connecteur a partir de postedAt. Deux runs reels le 2026-10-07 : 14 offres vues puis dataset vide, 0,02810 $ reels, 0 offre francilienne acceptee, l'acteur ignorant la zone demandee (14/14 en Bretagne). Bareme etabli au run (0,002 $ par resultat + 0,00005 $ de demarrage) et non plus estime. Statut DESACTIVE : ce n'est pas la source qui est refusee, c'est son rendement qui ne paie pas son cout. 20 resultats par run, plafond absolu 100, budget plafonne.",
+      "Acces TOLERE, non autorise : les conditions de LinkedIn interdisent la collecte automatisee, risque assume par le proprietaire (decision du 2026-10-05, compte Apify dedie confirme le 2026-10-06). Acteur Apify curious_coder/linkedin-jobs-scraper, page publique sans compte ni cookie (l'acteur avec compte est exclu), mots-cles alternance developpeur, splitByLocation desactive comme le registre l'impose, aucune donnee de recruteur stockee (jobPoster* ignores). LinkedIn ne filtre que 24 h / 7 jours / 30 jours : l'acteur est lance sur pastWeek, la fenetre de 3 jours est retablie par le connecteur a partir de postedAt. Deux runs reels le 2026-10-07 : 14 offres vues puis dataset vide, 0,02810 $ reels, 0 offre francilienne acceptee, l'acteur ignorant la zone demandee (14/14 en Bretagne). Bareme etabli au run (0,002 $ par resultat + 0,00005 $ de demarrage) et non plus estime. Statut REACTIVE le 2026-10-19 sur demande du proprietaire : le perimetre etant passe a toute la France, le motif « zero offre francilienne » ne s'applique plus. 20 resultats par run, plafond absolu 100, budget plafonne.",
   },
 ];
 

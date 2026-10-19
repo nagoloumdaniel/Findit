@@ -110,12 +110,17 @@ describe("resolveLocation", () => {
     }
   });
 
-  it("refuses a French city outside the zone", () => {
-    for (const label of ["Nantes", "Orléans", "Strasbourg", "Biarritz", "Lyon"]) {
-      expect(resolveLocation(label)).toMatchObject({
-        inScope: false,
-        reason: "OUTSIDE_FRANCE",
-      });
+  it("places a French city anywhere in France", () => {
+    const cases: ReadonlyArray<readonly [string, string]> = [
+      ["Nantes", "44"],
+      ["Orléans", "45"],
+      ["Strasbourg", "67"],
+      ["Biarritz", "64"],
+      ["Lyon", "69"],
+    ];
+
+    for (const [city, department] of cases) {
+      expect(resolveLocation(city)).toMatchObject({ inScope: true, departmentCode: department });
     }
   });
 
@@ -134,7 +139,7 @@ describe("resolveLocation", () => {
     }
   });
 
-  it("refuses to pick between two communes that share a name", () => {
+  it("refuses to pick between communes that share a name", () => {
     // Blandy existe en Essonne et en Seine-et-Marne. Le libellé ne dit pas
     // laquelle, et trancher inventerait le département.
     const resolution = resolveLocation("Blandy");
@@ -142,7 +147,7 @@ describe("resolveLocation", () => {
     expect(resolution).toMatchObject({ inScope: false, reason: "AMBIGUOUS_COMMUNE" });
     expect(resolution.inScope).toBe(false);
     if (!resolution.inScope) {
-      expect(resolution.detail).toContain("deux communes");
+      expect(resolution.detail).toContain("plusieurs communes");
     }
   });
 

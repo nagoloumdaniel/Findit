@@ -82,18 +82,12 @@ describe("CONNECTOR_REGISTRY_ENTRIES", () => {
     }
 
     /*
-     * Le statut n'est pas le même pour tous, et c'est voulu : LinkedIn est
-     * DÉSACTIVÉ depuis le 2026-10-07 après deux runs réels qui ont coûté
-     * 0,02810 $ pour zéro offre francilienne (l'acteur ignore la zone demandée).
-     * Le connecteur reste écrit et testé ; c'est son statut qui le tient à
-     * l'écart du cycle, et ce test fige cette distinction pour qu'une
-     * resynchronisation ne le rallume pas en silence.
+     * Toutes les sources scrapées sont ACTIVES depuis le 2026-10-19 : LinkedIn,
+     * longtemps désactivé pour son rendement (0,02810 $ pour zéro offre
+     * francilienne), a été réactivé sur demande du propriétaire, le périmètre
+     * étant passé à toute la France. Le connecteur reste écrit et testé.
      */
-    expect(entryFor("linkedin")?.status).toBe(ConnectorStatus.DISABLED);
     for (const [connector] of regimes) {
-      if (connector.name === "linkedin") {
-        continue;
-      }
       expect(entryFor(connector.name)?.status).toBe(ConnectorStatus.ACTIVE);
     }
   });

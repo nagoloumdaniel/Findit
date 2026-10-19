@@ -1,6 +1,6 @@
 import type { JobWorkMode } from "@findit/shared";
 
-import { ILE_DE_FRANCE_COMMUNES } from "./ile-de-france-communes.js";
+import { FRANCE_COMMUNES } from "./france-communes.js";
 
 export type LocationRefusal = "NO_LOCATION" | "OUTSIDE_FRANCE" | "AMBIGUOUS_COMMUNE" | "TOO_VAGUE";
 
@@ -246,13 +246,13 @@ export const resolveLocation = (label: string | null): LocationResolution => {
         continue;
       }
 
-      const department = ILE_DE_FRANCE_COMMUNES.get(key);
+      const department = FRANCE_COMMUNES.get(key);
       if (department === undefined) {
         continue;
       }
 
       if (department === "AMBIGUOUS") {
-        // Deux communes d'Île-de-France portent ce nom. Trancher reviendrait à
+        // Deux communes de France portent ce nom. Trancher reviendrait à
         // inventer le département.
         sawAmbiguousCommune = part;
         continue;
@@ -272,7 +272,7 @@ export const resolveLocation = (label: string | null): LocationResolution => {
     return {
       inScope: false,
       reason: "AMBIGUOUS_COMMUNE",
-      detail: `« ${sawAmbiguousCommune} » est le nom de deux communes d'Île-de-France : le libellé ne dit pas laquelle.`,
+      detail: `« ${sawAmbiguousCommune} » est le nom de plusieurs communes de France : le libellé ne dit pas laquelle.`,
       workMode,
     };
   }
