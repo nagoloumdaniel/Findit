@@ -201,6 +201,7 @@ model Job {
   duplicateDecisions     DuplicateDecision[]
   processingLogs         ProcessingLog[]
   telegramNotifications  TelegramJobNotification[]
+  favorites              Favorite[]
 
   /// Une même source ne peut pas décrire deux fois la même offre.
   @@unique([companyId, externalId])
@@ -1099,6 +1100,19 @@ model Resume {
   createdAt DateTime @default(now())
 
   @@index([active])
+  @@index([createdAt])
+}
+
+/// Une offre mise en favori par le propriétaire. Mono-utilisateur : le favori
+/// est un simple lien vers une offre, sans table d'utilisateurs.
+model Favorite {
+  id    String @id @default(uuid(7))
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([jobId])
   @@index([createdAt])
 }
 

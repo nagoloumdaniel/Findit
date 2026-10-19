@@ -145,7 +145,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Objectif** : quand plusieurs compétences sont sélectionnées, une logique explicite « toutes / au moins une / configurable » (§8.3).
 - **Travail** : paramètre `skillsMode=all|any`, appliqué au filtre de compétences.
 
-### 4.5 Favoris et notifications candidat
+### 4.5 ✅ Favoris et notifications candidat
 
 - **Objectif** : sauvegarder des offres en favori, historique de consultation, alertes sur les nouvelles offres correspondantes (§4.1, §10.4).
 - **État** : absent (seules les notifications Telegram de l'opérateur existent).
