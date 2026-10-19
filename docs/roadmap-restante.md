@@ -178,7 +178,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **État** : rétention `MatchingRun` (72 h) existe ; pas de rétention sur le CV fichier (dépend 1.4).
 - **Travail** : `expiresAt` + purge sur les CV importés, suppression des fichiers temporaires.
 
-### 6.2 Politique de confidentialité des documents générés
+### 6.2 ✅ Politique de confidentialité des documents générés
 
 - **Objectif** : informer clairement sur les traitements, limiter ce qui est transmis au fournisseur IA (§19).
 - **Travail** : documentation + écran de consentement ; transmission minimale au fournisseur.
