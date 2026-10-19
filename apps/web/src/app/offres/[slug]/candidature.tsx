@@ -12,11 +12,16 @@ type CandidatureSectionProps = {
   jobSlug: string;
 };
 
-/** Déclenche le téléchargement d'un fichier reçu en base64. */
-const download = (file: { fileName: string; contentType: string; contentBase64: string }): void => {
+/** Convertit un fichier base64 en URL d'objet, réutilisable pour l'aperçu. */
+const toBlobUrl = (file: { contentType: string; contentBase64: string }): string => {
   const bytes = Uint8Array.from(atob(file.contentBase64), (char) => char.charCodeAt(0));
   const blob = new Blob([bytes], { type: file.contentType });
-  const url = URL.createObjectURL(blob);
+  return URL.createObjectURL(blob);
+};
+
+/** Déclenche le téléchargement d'un fichier reçu en base64. */
+const download = (file: { fileName: string; contentType: string; contentBase64: string }): void => {
+  const url = toBlobUrl(file);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = file.fileName;
@@ -45,6 +50,8 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [score, setScore] = useState<CvScore | null>(null);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState("cv.pdf");
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +85,30 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
     });
     if (result.ok) {
       download(result.document);
+    } else {
+      setError(result.reason);
+    }
+    setBusy(null);
+  };
+
+  /** Génère le CV en PDF et l'affiche en aperçu, sans le télécharger. */
+  const onPreviewCv = async (): Promise<void> => {
+    setBusy("cv");
+    setError(null);
+    const result = await generateCvAction({
+      jobSlug,
+      template,
+      showPhoto,
+      photoDataUrl,
+      accentColor,
+      format: "pdf",
+    });
+    if (result.ok) {
+      if (previewUrl !== null) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(toBlobUrl(result.document));
+      setPreviewName(result.document.fileName);
     } else {
       setError(result.reason);
     }
@@ -191,6 +222,15 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
         >
           {busy === "cv" ? "Génération…" : "Générer le CV"}
         </button>
+        <button
+          type="button"
+          className="source-primary"
+          style={buttonStyle}
+          onClick={() => void onPreviewCv()}
+          disabled={busy !== null}
+        >
+          {busy === "cv" ? "Génération…" : "Prévisualiser le CV"}
+        </button>
 
         <label>
           Format de la lettre
@@ -212,6 +252,20 @@ export function CandidatureSection({ jobSlug }: CandidatureSectionProps) {
           {busy === "letter" ? "Génération…" : "Générer la lettre"}
         </button>
       </div>
+
+      {previewUrl !== null ? (
+        <div className="cv-preview" style={{ marginTop: "1rem" }}>
+          <iframe
+            className="cv-preview-frame"
+            src={previewUrl}
+            title="Aperçu du CV"
+            loading="lazy"
+          />
+          <a className="source-primary" href={previewUrl} download={previewName}>
+            Télécharger cet aperçu
+          </a>
+        </div>
+      ) : null}
 
       {error === null ? null : (
         <p className="detail-note" role="alert" style={{ marginTop: "0.75rem" }}>

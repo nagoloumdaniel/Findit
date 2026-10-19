@@ -93,3 +93,13 @@ test("la fiche d'offre affiche la correspondance au profil", async ({ page }) =>
       .first(),
   ).toBeVisible();
 });
+
+test("la fiche d'offre permet de prévisualiser le CV avant téléchargement", async ({ page }) => {
+  await page.goto("/offres/demo-alternance-developpeur-front-end-react-paris");
+
+  await page.getByRole("button", { name: "Prévisualiser le CV" }).click();
+
+  // La génération est asynchrone : l'aperçu (iframe) apparaît une fois le PDF prêt.
+  await expect(page.locator('iframe[title="Aperçu du CV"]')).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("link", { name: "Télécharger cet aperçu" })).toBeVisible();
+});

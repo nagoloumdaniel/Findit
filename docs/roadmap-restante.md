@@ -90,7 +90,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 3 — Génération de documents : prévisualisation et contrôle (P1)
 
-### 3.1 Prévisualisation du CV avant téléchargement
+### 3.1 ✅ Prévisualisation du CV avant téléchargement
 
 - **Objectif** : voir le CV, changer de modèle, activer/désactiver la photo, personnaliser la couleur, corriger des informations, relancer la génération, puis télécharger (§14.5).
 - **État** : `POST /api/documents/cv` télécharge directement le fichier, sans prévisualisation.
