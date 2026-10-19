@@ -187,7 +187,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 - **Objectif** : comptes et rôles distincts, contrôle d'accès par document (§18, §19).
 - **État** : mono-utilisateur (mot de passe unique + `x-internal-key`), question ouverte Q-2 dans `roadmap.md`.
-- **Note** : décision d'architecture à trancher avant toute implémentation ; ne pas bricoler.
+- **Note** : décision d'architecture à trancher avant toute implémentation ; ne pas bricoler. La décision proposée est documentée dans `docs/adr-auth-multi-utilisateurs.md` (session serveur + rôles `candidate`/`operator`), à valider par le propriétaire.
 
 ---
 
