@@ -135,6 +135,7 @@ describe("JobsService.list", () => {
     const list = await service.list(
       {
         freshness: "LAST_5D",
+        skillsMode: "all",
         sort: "DATE",
         page: 1,
         pageSize: 20,
@@ -145,6 +146,68 @@ describe("JobsService.list", () => {
     expect(list.items).toHaveLength(1);
     expect(list.items[0]?.origin).toBe("JOB_BOARD");
     expect(list.items[0]?.canonicalSource?.name).toBe("welcome-to-the-jungle");
+  });
+
+  it("exige toutes les compétences demandées quand skillsMode=all", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.count.mockResolvedValue(0);
+    prisma.job.findMany.mockResolvedValue([]);
+    const service = new JobsService(prisma as never);
+
+    await service.list(
+      {
+        freshness: "LAST_5D",
+        skillsMode: "all",
+        skills: ["react", "typescript"],
+        sort: "DATE",
+        page: 1,
+        pageSize: 20,
+      },
+      now,
+    );
+
+    const args = prisma.job.findMany.mock.calls[0]?.[0] as { where: { AND: unknown[] } };
+    expect(args.where.AND).toContainEqual({ skills: { some: { skill: { slug: "react" } } } });
+    expect(args.where.AND).toContainEqual({ skills: { some: { skill: { slug: "typescript" } } } });
+  });
+
+  it("accepte au moins une compétence quand skillsMode=any", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.count.mockResolvedValue(0);
+    prisma.job.findMany.mockResolvedValue([]);
+    const service = new JobsService(prisma as never);
+
+    await service.list(
+      {
+        freshness: "LAST_5D",
+        skillsMode: "any",
+        skills: ["react", "vue.js"],
+        sort: "DATE",
+        page: 1,
+        pageSize: 20,
+      },
+      now,
+    );
+
+    const args = prisma.job.findMany.mock.calls[0]?.[0] as {
+      where: { skills: { some: { skill: { slug: { in: string[] } } } } };
+    };
+    expect(args.where.skills).toEqual({ some: { skill: { slug: { in: ["react", "vue"] } } } });
+  });
+
+  it("exclut les offres dont la date n'est pas vérifiée", async () => {
+    const prisma = createPrisma(null);
+    prisma.job.count.mockResolvedValue(0);
+    prisma.job.findMany.mockResolvedValue([]);
+    const service = new JobsService(prisma as never);
+
+    await service.list(
+      { freshness: "LAST_5D", skillsMode: "all", sort: "DATE", page: 1, pageSize: 20 },
+      now,
+    );
+
+    const args = prisma.job.findMany.mock.calls[0]?.[0] as { where: { dateVerified: boolean } };
+    expect(args.where.dateVerified).toBe(true);
   });
 });
 

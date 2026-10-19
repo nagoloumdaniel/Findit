@@ -33,6 +33,28 @@ export const JobSearch = ({ current }: JobSearchProps) => {
         </button>
       </div>
 
+      <div className="job-search-row">
+        <input
+          id="skills"
+          className="job-search-input"
+          type="search"
+          name="skills"
+          defaultValue={current.get("skills") ?? ""}
+          placeholder="Compétences (React, TypeScript…)"
+          maxLength={500}
+          autoComplete="off"
+        />
+        <select
+          className="job-search-mode"
+          name="skillsMode"
+          defaultValue={current.get("skillsMode") ?? "all"}
+          aria-label="Combinaison des compétences"
+        >
+          <option value="all">Toutes</option>
+          <option value="any">Au moins une</option>
+        </select>
+      </div>
+
       {kept.map((key) => {
         const value = current.get(key);
         return value ? <input key={key} type="hidden" name={key} value={value} /> : null;

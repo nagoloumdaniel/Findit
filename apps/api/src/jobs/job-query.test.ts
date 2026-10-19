@@ -74,6 +74,17 @@ describe("jobQuerySchema", () => {
     expect(jobQuerySchema.parse({ company: "Acme" }).company).toBe("Acme");
     expect(() => jobQuerySchema.parse({ title: "a" })).toThrow();
   });
+
+  it("découpe les compétences et applique une logique toutes/au moins une", () => {
+    expect(jobQuerySchema.parse({ skills: "react, typescript" }).skills).toEqual([
+      "react",
+      "typescript",
+    ]);
+    // Défaut : toutes les compétences doivent être présentes.
+    expect(jobQuerySchema.parse({ skills: "react" }).skillsMode).toBe("all");
+    expect(jobQuerySchema.parse({ skills: "react", skillsMode: "any" }).skillsMode).toBe("any");
+    expect(() => jobQuerySchema.parse({ skillsMode: "exact" })).toThrow();
+  });
 });
 
 describe("freshnessQuerySchema", () => {

@@ -26,7 +26,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Fichiers** : `packages/database/prisma/schema.prisma`, `packages/persist/src/persist.ts`, `packages/job-pipeline/src/ingest.ts`, `apps/api/src/jobs`.
 - **Acceptation** : une offre « CDD intérim » garde son libellé brut lisible ; le type normalisé reste distinct.
 
-### 1.2 Marquage des offres sans date fiable
+### 1.2 ✅ Marquage des offres sans date fiable
 
 - **Objectif** : distinguer une date de publication vérifiée d'une date absente/insuffisamment fiable, au lieu de rejeter silencieusement (§7.2).
 - **État** : aujourd'hui une offre sans date ISO est rejetée (`parsePublishedAt`).
@@ -118,7 +118,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 
 ## Phase 4 — Recherche et interface (P1/P2)
 
-### 4.1 Filtres avancés réellement supportés
+### 4.1 ✅ Filtres avancés réellement supportés
 
 - **Objectif** : exposer les filtres dont la donnée existe déjà en base (§8.2) : niveau d'études (`studyLevel`), rémunération (`salaryMin`/`salaryMax`), durée, date de début (`startDate`), source, offre à date vérifiée (dépend 1.2), et rayon géographique (si coordonnées `latitude`/`longitude`).
 - **État** : seuls `role`, `contract`, `department`, `workMode`, `city`, `q`, `officialOnly`, `freshness`, `sort` sont filtrables.
@@ -140,7 +140,7 @@ Les items d'une phase dépendent de la phase précédente, sauf mention explicit
 - **Travail** : paramètres ciblés (`title`, `skills`, `company`, `location`) ou une syntaxe de recherche enrichie ; synonymes d'intitulés.
 - **Acceptation** : une recherche « React » sur les compétences ne matche pas une description qui mentionne React par hasard.
 
-### 4.4 Logique de combinaison des compétences
+### 4.4 ✅ Logique de combinaison des compétences
 
 - **Objectif** : quand plusieurs compétences sont sélectionnées, une logique explicite « toutes / au moins une / configurable » (§8.3).
 - **Travail** : paramètre `skillsMode=all|any`, appliqué au filtre de compétences.

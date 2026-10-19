@@ -160,6 +160,10 @@ model Job {
   /// Date de publication réelle à la source. Jamais renseignée avec la date de
   /// découverte : une offre sans date fiable ne peut pas être publiée.
   publishedAt DateTime
+  /// Faux quand la date de publication n'est pas fiable (source ne la donne pas
+  /// ou partiellement). Une offre non vérifiée est exclue des résultats garantis
+  /// comme récents, mais reste conservée pour audit.
+  dateVerified Boolean @default(true)
   /// Premier passage du collecteur sur cette offre.
   firstSeenAt DateTime
   /// Dernier passage ayant confirmé que l'offre est toujours en ligne.

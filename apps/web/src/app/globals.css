@@ -828,6 +828,21 @@ h1 {
   outline: none;
 }
 
+.job-search-row + .job-search-row {
+  margin-top: 0.5rem;
+}
+
+.job-search-mode {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
 .job-search-submit {
   padding: 0.65rem 1.1rem;
   border: 1px solid var(--fg);

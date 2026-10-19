@@ -29,6 +29,21 @@ export const jobQuerySchema = z.object({
   city: z.string().trim().min(1).max(80).optional(),
   /// Niveau d'études demandé, tel que la source l'a écrit (ex. « Bac+5 »).
   studyLevel: z.string().trim().min(1).max(80).optional(),
+  /// Compétences séparées par des virgules, rattachées au dictionnaire technique.
+  skills: z
+    .string()
+    .trim()
+    .min(1)
+    .max(500)
+    .transform((value) =>
+      value
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter((skill) => skill.length > 0),
+    )
+    .optional(),
+  /// « all » exige toutes les compétences demandées, « any » au moins une.
+  skillsMode: z.enum(["all", "any"]).default("all"),
   /// Recherche plein texte sur le titre, l'entreprise et la description.
   q: z.string().trim().min(2).max(120).optional(),
   /// Recherche sur le seul titre de l'offre.

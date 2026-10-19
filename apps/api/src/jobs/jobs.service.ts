@@ -1,4 +1,5 @@
 import { type PrismaClient, JobStatus } from "@findit/database";
+import { canonicalizeSkill } from "@findit/matching-engine";
 import { DEFAULT_CONTRACTS, DEFAULT_ROLE_CATEGORIES, publishedAfterFor } from "@findit/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -96,10 +97,23 @@ export class JobsService {
    * réapparaître dans la liste.
    */
   private publicWhere(query: JobQuery, now: Date) {
+    /*
+     * Les compétences demandées sont rattachées au dictionnaire technique :
+     * une compétence inconnue du dictionnaire ne peut pas être filtrée, plutôt
+     * que de chercher une forme libre qui ne matcherait rien.
+     */
+    const skillIds = (query.skills ?? [])
+      .map((name) => canonicalizeSkill(name))
+      .filter((entry) => entry !== null)
+      .map((entry) => entry.id);
+
     return {
       status: JobStatus.PUBLISHED,
       publishedAt: { gte: publishedAfterFor(query.freshness, now) },
       expiresAt: { gt: now },
+      // Une offre dont la date n'est pas fiable ne peut pas se présenter comme
+      // « récente » : elle est exclue de toute liste garantie par la fraîcheur.
+      dateVerified: true,
       /*
        * Sans filtre explicite, le flux s'en tient au défaut : les alternances
        * des métiers du développement. Un filtre demandé l'emporte et peut aller
@@ -116,6 +130,11 @@ export class JobsService {
         : {}),
       ...(query.salaryMin ? { salaryMin: { gte: query.salaryMin } } : {}),
       ...(query.salaryMax ? { salaryMin: { lte: query.salaryMax } } : {}),
+      ...(skillIds.length > 0
+        ? query.skillsMode === "all"
+          ? { AND: skillIds.map((id) => ({ skills: { some: { skill: { slug: id } } } })) }
+          : { skills: { some: { skill: { slug: { in: skillIds } } } } }
+        : {}),
       ...(query.q
         ? {
             OR: [
@@ -201,6 +220,7 @@ export class JobsService {
           status: JobStatus.PUBLISHED,
           publishedAt: { gte: publishedAfterFor(freshness, now) },
           expiresAt: { gt: now },
+          dateVerified: true,
         },
         include: {
           company: { select: { name: true, logoUrl: true, website: true, careerUrl: true } },
@@ -269,7 +289,7 @@ export class JobsService {
   }
 
   async stats(now: Date = new Date()): Promise<JobStats> {
-    const published = { status: JobStatus.PUBLISHED, expiresAt: { gt: now } };
+    const published = { status: JobStatus.PUBLISHED, expiresAt: { gt: now }, dateVerified: true };
 
     const [publishedLast24h, publishedLast5d, latest] = await Promise.all([
       this.prisma.job.count({
