@@ -36,6 +36,7 @@ import {
   WORKER_REDIS_CONNECTION,
 } from "../queue/queue.constants.js";
 import { createCycleDeps, createScrapedCycleDeps } from "./cycle-deps.js";
+import { createAgentConnectorFallback } from "./agent-connector-fallback.js";
 import { createJobHandler } from "./job-handler.js";
 import { registerDiscoveryFromUrl } from "./register-discovery.js";
 import { runCycle } from "./run-cycle.js";
@@ -271,6 +272,9 @@ export class CollectionSchedulerService implements OnApplicationBootstrap, OnApp
         sourceGate,
         ...(modelCost === undefined ? {} : { modelCost }),
         recoverPage: (url) => this.#recoverPage(url),
+        // Une source ATS connue se collecte via son connecteur, en secours du
+        // crawl : le repli est branché ici, le crawl reste le chemin par défaut.
+        connectorFallback: createAgentConnectorFallback(this.prisma, this.env),
         persist: (offers) => persistOffers(offers, { prisma: this.prisma }),
       },
       // Mode découverte seule : ce qui rend (le registre) reste, ce qui ne rend

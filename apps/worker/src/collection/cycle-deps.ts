@@ -113,10 +113,9 @@ const franceTravailSearchJobs = (
  * les dépendances d'exécution des connecteurs, garde de budget comprise. Chaque
  * appel crée un cycle neuf, avec son identifiant de corrélation et son budget.
  */
-const createCollectionRuntime = (prisma: PrismaClient, env: WorkerEnv) => {
+export const createCollectionRuntime = (prisma: PrismaClient, env: WorkerEnv) => {
   const store = createPrismaConnectorRunStore(prisma);
   const persistence = createIngestionPersistence(prisma, () => new Date());
-
   const connectorDeps: RunConnectorDeps = {
     fetch: globalThis.fetch,
     sleep,
