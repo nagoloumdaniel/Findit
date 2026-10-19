@@ -52,8 +52,8 @@ const PUBLIEE_DEPUIS_DAYS = 7;
 /** Taille de page maximale acceptée par l'API. */
 const PAGE_SIZE = 150;
 
-/** Borne de sécurité : atteindre ce nombre lève plutôt que d'amputer la liste. */
-const MAX_PAGES = 8;
+/** Borne de sécurité : au-delà, la collecte rend ce qu'elle a plutôt que d'échouer. */
+const MAX_PAGES = 10;
 
 const tokenSchema = z.object({
   access_token: z.string(),
@@ -269,9 +269,8 @@ export const createFranceTravailConnector = (
       }
     }
 
-    throw new FranceTravailShapeError(
-      `plus de ${String(MAX_PAGES)} pages pour « ${target.query} » : la collecte s'arrête plutôt que de rendre une liste amputée.`,
-    );
+    // La borne est un plafond de coût, pas une erreur : on rend ce qui a été lu.
+    return jobs;
   };
 
   return {
