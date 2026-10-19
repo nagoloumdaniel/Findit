@@ -179,7 +179,7 @@ export const JobFilters = ({ options, current }: JobFiltersProps) => {
         />
       ) : null}
 
-      {options.studyLevels.length > 0 ? (
+      {(options.studyLevels ?? []).length > 0 ? (
         <FilterGroup
           title="Niveau d’études"
           paramKey="studyLevel"
