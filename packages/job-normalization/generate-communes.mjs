@@ -121,7 +121,7 @@ const DEPARTMENTS = [
   "976",
 ];
 const ILE_DE_FRANCE = new Set(["75", "77", "78", "91", "92", "93", "94", "95"]);
-const USER_AGENT = "FinditBot/0.1 (+https://github.com/Nagoloum/Findit)";
+const USER_AGENT = "FinditBot/0.1 (+https://github.com/nagoloumdaniel/Findit)";
 
 /** Doit rester identique à `normalizeCommune` dans location.ts. */
 const normalize = (name) =>
