@@ -1,5 +1,6 @@
 import { PageShell } from "@findit/ui";
 
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { fetchJobDetail } from "../../../lib/api";
@@ -22,6 +23,41 @@ type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+/*
+ * Titre, description et canonical de la fiche. La description est composée de
+ * faits structurés (contrat, entreprise, lieu), jamais d'un extrait du texte de
+ * l'offre : une offre reprise d'un job board n'est pas republiée. Une offre
+ * introuvable, expirée ou de démonstration reçoit `noindex` : elle ne doit pas
+ * rester dans un index de recherche.
+ */
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const query = await searchParams;
+  const search = new URLSearchParams();
+  if (typeof query["freshness"] === "string") {
+    search.set("freshness", query["freshness"]);
+  }
+
+  const result = await fetchJobDetail(slug, search);
+  if (!result.ok || !result.data || result.data.isDemo) {
+    return { title: "Offre", robots: { index: false, follow: false } };
+  }
+
+  const job = result.data;
+  const contract = contractLabels[job.contractType] ?? job.contractType;
+  const title = `${job.title} - ${job.companyName}`;
+  const description = `Offre ${contract} chez ${job.companyName} à ${job.city}, publiée sur Findit.`;
+  const canonical = `/offres/${encodeURIComponent(slug)}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { type: "article", title, description, url: canonical },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function JobDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;

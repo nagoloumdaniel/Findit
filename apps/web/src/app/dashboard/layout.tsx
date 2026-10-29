@@ -24,6 +24,7 @@ const SECTIONS = [
 
 export const metadata: Metadata = {
   title: { default: "Exploitation", template: "%s - Exploitation" },
+  robots: { index: false, follow: false },
 };
 
 export default function DashboardLayout({ children }: Readonly<{ children: ReactNode }>) {

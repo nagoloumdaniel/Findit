@@ -9,7 +9,10 @@ import { fetchFavorites, fetchProfile, isProfileConfigured } from "../../lib/pro
 
 import { saveProfileAction } from "./actions";
 
-export const metadata: Metadata = { title: "Mon espace" };
+export const metadata: Metadata = {
+  title: "Mon espace",
+  robots: { index: false, follow: false },
+};
 
 /// Le profil change à chaque enregistrement : rien à mettre en cache ici.
 export const dynamic = "force-dynamic";

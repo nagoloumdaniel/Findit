@@ -1,5 +1,6 @@
 import { PageShell } from "@findit/ui";
 
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { JobCard } from "../components/job-card";
@@ -11,6 +12,13 @@ import { MatchCard } from "../components/match-card";
 import { fetchFilterOptions, fetchJobs, fetchStats } from "../lib/api";
 import { exactDateTime } from "../lib/labels";
 import { fetchRanked, isMatchConfigured } from "../lib/matching-api";
+
+/*
+ * Toutes les variantes de la liste (filtres, recherche, pagination) désignent la
+ * même page : le canonical les ramène à l'accueil plutôt que de disperser le
+ * signal sur des milliers d'URL de requête.
+ */
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /// Les offres changent d'heure en heure : la page est rendue à chaque requête.
 export const dynamic = "force-dynamic";

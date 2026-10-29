@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "../components/app-shell";
 import { getSessionUser } from "../lib/auth";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "../lib/site";
 import { THEME_INIT_SCRIPT } from "../lib/theme";
 
 import "./globals.css";
@@ -29,10 +30,28 @@ const mono = Geist_Mono({
   variable: "--font-mono",
 });
 
+/*
+ * Métadonnées par défaut du site. Les pages privées (`/moi`, `/dashboard`,
+ * connexion) les surchargent par `noindex` ; la fiche d'offre fournit son propre
+ * titre et son canonical. L'image Open Graph vient de `opengraph-image.tsx`.
+ */
 export const metadata: Metadata = {
-  title: "Findit",
-  description:
-    "Toutes les offres d'emploi récentes en France : CDI, CDD, intérim, stage et alternance, tous domaines confondus.",
+  metadataBase: new URL(siteUrl()),
+  title: { default: `${SITE_NAME} - offres d'emploi en France`, template: `%s - ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "fr_FR",
+    title: `${SITE_NAME} - offres d'emploi en France`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} - offres d'emploi en France`,
+    description: SITE_DESCRIPTION,
+  },
   icons: {
     icon: [
       { url: "/logonoir.png", media: "(prefers-color-scheme: light)" },
