@@ -1,5 +1,7 @@
 # Architecture Findit (Web Intelligence Agent)
 
+> **Instantané du 2026-10-07.** Ce document est en partie daté (par exemple : pas de modèle `User`, 17 paquets, 31 modèles, périmètre Île-de-France, fraîcheur 72 h). L'état actuel est décrit par le [README](../README.md), le schéma Prisma et le code.
+
 Ce document décrit l'architecture réelle du dépôt au 2026-10-07, après le pivot vers un agent
 autonome de collecte web. Le cahier des charges est
 [CAHIER_DES_CHARGES.md](../CAHIER_DES_CHARGES.md) ; la source de vérité opérationnelle détaillée

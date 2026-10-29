@@ -1,0 +1,19 @@
+name: Proposition
+description: Proposer une amélioration
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Besoin
+      description: Quel problème cela résout-il ?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+  - type: textarea
+    id: alt
+    attributes:
+      label: Alternatives envisagées
