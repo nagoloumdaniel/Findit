@@ -2,7 +2,7 @@
  * Findit s'identifie toujours. Ce user-agent est celui annoncé dans
  * docs/legal-compliance.md ; le masquer serait une fraude, pas un réglage.
  */
-export const FINDIT_USER_AGENT = "FinditBot/0.1 (+https://github.com/Nagoloum/Findit)";
+export const FINDIT_USER_AGENT = "FinditBot/0.1 (+https://github.com/nagoloumdaniel/Findit)";
 
 export class HttpRequestError extends Error {
   override readonly name = "HttpRequestError";

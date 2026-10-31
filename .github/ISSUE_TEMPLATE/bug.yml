@@ -1,0 +1,25 @@
+name: Bug
+description: Signaler un comportement incorrect
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Ce qui se passe
+      description: Comportement observé et comportement attendu.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes de reproduction
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environnement
+      description: Navigateur, OS, version de Node, instance (locale ou hébergée).
+  - type: markdown
+    attributes:
+      value: Ne collez ni secret, ni CV, ni donnée personnelle.

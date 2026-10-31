@@ -8,7 +8,7 @@
  */
 
 /** Identité annoncée, la même que celle de `@findit/job-connectors`. */
-export const FINDIT_USER_AGENT = "FinditBot/0.1 (+https://github.com/Nagoloum/Findit)";
+export const FINDIT_USER_AGENT = "FinditBot/0.1 (+https://github.com/nagoloumdaniel/Findit)";
 
 export interface HttpPage {
   /** URL finale après redirections. */

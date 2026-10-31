@@ -6,147 +6,183 @@
 ![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)
 ![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)
-![Fastify](https://img.shields.io/badge/Fastify-5-000000?logo=fastify&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis%2FBullMQ-queues-DC382D?logo=redis&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-web%20%2B%20API-000000?logo=vercel&logoColor=white)
-![Railway](https://img.shields.io/badge/Railway-worker-0B0D0E?logo=railway&logoColor=white)
-![License](https://img.shields.io/badge/license-non%20specifiee-lightgrey)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/licence-non%20d%C3%A9finie-lightgrey)
 
-> Agent autonome de collecte web : il découvre, crawle, extrait et publie des offres d'alternance et de stage en développement en Île-de-France.
+Un agent qui **découvre, collecte, déduplique et publie des offres d'emploi** en France (CDI, CDD, intérim, stage, alternance, job étudiant), avec un espace candidat : CV, matching CV/offres, génération de CV et de lettre de motivation.
 
-## Description
+**Site** : [finditfr.vercel.app](https://finditfr.vercel.app) · **API** : `finditfr-api.vercel.app` · Projet personnel, en développement actif.
 
-Depuis le pivot du **2026-10-06**, le produit s'appelle **Web Intelligence Agent**. Le dépôt, les paquets (`@findit/*`) et la base conservent le nom `findit`.
+## Aperçu
 
-L'agent reçoit un objectif en langage naturel, en déduit des requêtes de recherche, note les sources web qui remontent, les crawle dans des bornes strictes, extrait les offres page par page avec DeepSeek, les valide, les déduplique et les persiste. Un site public expose les offres retenues ; un espace personnel et un dashboard d'exploitation sont protégés par un mot de passe unique. En mode découverte seule (`AGENT_DISCOVERY_ONLY`), crawl et extraction sont ignorés : le run alimente le registre `CompanySource`.
+> **Capture d'écran manquante.** Aucune capture n'est versionnée dans ce dépôt (seuls `apps/web/public/logoblanc.png` et `logonoir.png` le sont). Pour en ajouter une : déposer un fichier dans `docs/assets/` (par exemple `accueil.png`) et l'insérer ici avec `![Accueil de Findit](docs/assets/accueil.png)`.
 
-Le service est **en ligne depuis le 2026-10-07**.
+<!-- TODO(captures) : accueil (liste + filtres), fiche d'offre, espace /moi, dashboard d'exploitation. -->
 
-## En ligne
+## Statut
 
-| Brique | Hébergeur                       | Adresse                                                    | Détail                                                                                           |
-| ------ | ------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Web    | Vercel, projet `finditfr`       | [finditfr.vercel.app](https://finditfr.vercel.app)         | Racine `apps/web` ; commandes dans `apps/web/vercel.json`                                        |
-| API    | Vercel, projet `finditfr-api`   | [finditfr-api.vercel.app](https://finditfr-api.vercel.app) | Racine `apps/api` ; entrée serverless `apps/api/api/[...chemin].ts`                              |
-| Worker | Railway, projet `findit-worker` | —                                                          | Service `worker` + service Redis ; BullMQ n'expose aucun port, la santé se lit dans les journaux |
+| Élément                  | État                                                                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Période de développement | du 2026-07-16 au 2026-10-19 (dernier commit)                                                                                                    |
+| Web                      | Déployé sur Vercel (projet `finditfr`, racine `apps/web`)                                                                                       |
+| API                      | Déployée sur Vercel (projet `finditfr-api`, racine `apps/api`, entrée serverless)                                                               |
+| Worker                   | Conçu pour Railway (service `worker` + Redis). **Son état en ligne n'est pas vérifiable depuis ce dépôt** : aucune disponibilité n'est garantie |
+| Agent autonome           | Éteint par défaut (`AGENT_RUN_ENABLED=false`) : il dépense de vrais appels DeepSeek et Brave                                                    |
+| Disponibilité            | Aucun engagement de service : projet personnel, services gratuits ou bornés en budget                                                           |
 
-Le routage de Vercel dans le dossier `api/` ne laisse passer qu'**un seul segment** après `/api` : mesuré le 2026-10-07, `/api/jobs` répondait alors que `/api/jobs/stats` renvoyait un 404 sans corps (donc émis par la plateforme). Cinq relais d'une ligne rétablissent la profondeur, chacun réexportant le gestionnaire unique : `api/jobs/[...chemin].ts`, `api/agent/[...chemin].ts`, `api/agent/runs/[...chemin].ts`, `api/matching/[...chemin].ts`, `api/matching/history/[...chemin].ts`. C'est un contournement, à supprimer le jour où la plateforme route les catch-all sur plusieurs segments.
+## Ce que ça fait
 
-Railway construit le worker avec Railpack depuis la racine (`RAILPACK_BUILD_CMD=pnpm turbo run build --filter=@findit/worker`, `RAILPACK_NODE_PLAYWRIGHT_INSTALL=1`) et le démarre par le script `start` de la racine (`node apps/worker/dist/main.js`). `Dockerfile.worker` décrit la même image (Playwright + Chromium). Les variables attendues sont listées dans `railway.env.example`. Détails : [docs/deployment.md](docs/deployment.md).
+- **Collecte** des offres depuis plusieurs familles de sources : API officielle France Travail, flux publics d'ATS (Greenhouse, Lever, Workable, Workday), job boards via des acteurs Apify (Welcome to the Jungle, HelloWork, Indeed, LinkedIn), et découverte d'entreprises par recherche web (Brave).
+- **Classification** par type de contrat (6 valeurs : `ALTERNANCE`, `INTERNSHIP`, `CDI`, `CDD`, `INTERIM`, `STUDENT_JOB`), métier et lieu (France entière), **normalisation** et **déduplication** (similarité de titre/entreprise, décisions écrites en base).
+- **Publication** sur un site public : liste, recherche, filtres, fiche d'offre ; fraîcheur de 24 h ou de 5 jours (`LAST_24H`, `LAST_5D`), 5 jours étant un plafond absolu.
+- **Espace candidat** (`/moi`) : compte par e-mail, profil, import de CV (PDF/DOCX), favoris, historique de matchings.
+- **Matching CV / offres** : structuration du CV par DeepSeek, score déterministe encadré par des garde-fous (`@findit/matching`, `@findit/matching-engine`).
+- **Génération de documents** : CV et lettre de motivation en PDF et DOCX (`@findit/documents`, `@react-pdf/renderer`, `docx`).
+- **Dashboard d'exploitation** (`/dashboard`) : runs de l'agent, coûts modèle, sources suivies, analytics. Certaines sections (Jobs, Crawls, Logs, Configuration) sont encore des états vides.
+- **Alertes Telegram** optionnelles, éteintes par défaut.
 
-## Fonctionnalités
+## Ce que ça ne fait pas
 
-| Élément                  | État                   | Détail                                                                                                                                                                                                          |
-| ------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Site public              | Disponible             | Liste, recherche par texte, filtres repliables, pagination, fiche d'offre ; `force-dynamic` conservé sur l'accueil et la fiche                                                                                  |
-| Thème clair / sombre     | Disponible             | Sélecteur Clair / Sombre / Système et script anti-flash dans le `<head>` (`layout.tsx`) ; mouvement dans `motion.css`                                                                                           |
-| Squelettes de chargement | Disponible             | 11 `loading.tsx` adossés à un composant `Skeleton` à 7 variantes                                                                                                                                                |
-| Cache des données        | Disponible             | 60 s pour les offres et les statistiques, 300 s pour les filtres et le détail ; `no-store` pour tout ce qui est propre à une session                                                                            |
-| Espace personnel `/moi`  | Disponible             | Profil, CV, compétences, langues, expériences, liens et matchings passés                                                                                                                                        |
-| Dashboard d'exploitation | Partiel                | `/dashboard` et 8 sections ; Jobs, Crawls, Logs et Configuration restent des états vides                                                                                                                        |
-| Garde d'accès            | Un mot de passe unique | `/moi` **et** `/dashboard` passent par `apps/web/src/proxy.ts` : mot de passe (`PROFILE_PASSWORD`) échangé contre un cookie signé ; pas de comptes                                                              |
-| API des offres           | Disponible             | `GET /api/jobs`, `/api/jobs/stats`, `/api/jobs/filters`, `/api/jobs/:slug`                                                                                                                                      |
-| API de l'agent           | Disponible             | `GET /api/agent/runs`, `/stats`, `/analytics`, `/sources`, `/runs/:id`                                                                                                                                          |
-| Matching CV / offres     | Disponible via l'API   | `POST /api/matching/score` → 200 (corps `{ cvText }`), `GET /api/matching/history` (sans le CV), `GET /api/matching/history/:id` → 200, 404 si inconnu, 400 si identifiant malformé ; CV structuré par DeepSeek |
-| API de profil            | Serveur à serveur      | `GET` / `PUT /api/profile`, protégés par l'en-tête `x-internal-key` (`ProfileKeyGuard`)                                                                                                                         |
-| Agent autonome           | Éteint par défaut      | Activé par `AGENT_RUN_ENABLED=true` avec `DEEPSEEK_API_KEY` ; cron `AGENT_COLLECTION_CRON` (défaut `0 8 * * *`, Paris)                                                                                          |
-| Agent — découverte seule | Allumé dans `.env`     | `AGENT_DISCOVERY_ONLY=true` : le modèle cherche, choisit et enregistre des entreprises (`CompanySource`) sans crawler ni extraire                                                                               |
-| Reprise en cascade       | Disponible             | CDC §4.7 : relecture bornée, `JobPosting` JSON-LD avant le LLM, relance des échecs, abandon journalisé (`retried`)                                                                                              |
-| Registre de conformité   | Disponible             | Table `Connector`, synchronisée par `pnpm registry:sync` ; une source découverte passe une porte (`board-access.ts`) avant toute visite                                                                         |
-| Alertes Telegram         | Éteintes par défaut    | Nouvelles offres idempotentes ; commandes `/start`, `/status`, `/latest`, `/help`                                                                                                                               |
+- **Pas de postulation automatique** : un lien d'origine renvoie vers la source de l'offre.
+- **Pas de republication intégrale des offres de job boards** : l'API n'en expose qu'un extrait de 320 caractères et le lien d'origine ; la description complète reste en base et sert au matching.
+- **Pas de contournement** de CAPTCHA, de page de connexion ou d'anti-bot, pas de proxys rotatifs, pas de faux user-agent (voir [Conformité des sources](#conformité-des-sources)).
+- **Pas de garantie d'exhaustivité** : la couverture dépend des sources actives, de leurs plafonds de budget et de la fenêtre de fraîcheur.
+- **Pas de garantie de disponibilité** des instances hébergées.
+- Le score de matching est **indicatif**.
 
-## Sources de collecte
+## Architecture
 
-| Famille        | Sources                                  | Mode                                                                     |
-| -------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| API officielle | France Travail                           | API `francetravail.io` (OAuth), si les identifiants partenaires existent |
-| ATS natifs     | Greenhouse, Lever, Workable, Workday     | Flux publics et sites carrières, avec `robots.txt` respecté              |
-| Job boards     | Welcome to the Jungle, HelloWork, Indeed | Connecteurs Apify, cycle quotidien, plafonds par défaut 15 / 15 / 20     |
-| Désactivée     | LinkedIn                                 | Connecteur écrit et testé, statut `DISABLED` au registre après mesure    |
+```mermaid
+flowchart LR
+  user["Visiteur / candidat"] --> web["Web<br/>Next.js 16 · Vercel"]
+  web -->|"appels serveur"| api["API<br/>NestJS 11 + Fastify 5 · Vercel"]
+  api --> db[("PostgreSQL<br/>Neon · Prisma 7")]
+  api -->|"CV, matching"| llm["DeepSeek"]
 
-Les job boards sont lus par leurs connecteurs, pas par le crawler de l'agent. Une source découverte par l'agent est d'abord présentée au registre (`packages/job-connectors/src/board-access.ts`) : un job board connu sans connecteur actif est refusé, et un locataire d'ATS qui agrège les offres d'autrui n'est pas enregistré (`aggregator-tenants.ts`). Le cycle des job boards est **allumé par défaut** depuis le 2026-10-07 (`SCRAPED_SOURCES_ENABLED`, `packages/config/src/env.ts`) ; sans `APIFY_API_TOKEN`, il ne collecte rien.
+  subgraph worker["Worker · NestJS + BullMQ · Railway"]
+    ats["Cycle ATS natifs<br/>+ France Travail + découverte"]
+    boards["Cycle job boards<br/>Apify, budget borné"]
+    agent["Agent autonome<br/>(optionnel)"]
+  end
 
-## L'agent
-
-Pipeline du cahier des charges (`CAHIER_DES_CHARGES.md` §4) : Search → Discover → Crawl → Read → Extract → Analyze → Validate → Deduplicate → Store → Publish → Report.
-
-L'implémentation est un pipeline **déterministe**, dans `packages/orchestrator/src/run-agent.ts` :
-
-| Étape        | Implémentation                                                                                                                    |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| Search       | `generateSearchQueries` (`@findit/agent`)                                                                                         |
-| Discover     | `scoreSources` écarte les sources sous le seuil ; le modèle choisit ensuite, parmi les 12 meilleures candidates, celles à visiter |
-| Crawl        | `@findit/crawler` : HTTP, repli Playwright, `robots.txt`, suivi des liens, bornes `maxDepth`/`maxPages`/`maxRuntimeMs`            |
-| Read/Extract | `extractJobsFromPage` page par page (`@findit/extract`), via DeepSeek ; les écoles sont écartées                                  |
-| Validate     | `isValidOffer`                                                                                                                    |
-| Deduplicate  | titre normalisé, au sein du run                                                                                                   |
-| Store        | `persistOffers` (`@findit/persist`)                                                                                               |
-| Memory       | `AgentRunStore` / `AgentMemory` : une URL déjà vue n'est pas re-crawlée dans le run                                               |
-
-Une étape qui échoue est consignée dans `AgentError` et n'interrompt pas le run. Un run se termine en `SUCCEEDED`, `FAILED` ou `STOPPED` (borne de temps atteinte).
-
-La **reprise en cascade** (cahier des charges, section 4.7) est portée par `packages/orchestrator/src/recovery.ts`. Pour chaque page : relecture bornée quand le crawl l'a rendue vide, puis extraction déterministe des `schema.org JobPosting` déclarés en JSON-LD (`@findit/extract`), puis extraction par DeepSeek. Seul un échec est relancé ; une stratégie qui a tourné sans rien trouver passe la main. Quand tout est épuisé, la page est abandonnée avec sa raison dans `AgentError` et `retried` vaut `true`. En amont, une porte déterministe (`mentionsPerimeterContract`, exclusion des listes d'ATS) écarte la page sans appeler le modèle.
-
-## Périmètre métier
-
-Contrats alternance et stage ; métiers front-end, back-end, full-stack, ingénierie logicielle, autres métiers du développement, mobile, data analyst, data engineer ; Île-de-France (75, 77, 78, 91, 92, 93, 94, 95). Voir `packages/shared/src/job-scope.ts`.
-
-Le flux public affiche par défaut les **alternances des métiers du développement** sur **72 heures** (`freshness` par défaut : `LAST_72H`). La fenêtre de 24 h (`LAST_24H`) est un resserrement possible, et 72 h est le plafond absolu : une offre plus ancienne n'est jamais exposée.
-
-## Décisions tranchées
-
-- **Posts LinkedIn** : canal refusé après mesure — 6 posts pour 0 offre et 0,03005 $, avec l'identité de l'auteur toujours rendue. Motif et chiffres : [docs/legal-compliance.md](docs/legal-compliance.md).
-- **Offres LinkedIn** : connecteur désactivé après mesure — 0 offre francilienne pour 0,02810 $, l'acteur ignorant la zone demandée (`packages/job-connectors/src/registry.ts`).
-- **Journal de dépense** : volontairement conservateur, le coût n'est jamais effacé (`HANDOFF.md`).
-- **`force-dynamic`** : conservé sur l'accueil (`apps/web/src/app/page.tsx`).
-
-## Stack technique
-
-- **Monorepo** : pnpm workspaces + Turborepo
-- **Web** : Next.js 16 (App Router), React 19 ; Vercel en production
-- **API** : NestJS 11 sur Fastify 5, Helmet, CORS ; Vercel en production, entrée serverless
-- **Worker** : NestJS + BullMQ 5, concurrence 1 (les cycles ne se chevauchent pas) ; Railway en production
-- **Base de données** : PostgreSQL en ligne (Neon) via Prisma 7 et l'adaptateur `pg` ; aucune base locale depuis le retrait de Docker Compose
-- **File d'attente** : Redis 8, service Redis hébergé sur Railway
-- **IA** : DeepSeek API via `@findit/ai` (`DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, défaut `deepseek-flash`)
-- **Recherche web** : Brave (`BraveSearchProvider`, `@findit/job-connectors`)
-- **Crawl** : `@findit/crawler`, HTTP puis Playwright 1.63 en repli
-- **Scraping job boards** : connecteurs Apify, plafonds de dépense `SCRAPING_BUDGET_MONTHLY_USD` / `SCRAPING_BUDGET_CYCLE_USD`
-- **Qualité** : ESLint 10, Prettier 3.9, Vitest 4, TypeScript 6
-
-## Installation locale
-
-Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack). Aucun Docker n'est requis : la base est en ligne (Neon) et Redis est hébergé sur Railway. L'outillage local qui parle à Redis (`pnpm board:proof`, agent lancé à la main) a besoin d'une URL joignable : activer un **proxy TCP** sur le service Redis de Railway et reporter l'URL publique dans `REDIS_URL`. Avec `REDIS_URL=redis://localhost:6379`, ces commandes ne peuvent pas fonctionner.
-
-```powershell
-corepack enable
-corepack prepare pnpm@11.13.1 --activate
-Copy-Item .env.example .env   # puis renseigner DATABASE_URL (Neon) et REDIS_URL (proxy Railway)
-pnpm install
-pnpm setup:hooks
-pnpm db:migrate
-pnpm registry:sync   # synchronise le registre de conformité des connecteurs
+  redis[("Redis<br/>file BullMQ")] --- worker
+  worker --> db
+  ats --> ft["API France Travail<br/>flux publics d'ATS"]
+  boards --> apify["Acteurs Apify"]
+  agent --> brave["Brave Search"]
+  agent --> llm
+  agent --> crawl["Crawl borné<br/>HTTP + Playwright"]
+  worker -.->|"si activé"| tg["Telegram"]
 ```
 
-`pnpm db:seed` insère des offres de DÉMONSTRATION (`isDemo = true`) : c'est un outil de développement, aucun chemin de production ne l'appelle.
+Le web ne parle jamais directement à PostgreSQL ou à Redis : il passe par l'API. Les trois planifications du worker partagent une seule file BullMQ en concurrence 1, donc deux cycles ne se chevauchent jamais. Détail : [docs/architecture.md](docs/architecture.md) (instantané du 2026-10-07, voir l'avertissement en tête de ce fichier), [docs/deployment.md](docs/deployment.md).
 
-Lancement :
+## Pipeline de l'agent
 
-```powershell
+L'orchestrateur est un **LLM encadré par des outils déterministes** : le modèle choisit les recherches et les sources à visiter ; le crawl, l'extraction, la validation, la déduplication et le stockage sont du code. Si la réponse du modèle est inutilisable, un plan déterministe prend le relais.
+
+```mermaid
+flowchart TD
+  obj["Objectif en langage naturel"] --> plan["Planification<br/>LLM, repli déterministe"]
+  plan --> search["Recherche Brave"]
+  search --> score["Scoring des sources<br/>score 0-100, seuil 40"]
+  score --> gate{"Registre de conformité<br/>board-access"}
+  gate -->|"refusée (NO_CONNECTOR…)"| drop["Source écartée et journalisée"]
+  gate -->|"admise"| select["Sélection par le LLM<br/>12 meilleures candidates"]
+  select --> crawl["Crawl borné<br/>robots.txt respecté"]
+  crawl --> det{"Porte déterministe<br/>contrat mentionné ? racine d'ATS ?"}
+  det -->|"non"| skip["Page ignorée, aucun appel modèle"]
+  det -->|"oui"| ext["Extraction<br/>JSON-LD JobPosting puis DeepSeek"]
+  ext --> val["Validation Zod · dédup."]
+  val --> store["Persistance<br/>classification, lieu, fraîcheur"]
+  store --> report["AgentRun / AgentAction / AgentError"]
+  report -.->|"jusqu'à 3 tours"| plan
+```
+
+Bornes par défaut : 10 requêtes, profondeur 2, 20 pages par source, 50 pages et 5 minutes par run. Une étape qui échoue est consignée et n'interrompt pas le run. En **mode découverte seule** (`AGENT_DISCOVERY_ONLY`), le crawl et l'extraction sont ignorés : le run alimente seulement le registre des entreprises.
+
+Le coût du modèle est relevé à chaque appel. Une porte déterministe placée avant l'extraction a fait passer un run de contrôle de **5 419 à 782 µ$** (mesure du 2026-10-06, voir [docs/architecture.md](docs/architecture.md)) : c'est une mesure ponctuelle sur un run, pas une moyenne.
+
+## Stack
+
+| Couche      | Technologies                                                        |
+| ----------- | ------------------------------------------------------------------- |
+| Monorepo    | pnpm 11 workspaces, Turborepo 2, TypeScript 6, Node.js 24           |
+| Web         | Next.js 16 (App Router), React 19                                   |
+| API         | NestJS 11 sur Fastify 5, Helmet, CORS, validation Zod               |
+| Worker      | NestJS, BullMQ 5, Redis                                             |
+| Données     | PostgreSQL (Neon), Prisma 7 avec l'adaptateur `pg`                  |
+| IA          | DeepSeek (structuration de CV, extraction, planification, matching) |
+| Collecte    | API France Travail, Brave Search, Apify, Cheerio, Playwright        |
+| Documents   | `@react-pdf/renderer`, `docx`, `unpdf`, `mammoth`                   |
+| Qualité     | ESLint 10, Prettier 3, Vitest 4, Playwright, GitHub Actions         |
+| Hébergement | Vercel (web + API), Railway (worker + Redis)                        |
+
+## Chiffres vérifiés
+
+Relevés dans le dépôt au **2026-10-29**.
+
+| Mesure              | Valeur                                                      |
+| ------------------- | ----------------------------------------------------------- |
+| Période des commits | 2026-07-16 → 2026-10-19                                     |
+| Commits             | 284                                                         |
+| Applications        | 3 (`web`, `api`, `worker`)                                  |
+| Paquets             | 19 (`packages/*`)                                           |
+| Modèles Prisma      | 38                                                          |
+| Migrations          | 34 dossiers dans `packages/database/prisma/migrations`      |
+| Fichiers de test    | 113 (`*.test.*` / `*.spec.*`, dont les parcours Playwright) |
+| Types de contrat    | 6                                                           |
+
+Ces nombres évoluent : les recompter avec `git rev-list --count HEAD`, `ls packages | wc -l`, etc.
+
+## Conformité des sources
+
+Le code ne décide pas seul de ce qu'il peut visiter : une table `Connector` (le **registre de conformité**) porte pour chaque source un statut d'accès `SourceAccessStatus` (`OFFICIAL_API`, `PUBLIC_FEED`, `AUTHORIZED_CRAWL`, `OWNER_ACCEPTED_SCRAPING`, `DISABLED_PENDING_PERMISSION`, `PROHIBITED`…), synchronisé par `pnpm registry:sync`. Une source non autorisée ne s'exécute pas ; un statut dont les conditions n'ont pas été revérifiées depuis plus de 90 jours est refusé.
+
+- **API officielle et flux publics** : France Travail (API officielle, identifiants partenaires requis), Greenhouse et Lever (flux publics), Workable, Workday (`robots.txt` du locataire relu avant chaque collecte).
+- **Crawler** : s'identifie (`FinditBot`), respecte `robots.txt`, borne profondeur, pages et durée. Un domaine connu (job board, ATS) doit avoir un connecteur actif ; un domaine inconnu reste gouverné par `robots.txt`.
+- **Job boards (Welcome to the Jungle, HelloWork, Indeed, LinkedIn)** : leurs conditions d'utilisation **interdisent la collecte automatisée**. Findit les collecte néanmoins via des acteurs Apify tiers, sous le régime `OWNER_ACCEPTED_SCRAPING` : un accès **toléré, non autorisé**, dont le **propriétaire du projet assume le risque** (blocage d'IP ou de compte, litige civil). Ce régime est distinct d'une autorisation et **ce dépôt ne prétend pas que cette collecte est légale**. Les coûts sont plafonnés par cycle et par mois, et seul un extrait court plus le lien d'origine est publié.
+- **Jamais** : contournement de CAPTCHA, connexion ou cookies, proxys rotatifs, falsification du user-agent.
+- **Brave Search** ne sert qu'à découvrir des domaines ; ses résultats ne sont pas stockés comme offres.
+
+Si vous êtes ayant droit d'une source et souhaitez son retrait, ouvrez une issue : la source peut être désactivée au registre. Détail complet, par source, avec dates de vérification : [docs/legal-compliance.md](docs/legal-compliance.md). Données personnelles : [docs/politique-confidentialite.md](docs/politique-confidentialite.md).
+
+## Démarrage
+
+Prérequis : Node.js `>= 24.18 < 25`, pnpm 11.13.1 (via Corepack), une base PostgreSQL joignable (Neon en production ; TLS exigé) et, pour le worker, un Redis. Aucun Docker n'est fourni.
+
+```bash
+corepack enable
+corepack prepare pnpm@11.13.1 --activate
+cp .env.example .env     # puis renseigner les variables (jamais de valeur réelle dans Git)
+pnpm install
+pnpm setup:hooks         # hook anti-secret, une fois
+pnpm db:migrate
+pnpm registry:sync       # synchronise le registre de conformité
 pnpm dev
 ```
 
-- Web : http://localhost:3100
-- API : http://localhost:4000
-- Santé API : http://localhost:4000/health
+- Web : <http://localhost:3100> · API : <http://localhost:4000> · santé : <http://localhost:4000/health>
+- `pnpm db:seed` insère des offres de **démonstration** (`isDemo = true`), pour le développement uniquement.
 
-Toutes les variables d'environnement sont documentées dans `.env.example` et validées par Zod au démarrage. L'API exige `DATABASE_URL`, `INTERNAL_API_KEY` (32 caractères minimum) et `DEEPSEEK_API_KEY` ; `REDIS_URL` ne concerne que le worker. L'espace personnel `/moi` s'active avec `PROFILE_PASSWORD` et `SESSION_SECRET` (32 caractères minimum) côté web ; sans eux, le site public tourne et la page annonce « espace personnel non configuré ».
+Variables d'environnement (noms seulement ; toutes sont décrites dans `.env.example` et validées par Zod au démarrage) :
+
+| Usage                | Variables                                                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Base et file         | `DATABASE_URL`, `REDIS_URL` (worker)                                                                |
+| API et web           | `NEXT_PUBLIC_API_URL`, `CORS_ORIGIN`, `INTERNAL_API_KEY`, `PROFILE_PASSWORD`, `SESSION_SECRET`      |
+| IA                   | `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_INPUT_USD_PER_MTOK`, `DEEPSEEK_OUTPUT_USD_PER_MTOK` |
+| Sources              | `BRAVE_SEARCH_API_KEY`, `APIFY_API_TOKEN`, `FRANCETRAVAIL_CLIENT_ID`, `FRANCETRAVAIL_CLIENT_SECRET` |
+| Agent et budgets     | `AGENT_RUN_ENABLED`, `AGENT_DISCOVERY_ONLY`, `SCRAPED_SOURCES_ENABLED`, `SCRAPING_BUDGET_*`         |
+| Telegram (optionnel) | `TELEGRAM_NOTIFICATIONS_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`                          |
+| SEO (optionnel)      | `NEXT_PUBLIC_SITE_URL` (adresse canonique du site, défaut : le déploiement de production)           |
+
+Les clés vivent dans `.env` (ignoré par Git), jamais dans un fichier versionné. L'outillage local qui parle à Redis (`pnpm board:proof`) exige une URL Redis joignable depuis votre machine. Déploiement complet : [docs/deployment.md](docs/deployment.md).
 
 ## Qualité
 
-```powershell
+```bash
 pnpm format:check
 pnpm typecheck
 pnpm lint
@@ -154,56 +190,45 @@ pnpm test
 pnpm build
 ```
 
-Ces cinq commandes sont la porte de qualité ; le workflow `.github/workflows/ci.yml` les rejoue. Mesuré le 2026-10-07 : `pnpm test` réussit 38 tâches Turborepo sur 38, `pnpm build` 21 sur 21. L'état d'exécution de GitHub Actions n'est pas vérifiable depuis ce dépôt.
+Ces cinq commandes sont la porte de qualité, rejouée par `.github/workflows/ci.yml` sans secret (le `.env.example` suffit : les tests utilisent des doublures). Les parcours Playwright (`pnpm --filter @findit/web test:e2e`) supposent un web et une API en marche avec de vraies offres.
 
 ## Structure du monorepo
 
-```
+```text
 apps/
-  web/      Interface Next.js (port 3100) ; racine du projet Vercel `finditfr`
-  api/      API NestJS/Fastify (port 4000) ; racine `finditfr-api`
-    api/    Relais serverless Vercel (un gestionnaire unique + cinq relais par préfixe)
-  worker/   BullMQ : cycles ATS natifs, job boards, agent autonome, Telegram
+  web/      Next.js 16 (port 3100) · racine du projet Vercel `finditfr`
+  api/      NestJS + Fastify (port 4000) · racine `finditfr-api`
+  worker/   BullMQ : cycles ATS, job boards, agent autonome, Telegram
 packages/
-  agent/               Cœur déterministe : requêtes, scoring, mémoire, run store
-  ai/                  Client DeepSeek, sortie structurée
-  config/              Schémas de configuration Zod par runtime
-  crawler/             Crawl borné : HTTP + Playwright, robots.txt, liens
-  database/            Schéma Prisma, migrations, seed
-  extract/             Extraction d'offres page par page, exclusion des écoles
-  job-classification/  Classification métier, contrat, lieu, école
-  job-connectors/      Connecteurs ATS, job boards Apify, recherche Brave, registre
-  job-deduplication/   Similarité et décision de doublon
-  job-normalization/   Normalisation des offres
-  job-pipeline/        Ingestion, décision d'ingestion, lien de candidature
-  matching/            Structuration de CV et score CV/offre
-  notifications/       Alertes et commandes Telegram
-  orchestrator/        Boucle de l'agent (run-agent)
-  persist/             Écriture des offres retenues par l'agent
-  shared/              Périmètre métier partagé (job-scope)
-  ui/                  Composants d'interface partagés
-Dockerfile.worker      Image du worker (racine de build : la racine du dépôt)
-railway.env.example    Variables du service worker sur Railway
-infrastructure/        Emplacements réservés (Docker, monitoring, scripts)
-docs/                  Architecture, déploiement, conformité légale
+  agent/ orchestrator/ crawler/ extract/ persist/    agent de collecte
+  job-connectors/ job-normalization/ job-classification/
+  job-deduplication/ job-pipeline/                    sources et traitement des offres
+  matching/ matching-engine/ documents/               candidat : matching, CV, lettres
+  ai/ config/ database/ notifications/ shared/ ui/    socle commun
+docs/                                                 architecture, déploiement, conformité
 ```
-
-Détail de l'architecture : [docs/architecture.md](docs/architecture.md). Déploiement : [docs/deployment.md](docs/deployment.md). Conformité des sources : [docs/legal-compliance.md](docs/legal-compliance.md).
 
 ## Limites connues
 
-- **Pas de comptes ni de rôles** : un mot de passe unique garde `/moi` et `/dashboard`. Les routes publiques (liste, fiche) et les API `/api/jobs`, `/api/agent`, `/api/matching` restent ouvertes ; seul `/api/profile` exige l'en-tête `x-internal-key`.
+- **Contrôle d'accès à durcir** : le dashboard repose sur la garde du proxy web (`PROFILE_PASSWORD`), et plusieurs routes de l'API (`/api/agent/*`, `/api/matching/*`) sont publiques. N'envoyez pas de données personnelles sensibles à une instance que vous ne contrôlez pas. Pour signaler un problème de sécurité : [SECURITY.md](SECURITY.md).
 - **Worker sans port** : sa santé se lit dans ses journaux et dans les `ConnectorRun`, pas par un `GET /health`.
-- **Contournement de routage Vercel** : les cinq relais du dossier `api/` sont un palliatif, pas une architecture.
-- **Reprise en cascade partielle** (§4.7 du CDC) : la relecture d'une page vide, l'extraction `JobPosting` JSON-LD avant le LLM et la relance des échecs sont livrées. Manque l'invocation de connecteurs spécialisés en repli.
-- **Boucle pilotée par le LLM, étapes codées** (§5 du CDC) : le modèle choisit les requêtes et les sources à visiter sur un nombre de tours borné ; crawl, extraction, validation, déduplication et stockage restent déterministes. Le plan déterministe sert de repli si la réponse du modèle est inutilisable.
-- **Questions ouvertes** : Q-2 (comptes multiples) et Q-3 (sources de départ) ; Q-1 (hébergement) est tranchée par le déploiement ci-dessus.
-- La base de production est en ligne (Neon) et le rôle applicatif n'en est pas propriétaire : une migration de structure doit passer par une connexion propriétaire (documenté dans `HANDOFF.md` et `docs/architecture.md`).
+- **Contournement de routage Vercel** : l'API se déploie derrière des relais d'une ligne dans `apps/api/api/`, palliatif d'une limite de routage de la plateforme.
+- **Rendement des job boards faible et coûteux** : plafonds de budget par cycle et par mois, résultats variables (l'acteur LinkedIn, par exemple, ignore la zone demandée).
+- **Reprise en cascade partielle** : relecture d'une page vide, JSON-LD avant le LLM et relance des échecs sont livrés ; l'appel de connecteurs spécialisés en repli ne l'est pas.
+- **Documentation interne en partie datée** : `docs/architecture.md` décrit l'état du 2026-10-07 ; le schéma Prisma et le code font foi.
+
+## Contribuer
+
+Projet personnel, mais les contributions sont bienvenues : lire [CONTRIBUTING.md](CONTRIBUTING.md) et le [code de conduite](CODE_OF_CONDUCT.md). Failles de sécurité : [SECURITY.md](SECURITY.md), pas d'issue publique.
+
+## Développement assisté par IA
+
+Ce projet est conçu et dirigé par son auteur, avec l'assistance d'outils d'IA (Claude Code, Anthropic) pour l'écriture de code, de tests et de documentation. Environ 111 des 284 commits portent un trailer `Co-Authored-By: Claude`. Chaque changement passe par la porte de qualité ci-dessus, mais le code reste à relire comme n'importe quel code : l'assistance IA n'est pas un gage de correction.
+
+## Auteur et contributeurs
+
+[Daniel Nagoloum Talla](https://github.com/nagoloumdaniel) (180 commits sous ce nom, 104 sous le nom d'affichage « Nagoloum » : même personne, même adresse de commit).
 
 ## Licence
 
-Aucune licence n'est déclarée dans ce dépôt pour le moment.
-
----
-
-Par [Daniel Nagoloum Talla](https://github.com/nagoloumdaniel) · [Portfolio](https://nagoloum.vercel.app)
+**Aucune licence n'est définie pour l'instant.** Le code est public et visible, mais sans licence les droits d'auteur restent réservés : vous pouvez le consulter et le forker dans les limites des conditions de GitHub, pas le réutiliser, le modifier ni le redistribuer. Le choix d'une licence appartient à l'auteur.

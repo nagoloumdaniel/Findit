@@ -19,7 +19,7 @@ Lorsqu'une source n'est pas accessible légalement, son connecteur est désactiv
 Findit s'identifie toujours. Le user-agent annoncé est :
 
 ```text
-FinditBot/0.1 (+https://github.com/Nagoloum/Findit)
+FinditBot/0.1 (+https://github.com/nagoloumdaniel/Findit)
 ```
 
 ## Statuts d'accès
